@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, auto
 
 __all__ = [
     "Suit",
@@ -146,16 +146,16 @@ class HandType(Enum):
         Ace, King, Queen, Jack, Ten, all of the same suit (best hand).
     """
 
-    HIGH_CARD = "high_card"
-    PAIR = "pair"
-    TWO_PAIR = "two_pair"
-    THREE_OF_A_KIND = "three_of_a_kind"
-    STRAIGHT = "straight"
-    FLUSH = "flush"
-    FULL_HOUSE = "full_house"
-    FOUR_OF_A_KIND = "four_of_a_kind"
-    STRAIGHT_FLUSH = "straight_flush"
-    ROYAL_FLUSH = "royal_flush"
+    HIGH_CARD = auto()
+    PAIR = auto()
+    TWO_PAIR = auto()
+    THREE_OF_A_KIND = auto()
+    STRAIGHT = auto()
+    FLUSH = auto()
+    FULL_HOUSE = auto()
+    FOUR_OF_A_KIND = auto()
+    STRAIGHT_FLUSH = auto()
+    ROYAL_FLUSH = auto()
 
 
 class PlayerPosition(Enum):
@@ -188,12 +188,12 @@ class PlayerPosition(Enum):
         streets and has the maximum informational advantage.
     """
 
-    SMALL_BLIND = "small_blind"
-    BIG_BLIND = "big_blind"
-    UNDER_THE_GUN = "under_the_gun"
-    MIDDLE_POSITION = "middle_position"
-    CUT_OFF = "cutoff"
-    BUTTON = "button"
+    SMALL_BLIND = auto()
+    BIG_BLIND = auto()
+    UNDER_THE_GUN = auto()
+    MIDDLE_POSITION = auto()
+    CUT_OFF = auto()
+    BUTTON = auto()
 
 
 class PlayerState(Enum):
@@ -213,9 +213,9 @@ class PlayerState(Enum):
         in the hand competing for pots they contributed to.
     """
 
-    ACTIVE = "active"
-    FOLDED = "folded"
-    ALL_IN = "all_in"
+    ACTIVE = auto()
+    FOLDED = auto()
+    ALL_IN = auto()
 
 
 class GameStateType(Enum):
@@ -249,16 +249,16 @@ class GameStateType(Enum):
         Game has ended (not enough players with chips).
     """
 
-    WAITING_FOR_PLAYERS = "waiting_for_players"
-    READY = "ready"
-    DEALING = "dealing"
-    PRE_FLOP = "pre_flop"
-    FLOP = "flop"
-    TURN = "turn"
-    RIVER = "river"
-    SHOWDOWN = "showdown"
-    HAND_COMPLETE = "hand_complete"
-    GAME_OVER = "game_over"
+    WAITING_FOR_PLAYERS = auto()
+    READY = auto()
+    DEALING = auto()
+    PRE_FLOP = auto()
+    FLOP = auto()
+    TURN = auto()
+    RIVER = auto()
+    SHOWDOWN = auto()
+    HAND_COMPLETE = auto()
+    GAME_OVER = auto()
 
 
 class ActionType(Enum):
@@ -284,12 +284,12 @@ class ActionType(Enum):
         Bet all remaining chips.
     """
 
-    FOLD = "fold"
-    CHECK = "check"
-    CALL = "call"
-    BET = "bet"
-    RAISE = "raise"
-    ALL_IN = "all_in"
+    FOLD = auto()
+    CHECK = auto()
+    CALL = auto()
+    BET = auto()
+    RAISE = auto()
+    ALL_IN = auto()
 
 
 class GameEventType(Enum):
@@ -329,24 +329,24 @@ class GameEventType(Enum):
     """
 
     # Game lifecycle events
-    GAME_START = "game_start"
-    HAND_START = "hand_start"
-    HAND_END = "hand_end"
-    GAME_END = "game_end"
+    GAME_START = auto()
+    HAND_START = auto()
+    HAND_END = auto()
+    GAME_END = auto()
 
     # Dealing events
-    DEAL_HOLE_CARDS = "deal_hole_cards"
-    DEAL_FLOP = "deal_flop"
-    DEAL_TURN = "deal_turn"
-    DEAL_RIVER = "deal_river"
+    DEAL_HOLE_CARDS = auto()
+    DEAL_FLOP = auto()
+    DEAL_TURN = auto()
+    DEAL_RIVER = auto()
 
     # Player action events
-    PLAYER_ACTION = "player_action"
-    BETTING_ROUND_COMPLETE = "betting_round_complete"
+    PLAYER_ACTION = auto()
+    BETTING_ROUND_COMPLETE = auto()
 
     # Blind events
-    POST_BLINDS = "post_blinds"
+    POST_BLINDS = auto()
 
     # Showdown events
-    SHOWDOWN = "showdown"
-    AWARD_POT = "award_pot"
+    SHOWDOWN = auto()
+    AWARD_POT = auto()
