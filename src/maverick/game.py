@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from .card import Card
 from .deck import Deck
-from .enums import ActionType, GameEventType, GameStateType, PlayerState, Street
+from .enums import ActionType, GameEventType, GameStateType, PlayerState, Street, PlayerPosition
 from .hand import Hand
 from .holding import Holding
 from .player import Player
@@ -116,7 +116,7 @@ class GameState(BaseModel):
 
 class Game:
     """
-    Texas Hold'em Poker Game State Machine.
+    Texas Hold'em Poker Game.
 
     This class implements a complete Texas Hold'em poker game using a state
     machine architecture. It manages game flow, player actions, betting rounds,
@@ -134,12 +134,13 @@ class Game:
     9. HAND_COMPLETE: Hand is over, preparing for next hand
     10. GAME_OVER: Game has ended
 
-    Example:
-        >>> game = Game(small_blind=10, big_blind=20)
-        >>> game.add_player(Player(name="Alice", stack=1000))
-        >>> game.add_player(Player(name="Bob", stack=1000))
-        >>> game.start_game()
-        >>> game.start_hand()
+    Example
+    -------
+    >>> game = Game(small_blind=10, big_blind=20)
+    >>> game.add_player(Player(name="Alice", stack=1000))
+    >>> game.add_player(Player(name="Bob", stack=1000))
+    >>> game.start_game()
+    >>> game.start_hand()
     """
 
     def __init__(
@@ -164,7 +165,7 @@ class Game:
         self.event_history: list[GameEvent] = []
         self._state_handlers = self._initialize_state_handlers()
 
-    def _initialize_state_handlers(self) -> dict:
+    def _initialize_state_handlers(self) -> dict[GameStateType, callable]:
         """Initialize the state transition handlers."""
         return {
             GameStateType.WAITING_FOR_PLAYERS: self._handle_waiting_for_players,
@@ -272,12 +273,6 @@ class Game:
             if player.stack > 0:
                 player.state = PlayerState.ACTIVE
 
-        # Move button
-        self.state.button_position = (self.state.button_position + 1) % len(
-            self.state.players
-        )
-        self.state.dealer_index = self.state.button_position
-
         event = GameEvent(event_type=GameEventType.HAND_START)
         self._emit_event(event)
 
@@ -308,14 +303,13 @@ class Game:
         # Post blinds
         self._post_blinds()
 
-        # Transition to pre-flop
-        self.state.street = Street.PRE_FLOP
-        self._transition_to(GameStateType.PRE_FLOP)
-
         # Set first player to act (left of big blind)
         self.state.current_player_index = (self.state.button_position + 3) % len(
             self.state.players
         )
+        
+        # Transition to pre-flop state
+        self._transition_to(GameStateType.PRE_FLOP)
 
     def _post_blinds(self) -> None:
         """Post small and big blinds."""
@@ -454,10 +448,6 @@ class Game:
         # Move to next player
         self._advance_to_next_player()
 
-        # Check if betting round is complete
-        if self.state.is_betting_round_complete():
-            self._complete_betting_round()
-
     def _get_valid_actions(self, player: Player) -> list[ActionType]:
         """Get list of valid actions for a player."""
         actions = [ActionType.FOLD]
@@ -499,9 +489,13 @@ class Game:
             player = self.state.players[self.state.current_player_index]
             if player.state == PlayerState.ACTIVE and not player.acted_this_street:
                 return
+        
+        # If we reach here, no players left to act
+        self.state.current_player_index = start_index
 
         # If we've cycled through all players, check betting round completion
-        # This should be caught by is_betting_round_complete()
+        if self.state.is_betting_round_complete():
+            self._complete_betting_round()
 
     def _complete_betting_round(self) -> None:
         """Complete the current betting round and transition to next state."""
@@ -648,6 +642,14 @@ class Game:
             self._emit_event(event)
             self._transition_to(GameStateType.GAME_OVER)
         else:
+            # Move button
+            for p in self.state.players:
+                p.position = None  # Reset positions
+            n_players = len(self.state.players)
+            self.state.button_position = (self.state.button_position + 1) % n_players
+            self.state.dealer_index = self.state.button_position
+            self.state.players[self.state.dealer_index].position = PlayerPosition.BUTTON
+            
             # Ready for next hand
             self._transition_to(GameStateType.READY)
 
@@ -664,6 +666,8 @@ class Game:
             new_state: The state to transition to
         """
         self.state.state_type = new_state
+        if new_state == GameStateType.PRE_FLOP:
+            self.state.street = Street.PRE_FLOP
 
         # Call the appropriate state handler
         handler = self._state_handlers.get(new_state)
@@ -687,18 +691,21 @@ class Game:
             Dictionary containing current game state information
         """
         return {
-            "state": self.state.state_type.value,
-            "street": self.state.street.value,
+            "state": self.state.state_type.name,
+            "street": self.state.street.name if self.state.street else None,
             "hand_number": self.state.hand_number,
             "pot": self.state.pot,
             "current_bet": self.state.current_bet,
             "community_cards": self.state.community_cards,
+            "dealer_index": self.state.dealer_index,
+            "button_position": self.state.button_position,
             "players": [
                 {
                     "id": p.id,
                     "name": p.name,
                     "stack": p.stack,
-                    "state": p.state.value if p.state else None,
+                    "state": p.state.name if p.state else None,
+                    "position": p.position.name if p.position else None,
                     "current_bet": p.current_bet,
                 }
                 for p in self.state.players
