@@ -5,10 +5,13 @@ This module defines the protocol that all player implementations must follow
 to participate in a Texas Hold'em poker game.
 """
 
-from typing import Optional, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Optional, Protocol, runtime_checkable
 
 from .enums import PlayerState
 from .holding import Holding
+
+if TYPE_CHECKING:
+    from .game import ActionType, GameState
 
 __all__ = ["PlayerProtocol"]
 
