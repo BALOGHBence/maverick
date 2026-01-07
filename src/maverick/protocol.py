@@ -7,11 +7,11 @@ to participate in a Texas Hold'em poker game.
 
 from typing import TYPE_CHECKING, Optional, Protocol, runtime_checkable
 
-from .enums import PlayerState
+from .enums import ActionType, PlayerState
 from .holding import Holding
 
 if TYPE_CHECKING:
-    from .game import ActionType, GameState
+    from .game import GameState
 
 __all__ = ["PlayerProtocol"]
 
@@ -57,8 +57,8 @@ class PlayerProtocol(Protocol):
     acted_this_street: bool
 
     def decide_action(
-        self, game_state: "GameState", valid_actions: list["ActionType"], min_raise: int
-    ) -> tuple["ActionType", int]:
+        self, game_state: "GameState", valid_actions: list[ActionType], min_raise: int
+    ) -> tuple[ActionType, int]:
         """
         Decide what action to take given the current game state.
 

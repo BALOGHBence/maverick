@@ -1,6 +1,16 @@
 from enum import Enum
 
-__all__ = ["Suit", "Rank", "Street", "HandType", "PlayerPosition", "PlayerState"]
+__all__ = [
+    "Suit",
+    "Rank",
+    "Street",
+    "HandType",
+    "PlayerPosition",
+    "PlayerState",
+    "GameStateType",
+    "ActionType",
+    "GameEventType",
+]
 
 
 class Suit(Enum):
@@ -206,3 +216,137 @@ class PlayerState(Enum):
     ACTIVE = "active"
     FOLDED = "folded"
     ALL_IN = "all_in"
+
+
+class GameStateType(Enum):
+    """
+    Game state enumeration for Texas Hold'em.
+
+    Represents the different states of the game from waiting for players
+    to game completion.
+
+    Attributes
+    ----------
+    WAITING_FOR_PLAYERS : str
+        Game is waiting for enough players to join.
+    READY : str
+        Enough players have joined; game is ready to start.
+    DEALING : str
+        Dealing hole cards to players and posting blinds.
+    PRE_FLOP : str
+        First betting round after hole cards are dealt.
+    FLOP : str
+        Second betting round after three community cards are dealt.
+    TURN : str
+        Third betting round after the fourth community card is dealt.
+    RIVER : str
+        Final betting round after the fifth community card is dealt.
+    SHOWDOWN : str
+        Players reveal hands and the winner is determined.
+    HAND_COMPLETE : str
+        Hand has ended; preparing for the next hand.
+    GAME_OVER : str
+        Game has ended (not enough players with chips).
+    """
+
+    WAITING_FOR_PLAYERS = "waiting_for_players"
+    READY = "ready"
+    DEALING = "dealing"
+    PRE_FLOP = "pre_flop"
+    FLOP = "flop"
+    TURN = "turn"
+    RIVER = "river"
+    SHOWDOWN = "showdown"
+    HAND_COMPLETE = "hand_complete"
+    GAME_OVER = "game_over"
+
+
+class ActionType(Enum):
+    """
+    Player action enumeration.
+
+    Represents the different types of actions a player can take during a
+    betting round.
+
+    Attributes
+    ----------
+    FOLD : str
+        Discard hand and forfeit any chance of winning the pot.
+    CHECK : str
+        Pass the action without betting (only valid when there's no bet to call).
+    CALL : str
+        Match the current bet to stay in the hand.
+    BET : str
+        Be the first to put chips into the pot in a betting round.
+    RAISE : str
+        Increase the current bet.
+    ALL_IN : str
+        Bet all remaining chips.
+    """
+
+    FOLD = "fold"
+    CHECK = "check"
+    CALL = "call"
+    BET = "bet"
+    RAISE = "raise"
+    ALL_IN = "all_in"
+
+
+class GameEventType(Enum):
+    """
+    Game event enumeration.
+
+    Represents the different types of events that can occur during a poker game.
+
+    Attributes
+    ----------
+    GAME_START : str
+        Game begins.
+    HAND_START : str
+        New hand starts.
+    HAND_END : str
+        Hand ends.
+    GAME_END : str
+        Game ends.
+    DEAL_HOLE_CARDS : str
+        Hole cards dealt to players.
+    DEAL_FLOP : str
+        First three community cards dealt.
+    DEAL_TURN : str
+        Fourth community card dealt.
+    DEAL_RIVER : str
+        Fifth community card dealt.
+    PLAYER_ACTION : str
+        Player takes an action.
+    BETTING_ROUND_COMPLETE : str
+        Betting round completes.
+    POST_BLINDS : str
+        Blind bets posted.
+    SHOWDOWN : str
+        Showdown occurs.
+    AWARD_POT : str
+        Pot awarded to winner(s).
+    """
+
+    # Game lifecycle events
+    GAME_START = "game_start"
+    HAND_START = "hand_start"
+    HAND_END = "hand_end"
+    GAME_END = "game_end"
+
+    # Dealing events
+    DEAL_HOLE_CARDS = "deal_hole_cards"
+    DEAL_FLOP = "deal_flop"
+    DEAL_TURN = "deal_turn"
+    DEAL_RIVER = "deal_river"
+
+    # Player action events
+    PLAYER_ACTION = "player_action"
+    BETTING_ROUND_COMPLETE = "betting_round_complete"
+
+    # Blind events
+    POST_BLINDS = "post_blinds"
+
+    # Showdown events
+    SHOWDOWN = "showdown"
+    AWARD_POT = "award_pot"
