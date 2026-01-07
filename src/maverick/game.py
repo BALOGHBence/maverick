@@ -11,7 +11,14 @@ from pydantic import BaseModel, Field
 
 from .card import Card
 from .deck import Deck
-from .enums import ActionType, GameEventType, GameStateType, PlayerState, Street, PlayerPosition
+from .enums import (
+    ActionType,
+    GameEventType,
+    GameStateType,
+    PlayerState,
+    Street,
+    PlayerPosition,
+)
 from .hand import Hand
 from .holding import Holding
 from .player import Player
@@ -307,7 +314,7 @@ class Game:
         self.state.current_player_index = (self.state.button_position + 3) % len(
             self.state.players
         )
-        
+
         # Transition to pre-flop state
         self._transition_to(GameStateType.PRE_FLOP)
 
@@ -489,7 +496,7 @@ class Game:
             player = self.state.players[self.state.current_player_index]
             if player.state == PlayerState.ACTIVE and not player.acted_this_street:
                 return
-        
+
         # If we reach here, no players left to act
         self.state.current_player_index = start_index
 
@@ -649,7 +656,7 @@ class Game:
             self.state.button_position = (self.state.button_position + 1) % n_players
             self.state.dealer_index = self.state.button_position
             self.state.players[self.state.dealer_index].position = PlayerPosition.BUTTON
-            
+
             # Ready for next hand
             self._transition_to(GameStateType.READY)
 
