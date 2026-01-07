@@ -156,6 +156,7 @@ class Game:
         big_blind: int = 20,
         min_players: int = 2,
         max_players: int = 9,
+        max_hands: int = 1000,
     ):
         """
         Initialize a new Texas Hold'em game.
@@ -168,6 +169,7 @@ class Game:
         """
         self.min_players = min_players
         self.max_players = max_players
+        self.max_hands = max_hands
         self.state = GameState(small_blind=small_blind, big_blind=big_blind)
         self.event_history: list[GameEvent] = []
         self._state_handlers = self._initialize_state_handlers()
@@ -257,6 +259,26 @@ class Game:
         self._emit_event(event)
         self.start_hand()
 
+        hand_count = 0
+
+        while hand_count < self.max_hands:
+            # Play the current hand
+            self.play_hand()
+
+            # Check if we have enough players to continue
+            active_players = [p for p in self.state.players if p.stack > 0]
+            if len(active_players) < 2:
+                # Not enough players to continue -> game over
+                break
+
+            # Start next hand
+            try:
+                self.start_hand()
+            except Exception:
+                break
+            finally:
+                hand_count += 1
+
     def start_hand(self) -> None:
         """Start a new hand."""
         if len(self.state.players) < self.min_players:
@@ -285,6 +307,36 @@ class Game:
 
         # Transition to dealing state
         self._transition_to(GameStateType.DEALING)
+
+    def play_hand(self) -> None:
+        while self.state.state_type not in [
+            GameStateType.SHOWDOWN,
+            GameStateType.HAND_COMPLETE,
+            GameStateType.READY,
+        ]:
+            current_player = self.state.get_current_player()
+
+            # Skip if no current player or player cannot act
+            if not current_player or current_player.state != PlayerState.ACTIVE:
+                self._advance_to_next_player()
+                continue
+
+            # Get valid actions and min raise
+            valid_actions = self._get_valid_actions(current_player)
+            min_raise = self.state.current_bet + self.state.min_bet
+
+            # Ask player to decide
+            action, amount = current_player.decide_action(
+                self.state, valid_actions, min_raise
+            )
+
+            # Execute the action
+            # (player_action automatically advances to next player and transitions states)
+            try:
+                self.player_action(current_player.id, action, amount)
+            except ValueError as e:
+                # Fallback: fold
+                self.player_action(current_player.id, ActionType.FOLD, 0)
 
     def _handle_waiting_for_players(self) -> None:
         """Handle WAITING_FOR_PLAYERS state."""
