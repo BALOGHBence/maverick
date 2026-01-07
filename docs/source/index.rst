@@ -54,6 +54,7 @@ Table of Contents
    
    texas_holdem_rules
    custom_players
+   complete_example
    api_reference
 
 State Machine Architecture
