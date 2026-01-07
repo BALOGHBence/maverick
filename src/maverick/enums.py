@@ -88,7 +88,7 @@ class PlayerPosition(Enum):
     MIDDLE_POSITION = "middle_position"
     CUT_OFF = "cutoff"
     BUTTON = "button"
-    
+
 
 class PlayerState(Enum):
     ACTIVE = "active"
