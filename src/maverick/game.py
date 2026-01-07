@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from .card import Card
 from .deck import Deck
 from .enums import PlayerState, Street
+from .hand import Hand
 from .holding import Holding
 from .player import Player
 
@@ -516,10 +517,10 @@ class Game:
             min_raise = self.state.current_bet + self.state.min_bet
             if amount < min_raise:
                 raise ValueError(f"Raise must be at least {min_raise}")
+            # Amount is the total bet amount (not just the raise size)
             call_amount = self.state.current_bet - current_player.current_bet
-            raise_amount = amount - self.state.current_bet
-            total_amount = call_amount + raise_amount
-            actual_amount = min(total_amount, current_player.stack)
+            total_to_add = amount - current_player.current_bet
+            actual_amount = min(total_to_add, current_player.stack)
             current_player.current_bet += actual_amount
             current_player.total_contributed += actual_amount
             current_player.stack -= actual_amount
@@ -579,8 +580,10 @@ class Game:
             actions.append(ActionType.BET)
 
         # Can raise if there's a bet to raise
-        min_raise = self.state.current_bet + self.state.min_bet
-        if self.state.current_bet > 0 and player.stack >= min_raise:
+        min_raise_total = self.state.current_bet + self.state.min_bet
+        call_amount = self.state.current_bet - player.current_bet
+        total_needed_for_min_raise = min_raise_total - player.current_bet
+        if self.state.current_bet > 0 and player.stack >= total_needed_for_min_raise:
             actions.append(ActionType.RAISE)
 
         # Can always go all-in if you have chips
@@ -685,8 +688,6 @@ class Game:
 
     def _handle_showdown(self) -> None:
         """Handle SHOWDOWN state - determine winner and award pot."""
-        from .hand import Hand
-
         players_in_hand = self.state.get_players_in_hand()
 
         if len(players_in_hand) == 1:
@@ -718,14 +719,16 @@ class Game:
             best_score = player_scores[0][1]
             winners = [p for p, s in player_scores if s == best_score]
 
-            # Split pot among winners
+            # Split pot among winners, distribute remainder to first winner in position
             pot_share = self.state.pot // len(winners)
-            for winner in winners:
-                winner.stack += pot_share
+            remainder = self.state.pot % len(winners)
+            for i, winner in enumerate(winners):
+                amount = pot_share + (1 if i == 0 and remainder > 0 else 0)
+                winner.stack += amount
                 event = GameEvent(
                     event_type=GameEventType.AWARD_POT,
                     player_id=winner.id,
-                    amount=pot_share,
+                    amount=amount,
                 )
                 self._emit_event(event)
 
