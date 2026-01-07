@@ -142,7 +142,7 @@ Here's the complete script that runs a full game:
 
 .. code-block:: python
 
-    from maverick import Game, Player, ActionType, GameState, GameEventType
+    from maverick import Game, Player, ActionType, GameState, GameEventType, PlayerState, GameStateType
     
     # [Include all three bot classes from above]
     
@@ -184,6 +184,50 @@ Here's the complete script that runs a full game:
         elif event.event_type == GameEventType.AWARD_POT:
             print(f"  → {event.data.get('player_name', 'Player')} wins ${event.amount}")
     
+    def play_hand(game: Game):
+        """
+        Play a complete hand by processing player actions.
+        
+        The game automatically transitions through states (PRE_FLOP → FLOP → TURN → RIVER → SHOWDOWN)
+        as betting rounds complete. We just need to keep getting actions from players until
+        the hand reaches SHOWDOWN state.
+        """
+        max_actions = 1000  # Safety limit
+        action_count = 0
+        
+        # Keep playing until hand reaches showdown
+        while game.state.state_type not in [GameStateType.SHOWDOWN, GameStateType.HAND_COMPLETE]:
+            action_count += 1
+            if action_count > max_actions:
+                print("⚠ Exceeded maximum actions per hand!")
+                break
+            
+            current_player = game.state.get_current_player()
+            
+            # Skip if no current player or player cannot act
+            if not current_player or current_player.state != PlayerState.ACTIVE:
+                # Manually advance to next player
+                game._advance_to_next_player()
+                continue
+            
+            # Get valid actions and min raise
+            valid_actions = game._get_valid_actions(current_player)
+            min_raise = game.state.current_bet + game.state.min_bet
+            
+            # Ask player to decide
+            action, amount = current_player.decide_action(
+                game.state, valid_actions, min_raise
+            )
+            
+            # Execute the action
+            # (player_action automatically advances to next player and transitions states)
+            try:
+                game.player_action(current_player.id, action, amount)
+            except ValueError as e:
+                print(f"  ⚠ Invalid action from {current_player.name}: {e}")
+                # Fallback: fold
+                game.player_action(current_player.id, ActionType.FOLD, 0)
+    
     def main():
         """Run a complete poker game."""
         print("Starting Texas Hold'em Poker Game")
@@ -214,8 +258,8 @@ Here's the complete script that runs a full game:
         hand_count = 0
         max_hands = 20  # Limit hands to keep example manageable
         
-        # Play until game is over or max hands reached
-        while game.state.state_type.value != "game_over" and hand_count < max_hands:
+        # Play until not enough players or max hands reached
+        while hand_count < max_hands:
             hand_count += 1
             print(f"\n{'#' * 60}")
             print(f"# HAND {hand_count}")
@@ -227,13 +271,8 @@ Here's the complete script that runs a full game:
             # Track events for this hand
             initial_event_count = len(game.event_history)
             
-            # The game progresses automatically through the state machine
-            # Players' decide_action methods are called when it's their turn
-            
-            # Wait for hand to complete
-            while (game.state.state_type.value not in ["hand_complete", "game_over"]):
-                # Game processes actions internally
-                pass
+            # Play the hand (game auto-progresses through streets)
+            play_hand(game)
             
             # Print events that occurred during the hand
             print("\nHand Events:")
@@ -245,20 +284,19 @@ Here's the complete script that runs a full game:
             print("\nHand Complete!")
             print_game_state(game)
             
-            # Check if anyone is out of chips
+            # Check if we have enough players to continue
             active_players = [p for p in game.state.players if p.stack > 0]
             if len(active_players) < 2:
                 print(f"\n{'='*60}")
                 print("GAME OVER - Not enough players with chips!")
                 break
             
-            # Start next hand if game should continue
-            if game.state.state_type.value == "hand_complete" and len(active_players) >= 2:
-                try:
-                    game.start_hand()
-                except Exception as e:
-                    print(f"Could not start new hand: {e}")
-                    break
+            # Start next hand
+            try:
+                game.start_hand()
+            except Exception as e:
+                print(f"Could not start new hand: {e}")
+                break
         
         # Print final results
         print(f"\n{'='*60}")
@@ -347,15 +385,36 @@ Learning from the Example
 
 This example demonstrates several key concepts:
 
+**Game Loop Architecture**
+  The game uses a state machine but requires explicit action processing. The ``play_betting_round()``
+  function drives the game by:
+  
+  1. Checking if the betting round is complete
+  2. Getting the current player
+  3. Calling the player's ``decide_action()`` method
+  4. Executing the action via ``game.player_action()``
+  5. Moving to the next player
+  
+  This pattern gives you full control over game flow and allows for features like
+  timeouts, logging, or UI updates between actions.
+
 **State Machine Flow**
-  The game automatically transitions through states (PRE_FLOP → FLOP → TURN → RIVER → SHOWDOWN)
-  based on player actions and game rules.
+  The game transitions through states (PRE_FLOP → FLOP → TURN → RIVER → SHOWDOWN)
+  via explicit calls to ``game._transition_to()``. Each transition triggers appropriate
+  handlers that deal cards and update game state.
 
 **Player Decision Making**
-  Each bot's ``decide_action`` method is called when it's their turn, with full game state information.
+  Each bot's ``decide_action`` method is called when it's their turn, receiving:
+  
+  * ``game_state``: Complete game state including pot, bets, community cards
+  * ``valid_actions``: List of legal actions the player can take
+  * ``min_raise``: Minimum amount required for a raise
+  
+  This separation allows players to implement any strategy without knowing internal game mechanics.
 
 **Event Tracking**
   All game events are recorded in ``game.event_history``, allowing for replay and analysis.
+  Events include player actions, cards dealt, and pot awards.
 
 **Strategy Differences**
   The three bots demonstrate different playing styles:
@@ -365,7 +424,13 @@ This example demonstrates several key concepts:
   * SmartBot: Considers pot size and position
 
 **Game Management**
-  The example shows proper game lifecycle management, from setup through multiple hands to completion.
+  The example shows proper game lifecycle management:
+  
+  1. Create game with blinds
+  2. Add players
+  3. Start game (deals first hand)
+  4. Loop: play hand → check for winners → start next hand
+  5. Display final results
 
 Next Steps
 ----------
@@ -377,6 +442,7 @@ Try modifying the example to:
 * Track detailed statistics (win rate, aggression factor, etc.)
 * Implement tournament structures with increasing blinds
 * Add logging or visualization of game progression
+* Add timeouts or user input for human players
 
 See :doc:`custom_players` for more details on player implementation and :doc:`api_reference`
 for the complete API documentation.
