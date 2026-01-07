@@ -1,6 +1,6 @@
 from enum import Enum
 
-__all__ = ["Suit", "Rank", "Street", "HandType", "PlayerPosition"]
+__all__ = ["Suit", "Rank", "Street", "HandType", "PlayerPosition", "PlayerState"]
 
 
 class Suit(Enum):
@@ -88,3 +88,9 @@ class PlayerPosition(Enum):
     MIDDLE_POSITION = "middle_position"
     CUT_OFF = "cutoff"
     BUTTON = "button"
+    
+
+class PlayerState(Enum):
+    ACTIVE = "active"
+    FOLDED = "folded"
+    ALL_IN = "all_in"
