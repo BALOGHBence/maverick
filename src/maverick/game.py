@@ -663,7 +663,6 @@ class Game:
         Args:
             new_state: The state to transition to
         """
-        old_state = self.state.state_type
         self.state.state_type = new_state
 
         # Call the appropriate state handler
