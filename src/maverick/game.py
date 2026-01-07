@@ -21,6 +21,7 @@ __all__ = [
     "GameState",
     "GameEvent",
     "GameEventType",
+    "GameStateType",
     "ActionType",
     "Game",
     "PlayerProtocol",
@@ -581,7 +582,6 @@ class Game:
 
         # Can raise if there's a bet to raise
         min_raise_total = self.state.current_bet + self.state.min_bet
-        call_amount = self.state.current_bet - player.current_bet
         total_needed_for_min_raise = min_raise_total - player.current_bet
         if self.state.current_bet > 0 and player.stack >= total_needed_for_min_raise:
             actions.append(ActionType.RAISE)
@@ -719,11 +719,17 @@ class Game:
             best_score = player_scores[0][1]
             winners = [p for p, s in player_scores if s == best_score]
 
-            # Split pot among winners, distribute remainder to first winner in position
+            # Sort winners by seat position (closest to button gets remainder chips)
+            winners_sorted = sorted(
+                winners, key=lambda p: p.seat if p.seat is not None else 0
+            )
+
+            # Split pot among winners, distribute remainder chips to winners closest to button
             pot_share = self.state.pot // len(winners)
             remainder = self.state.pot % len(winners)
-            for i, winner in enumerate(winners):
-                amount = pot_share + (1 if i == 0 and remainder > 0 else 0)
+            for i, winner in enumerate(winners_sorted):
+                # First 'remainder' winners get 1 extra chip
+                amount = pot_share + (1 if i < remainder else 0)
                 winner.stack += amount
                 event = GameEvent(
                     event_type=GameEventType.AWARD_POT,

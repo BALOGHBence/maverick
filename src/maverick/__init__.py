@@ -10,6 +10,7 @@ from .game import (
     GameState,
     GameEvent,
     GameEventType,
+    GameStateType,
     ActionType,
     PlayerProtocol,
 )
@@ -28,6 +29,7 @@ __all__ = [
     "GameState",
     "GameEvent",
     "GameEventType",
+    "GameStateType",
     "ActionType",
     "PlayerProtocol",
 ]
