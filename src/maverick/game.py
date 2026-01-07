@@ -7,7 +7,7 @@ pot distribution.
 """
 
 from enum import Enum
-from typing import Optional, Protocol, runtime_checkable
+from typing import Optional
 from pydantic import BaseModel, Field
 
 from .card import Card
@@ -24,12 +24,39 @@ __all__ = [
     "GameStateType",
     "ActionType",
     "Game",
-    "PlayerProtocol",
 ]
 
 
 class GameStateType(Enum):
-    """Possible states of the Texas Hold'em game."""
+    """
+    Game state enumeration for Texas Hold'em.
+
+    Represents the different states of the game from waiting for players
+    to game completion.
+
+    Attributes
+    ----------
+    WAITING_FOR_PLAYERS : str
+        Game is waiting for enough players to join.
+    READY : str
+        Enough players have joined; game is ready to start.
+    DEALING : str
+        Dealing hole cards to players and posting blinds.
+    PRE_FLOP : str
+        First betting round after hole cards are dealt.
+    FLOP : str
+        Second betting round after three community cards are dealt.
+    TURN : str
+        Third betting round after the fourth community card is dealt.
+    RIVER : str
+        Final betting round after the fifth community card is dealt.
+    SHOWDOWN : str
+        Players reveal hands and the winner is determined.
+    HAND_COMPLETE : str
+        Hand has ended; preparing for the next hand.
+    GAME_OVER : str
+        Game has ended (not enough players with chips).
+    """
 
     WAITING_FOR_PLAYERS = "waiting_for_players"
     READY = "ready"
@@ -44,7 +71,27 @@ class GameStateType(Enum):
 
 
 class ActionType(Enum):
-    """Types of actions a player can take."""
+    """
+    Player action enumeration.
+
+    Represents the different types of actions a player can take during a
+    betting round.
+
+    Attributes
+    ----------
+    FOLD : str
+        Discard hand and forfeit any chance of winning the pot.
+    CHECK : str
+        Pass the action without betting (only valid when there's no bet to call).
+    CALL : str
+        Match the current bet to stay in the hand.
+    BET : str
+        Be the first to put chips into the pot in a betting round.
+    RAISE : str
+        Increase the current bet.
+    ALL_IN : str
+        Bet all remaining chips.
+    """
 
     FOLD = "fold"
     CHECK = "check"
@@ -55,7 +102,40 @@ class ActionType(Enum):
 
 
 class GameEventType(Enum):
-    """Types of events that can occur in the game."""
+    """
+    Game event enumeration.
+
+    Represents the different types of events that can occur during a poker game.
+
+    Attributes
+    ----------
+    GAME_START : str
+        Game begins.
+    HAND_START : str
+        New hand starts.
+    HAND_END : str
+        Hand ends.
+    GAME_END : str
+        Game ends.
+    DEAL_HOLE_CARDS : str
+        Hole cards dealt to players.
+    DEAL_FLOP : str
+        First three community cards dealt.
+    DEAL_TURN : str
+        Fourth community card dealt.
+    DEAL_RIVER : str
+        Fifth community card dealt.
+    PLAYER_ACTION : str
+        Player takes an action.
+    BETTING_ROUND_COMPLETE : str
+        Betting round completes.
+    POST_BLINDS : str
+        Blind bets posted.
+    SHOWDOWN : str
+        Showdown occurs.
+    AWARD_POT : str
+        Pot awarded to winner(s).
+    """
 
     # Game lifecycle events
     GAME_START = "game_start"
@@ -79,54 +159,6 @@ class GameEventType(Enum):
     # Showdown events
     SHOWDOWN = "showdown"
     AWARD_POT = "award_pot"
-
-
-@runtime_checkable
-class PlayerProtocol(Protocol):
-    """
-    Protocol defining the interface for a valid player implementation.
-
-    Any class implementing this protocol can participate in a Texas Hold'em game.
-    Custom player classes must implement all methods defined in this protocol.
-
-    Attributes:
-        id: Unique identifier for the player
-        name: Display name for the player
-        seat: Seat number at the table (0-indexed)
-        stack: Current chip count
-        holding: Current hole cards (None if no cards dealt)
-        current_bet: Amount bet in current betting round
-        total_contributed: Total amount contributed to pot this hand
-        state: Current player state (ACTIVE, FOLDED, ALL_IN)
-        acted_this_street: Whether player has acted in current betting round
-    """
-
-    id: Optional[str]
-    name: Optional[str]
-    seat: Optional[int]
-    stack: int
-    holding: Optional[Holding]
-    current_bet: int
-    total_contributed: int
-    state: Optional[PlayerState]
-    acted_this_street: bool
-
-    def decide_action(
-        self, game_state: "GameState", valid_actions: list[ActionType], min_raise: int
-    ) -> tuple[ActionType, int]:
-        """
-        Decide what action to take given the current game state.
-
-        Args:
-            game_state: Current state of the game
-            valid_actions: List of valid actions the player can take
-            min_raise: Minimum amount for a raise action
-
-        Returns:
-            A tuple of (action_type, amount) where amount is relevant for
-            BET, RAISE, CALL, and ALL_IN actions
-        """
-        ...
 
 
 class GameEvent(BaseModel):

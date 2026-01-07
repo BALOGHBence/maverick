@@ -1,6 +1,6 @@
 from .card import Card
 from .deck import Deck
-from .enums import Suit, Rank, HandType
+from .enums import Suit, Rank, HandType, Street, PlayerPosition, PlayerState
 from .player import Player
 from .hand import Hand
 from .holding import Holding
@@ -12,8 +12,8 @@ from .game import (
     GameEventType,
     GameStateType,
     ActionType,
-    PlayerProtocol,
 )
+from .protocol import PlayerProtocol
 
 __all__ = [
     "Card",
@@ -21,6 +21,9 @@ __all__ = [
     "Suit",
     "Rank",
     "HandType",
+    "Street",
+    "PlayerPosition",
+    "PlayerState",
     "Player",
     "Hand",
     "Holding",
