@@ -2,8 +2,9 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from .enums import PlayerState
+from .enums import PlayerState, ActionType
 from .holding import Holding
+from .state import GameState
 
 __all__ = ["Player"]
 
@@ -27,3 +28,8 @@ class Player(BaseModel):
     )  # contribution in the current betting round
     total_contributed: int = Field(default=0, ge=0)  # total contribution this hand
     acted_this_street: bool = False
+
+    def decide_action(
+        self, game_state: GameState, valid_actions: list[ActionType], min_raise: int
+    ) -> tuple[ActionType, int]:
+        raise NotImplementedError

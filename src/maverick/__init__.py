@@ -14,11 +14,9 @@ from .player import Player
 from .hand import Hand
 from .holding import Holding
 from .scoring import score_hand
-from .game import (
-    Game,
-    GameState,
-)
-from .protocol import PlayerProtocol
+from .game import Game
+from .state import GameState
+from .protocol import PlayerLike
 
 __all__ = [
     "Card",
@@ -37,5 +35,5 @@ __all__ = [
     "GameEventType",
     "GameStateType",
     "ActionType",
-    "PlayerProtocol",
+    "PlayerLike",
 ]

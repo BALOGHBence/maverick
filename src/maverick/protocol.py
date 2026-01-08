@@ -13,11 +13,11 @@ from .holding import Holding
 if TYPE_CHECKING:
     from .game import GameState
 
-__all__ = ["PlayerProtocol"]
+__all__ = ["PlayerLike"]
 
 
 @runtime_checkable
-class PlayerProtocol(Protocol):
+class PlayerLike(Protocol):
     """
     Protocol defining the interface for a valid player implementation.
 

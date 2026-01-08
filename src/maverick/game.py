@@ -6,13 +6,10 @@ architecture. The game manages player actions, betting rounds, card dealing, and
 pot distribution.
 """
 
-from typing import Optional, Deque
+from typing import Deque
 from collections import deque
 import logging
 
-from pydantic import BaseModel, Field
-
-from .card import Card
 from .deck import Deck
 from .enums import (
     ActionType,
@@ -23,81 +20,10 @@ from .enums import (
 )
 from .hand import Hand
 from .holding import Holding
-from .player import Player
+from .protocol import PlayerLike
+from .state import GameState
 
-__all__ = ["GameState", "Game"]
-
-
-class GameState(BaseModel):
-    """
-    Represents the complete state of a Texas Hold'em game.
-
-    This class encapsulates all information about the current state of the game,
-    including players, community cards, pot, and betting information.
-    """
-
-    state_type: GameStateType = GameStateType.WAITING_FOR_PLAYERS
-    street: Street = Street.PRE_FLOP
-    players: list[Player] = Field(default_factory=list)
-    active_players: list[int] = Field(default_factory=list)  # Indices of active players
-    current_player_index: int = 0
-    dealer_index: int = 0
-
-    # Cards
-    deck: Optional[Deck] = None
-    community_cards: list[Card] = Field(default_factory=list)
-
-    # Betting
-    pot: int = 0
-    current_bet: int = 0
-    min_bet: int = 0
-    small_blind: int = Field(default=10, ge=1)
-    big_blind: int = Field(default=20, ge=1)
-
-    # Hand tracking
-    hand_number: int = 0
-    button_position: int = 0
-
-    class Config:
-        arbitrary_types_allowed = True
-
-    def get_active_players(self) -> list[Player]:
-        """Return list of players who haven't folded and have chips."""
-        return [
-            p for p in self.players if p.state == PlayerState.ACTIVE and p.stack > 0
-        ]
-
-    def get_players_in_hand(self) -> list[Player]:
-        """Return list of players still in the hand (not folded)."""
-        return [p for p in self.players if p.state != PlayerState.FOLDED]
-
-    def get_current_player(self) -> Optional[Player]:
-        """Return the player whose turn it is."""
-        if 0 <= self.current_player_index < len(self.players):
-            return self.players[self.current_player_index]
-        return None
-
-    def is_betting_round_complete(self) -> bool:
-        """Check if the current betting round is complete."""
-        active = self.get_active_players()
-
-        # If only one player left, betting is complete
-        if len(self.get_players_in_hand()) <= 1:
-            return True
-
-        # All players must have acted
-        if not all(p.acted_this_street for p in active):
-            return False
-
-        # All active players must have equal bets or be all-in
-        for player in active:
-            if (
-                player.state != PlayerState.ALL_IN
-                and player.current_bet != self.current_bet
-            ):
-                return False
-
-        return True
+__all__ = ["Game"]
 
 
 class Game:
@@ -143,14 +69,16 @@ class Game:
         self._event_queue: Deque[GameEventType] = deque()
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def _log(self, message: str, loglevel: int = logging.INFO) -> None:
+    def _log(
+        self, message: str, loglevel: int = logging.INFO, street_prefix: bool = True
+    ) -> None:
 
         # ANSI colors (set NO_COLOR=1 to disable)
         color_map = {
-            Street.PRE_FLOP: "\033[38;5;39m",  # blue
-            Street.FLOP: "\033[38;5;34m",  # green
-            Street.TURN: "\033[38;5;214m",  # orange
-            Street.RIVER: "\033[38;5;196m",  # red
+            Street.PRE_FLOP: "\033[38;5;39m",   # blue
+            Street.FLOP: "\033[38;5;34m",       # green
+            Street.TURN: "\033[38;5;214m",      # orange
+            Street.RIVER: "\033[38;5;196m",     # red
             Street.SHOWDOWN: "\033[38;5;201m",  # magenta
         }
         reset = "\033[0m"
@@ -158,12 +86,12 @@ class Game:
         street = self.state.street
         street_name = street.name
 
-        street_prefix = f"{color_map.get(street, '')}{street_name}{reset}"
+        street_prefix_msg = f"{color_map.get(street, '')}{street_name}{reset}"
 
-        msg = f"{street_prefix} | {message}"
+        msg = f"{street_prefix_msg} | {message}" if street_prefix else message
         self._logger.log(loglevel, msg)
 
-    def add_player(self, player: Player) -> None:
+    def add_player(self, player: PlayerLike) -> None:
         """
         Add a player to the game.
 
@@ -195,7 +123,9 @@ class Game:
 
         # Update game state
         self._handle_event(GameEventType.PLAYER_JOINED)
-        self._log(f"Player {player.name} joined the game.", logging.INFO)
+        self._log(
+            f"Player {player.name} joined the game.", logging.INFO, street_prefix=False
+        )
 
     def remove_player(self, player_id: str) -> None:
         """
@@ -222,7 +152,9 @@ class Game:
 
         # Update game state
         self._handle_event(GameEventType.PLAYER_LEFT)
-        self._log(f"Player {player.name} left the game.", logging.INFO)
+        self._log(
+            f"Player {player.name} left the game.", logging.INFO, street_prefix=False
+        )
 
     def start(self) -> None:
         """
@@ -230,7 +162,7 @@ class Game:
 
         Kicks off the game's event loop, transitioning through hands until the game ends.
         """
-        self._log("Game started.", logging.INFO)
+        self._log("Game started.\n", logging.INFO, street_prefix=False)
         self._initialize_game()
         self._event_queue.append(GameEventType.GAME_STARTED)
         self._drain_event_queue()  # starts the event processing loop
@@ -323,6 +255,8 @@ class Game:
             case GameEventType.HAND_ENDED:
                 self.state.players = [p for p in self.state.players if p.stack > 0]
 
+                self._log("Hand ended\n", logging.INFO, street_prefix=False)
+
                 # Check if we have enough players to continue
                 active_players = [p for p in self.state.players if p.stack > 0]
                 if len(self.state.players) < self.min_players:
@@ -344,6 +278,7 @@ class Game:
                         self._log(
                             "Reached maximum number of hands, ending game.",
                             logging.INFO,
+                            street_prefix=False,
                         )
                         self.state.state_type = GameStateType.GAME_OVER
                         self._event_queue.append(GameEventType.GAME_ENDED)
@@ -352,7 +287,7 @@ class Game:
                         self._event_queue.append(GameEventType.HAND_STARTED)
 
             case GameEventType.GAME_ENDED:
-                self._log("Game ended", logging.INFO)
+                self._log("Game ended", logging.INFO, street_prefix=False)
 
             case GameEventType.PLAYER_JOINED:
                 if self.state.state_type == GameStateType.WAITING_FOR_PLAYERS:
@@ -380,7 +315,11 @@ class Game:
         # Increment hand number
         self.state.hand_number += 1
 
-        self._log(f"Starting hand #{self.state.hand_number}", logging.INFO)
+        self._log(
+            "=" * 30 + f" Hand {self.state.hand_number} " + "=" * 30 + "\n",
+            logging.INFO,
+            street_prefix=False,
+        )
 
         if len(self.state.players) < self.min_players:
             raise ValueError("Not enough players to start hand")
@@ -400,6 +339,9 @@ class Game:
             if player.stack > 0:
                 player.state = PlayerState.ACTIVE
 
+        # Reset street
+        self.state.street = Street.PRE_FLOP
+
     def _take_action_from_current_player(self) -> None:
         current_player = self.state.get_current_player()
 
@@ -416,26 +358,22 @@ class Game:
             self.state, valid_actions, min_raise
         )
 
-        self._log(
-            f"Player {current_player.name} decided to {action.name} with amount {amount}",
-            logging.INFO,
-        )
-
         # Execute the action
         # (player_action automatically advances to next player and transitions states)
         try:
-            self._register_player_action(current_player.id, action, amount)
+            self._register_player_action(current_player, action, amount)
         except ValueError:
             # Fallback: fold
             self._log(
                 f"Player {current_player.name} action invalid, folding.",
                 logging.WARNING,
             )
-            self._register_player_action(current_player.id, ActionType.FOLD, 0)
+            self._register_player_action(current_player, ActionType.FOLD, 0)
 
     def _deal_hole_cards(self) -> None:
         """Deal hole cards and post blinds."""
-        self._log("Dealing hole cards", logging.INFO)
+        dealer = self.state.players[self.state.button_position]
+        self._log(f"Dealing hole cards. Dealer: {dealer.name}", logging.INFO)
         for player in self.state.players:
             if player.state == PlayerState.ACTIVE:
                 cards = self.state.deck.deal(2)
@@ -455,7 +393,7 @@ class Game:
         self.state.pot += sb_amount
 
         self._log(
-            f"Posting small blind of {sb_amount} by player {sb_player.name}",
+            f"Posting small blind of {sb_amount} by player {sb_player.name}. Remaining stack: {sb_player.stack}",
             logging.INFO,
         )
 
@@ -469,7 +407,8 @@ class Game:
         self.state.pot += bb_amount
 
         self._log(
-            f"Posting big blind of {bb_amount} by player {bb_player.name}", logging.INFO
+            f"Posting big blind of {bb_amount} by player {bb_player.name}. Remaining stack: {bb_player.stack}",
+            logging.INFO,
         )
 
         self.state.current_bet = self.state.big_blind
@@ -481,13 +420,13 @@ class Game:
         )
 
     def _register_player_action(
-        self, player_id: str, action: ActionType, amount: int = 0
+        self, player: PlayerLike, action: ActionType, amount: int = 0
     ) -> None:
         """
         Process a player action.
 
         Args:
-            player_id: ID of the player taking action
+            player: The player taking action
             action: Type of action (FOLD, CHECK, CALL, BET, RAISE, ALL_IN)
             amount: Amount for BET, RAISE actions
 
@@ -495,7 +434,7 @@ class Game:
             ValueError: If action is invalid
         """
         current_player = self.state.get_current_player()
-        if not current_player or current_player.id != player_id:
+        if not current_player or current_player.id != player.id:
             raise ValueError("Not this player's turn")
 
         if current_player.state != PlayerState.ACTIVE:
@@ -508,9 +447,12 @@ class Game:
 
         if action == ActionType.FOLD:
             current_player.state = PlayerState.FOLDED
+            self._log(f"Player {current_player.name} folds.", logging.INFO)
         elif action == ActionType.CHECK:
             if current_player.current_bet != self.state.current_bet:
                 raise ValueError("Cannot check when there is a bet to call")
+
+            self._log(f"Player {current_player.name} checks.", logging.INFO)
         elif action == ActionType.CALL:
             call_amount = self.state.current_bet - current_player.current_bet
             actual_amount = min(call_amount, current_player.stack)
@@ -518,13 +460,22 @@ class Game:
             current_player.total_contributed += actual_amount
             current_player.stack -= actual_amount
             self.state.pot += actual_amount
+
+            # Check if player is all-in
             if current_player.stack == 0:
                 current_player.state = PlayerState.ALL_IN
+
+            self._log(
+                f"Player {current_player.name} calls with amount {actual_amount}. Remaining stack: {current_player.stack}.",
+                logging.INFO,
+            )
         elif action == ActionType.BET:
             if self.state.current_bet > 0:
                 raise ValueError("Cannot bet when there is already a bet")
+
             if amount < self.state.min_bet:
                 raise ValueError(f"Bet must be at least {self.state.min_bet}")
+
             actual_amount = min(amount, current_player.stack)
             current_player.current_bet = actual_amount
             current_player.total_contributed += actual_amount
@@ -533,14 +484,21 @@ class Game:
             self.state.current_bet = actual_amount
             if current_player.stack == 0:
                 current_player.state = PlayerState.ALL_IN
+
             # Reset acted flags for other players
             for p in self.state.players:
-                if p.id != player_id and p.state == PlayerState.ACTIVE:
+                if p.id != player.id and p.state == PlayerState.ACTIVE:
                     p.acted_this_street = False
+
+            self._log(
+                f"Player {current_player.name} bets amount {actual_amount}. Remaining stack: {current_player.stack}.",
+                logging.INFO,
+            )
         elif action == ActionType.RAISE:
             min_raise = self.state.current_bet + self.state.min_bet
             if amount < min_raise:
                 raise ValueError(f"Raise must be at least {min_raise}")
+
             # Amount is the total bet amount (not just the raise size)
             call_amount = self.state.current_bet - current_player.current_bet
             total_to_add = amount - current_player.current_bet
@@ -550,12 +508,20 @@ class Game:
             current_player.stack -= actual_amount
             self.state.pot += actual_amount
             self.state.current_bet = current_player.current_bet
+
+            # Check if player is all-in
             if current_player.stack == 0:
                 current_player.state = PlayerState.ALL_IN
+
             # Reset acted flags for other players
             for p in self.state.players:
-                if p.id != player_id and p.state == PlayerState.ACTIVE:
+                if p.id != player.id and p.state == PlayerState.ACTIVE:
                     p.acted_this_street = False
+
+            self._log(
+                f"Player {current_player.name} raises to amount {current_player.current_bet}. Remaining stack: {current_player.stack}.",
+                logging.INFO,
+            )
         elif action == ActionType.ALL_IN:
             actual_amount = current_player.stack
             current_player.current_bet += actual_amount
@@ -563,16 +529,24 @@ class Game:
             current_player.stack = 0
             self.state.pot += actual_amount
             current_player.state = PlayerState.ALL_IN
+
             if current_player.current_bet > self.state.current_bet:
                 self.state.current_bet = current_player.current_bet
+
                 # Reset acted flags for other players
                 for p in self.state.players:
-                    if p.id != player_id and p.state == PlayerState.ACTIVE:
+                    if p.id != player.id and p.state == PlayerState.ACTIVE:
                         p.acted_this_street = False
 
-        current_player.acted_this_street = True
+            self._log(
+                f"Player {current_player.name} goes all-in with amount {actual_amount}.",
+                logging.INFO,
+            )
 
-    def _get_valid_actions(self, player: Player) -> list[ActionType]:
+        current_player.acted_this_street = True
+        self._log("Current pot: " + str(self.state.pot), logging.INFO)
+
+    def _get_valid_actions(self, player: PlayerLike) -> list[ActionType]:
         """Get list of valid actions for a player."""
         actions = [ActionType.FOLD]
 
@@ -679,11 +653,6 @@ class Game:
             # Only one player left, they win
             winner = players_in_hand[0]
             winner.stack += self.state.pot
-
-            self._log(
-                f"Player {winner.name} wins the pot of {self.state.pot} by default (all others folded).",
-                logging.INFO,
-            )
         else:
             # Multiple players - evaluate hands
             assert len(self.state.community_cards) == 5
@@ -692,13 +661,25 @@ class Game:
                 if player.holding:
                     # Find best 5-card hand
                     best_score = None
+                    best_hand = None
+                    best_hand_type = None
                     for hand in Hand.all_possible_hands(
                         player.holding.cards, self.state.community_cards
                     ):
-                        _, score = hand.score()
+                        (hand_type, score) = hand.score()
                         if (best_score is None) or (score > best_score):
                             best_score = score
+                            best_hand = hand
+                            best_hand_type = hand_type
                     player_scores.append((player, best_score))
+                    self._log(
+                        (
+                            f"Player {player.name} has hand {best_hand_type.name} with "
+                            f"cards {[card.utf8() for card in best_hand.private_cards + best_hand.community_cards]}"
+                            f" (score: {best_score:.6g})"
+                        ),
+                        logging.INFO,
+                    )
 
             # Find winner(s)
             player_scores.sort(key=lambda x: x[1], reverse=True)
@@ -717,7 +698,7 @@ class Game:
                 # First 'remainder' winners get 1 extra chip
                 amount = pot_share + (1 if i < remainder else 0)
                 winner.stack += amount
-
                 self._log(
                     f"Player {winner.name} wins {amount} from the pot.", logging.INFO
                 )
+        self._log("Showdown complete\n", logging.INFO)
