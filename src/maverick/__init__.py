@@ -13,7 +13,7 @@ from .enums import (
 from .player import Player
 from .hand import Hand
 from .holding import Holding
-from .scoring import score_hand
+from .utils.scoring import score_hand
 from .game import Game
 from .state import GameState
 from .protocol import PlayerLike

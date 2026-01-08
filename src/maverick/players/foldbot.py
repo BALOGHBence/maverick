@@ -9,10 +9,7 @@ class FoldBot(Player):
     """A passive bot that always folds when possible."""
 
     def decide_action(
-        self,
-        game_state: GameState,
-        valid_actions: list[ActionType],
-        min_raise: int
+        self, game_state: GameState, valid_actions: list[ActionType], min_raise: int
     ) -> tuple[ActionType, int]:
         """Always call or check if possible, otherwise fold."""
         if ActionType.FOLD in valid_actions:

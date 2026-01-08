@@ -1,7 +1,7 @@
 from typing import Tuple
 
-from .card import Card
-from .enums import HandType
+from ..card import Card
+from ..enums import HandType
 
 __all__ = ["score_hand"]
 
@@ -66,8 +66,8 @@ def _check_pair(numbers: list[str]) -> float:
 def score_hand(hand: list[Card]) -> Tuple[HandType, float]:
     """Classifies and scores a poker hand."""
 
-    assert len(hand) == 5, "Hand must contain exactly 5 cards."
-
+    assert len(hand) > 0, "At least one card is required to score a hand."
+    
     # We get the suit for each card in the hand
     suit_values = [card.suit.value for card in hand]
     rank_values = [card.rank.value for card in hand]
@@ -130,5 +130,6 @@ def score_hand(hand: list[Card]) -> Tuple[HandType, float]:
         handtype = HandType.HIGH_CARD
         n = sorted(rank_values, reverse=True)
         score = n[0] + n[1] / 100 + n[2] / 1000 + n[3] / 10000 + n[4] / 100000
+        #score = sum([n[0]] + [n[i]/(10**(i+1)) for i in range(1,len(n))])
 
     return handtype, score

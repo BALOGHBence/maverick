@@ -43,7 +43,7 @@ class GameState(BaseModel):
     # Hand tracking
     hand_number: int = 0
     button_position: int = 0
-    
+
     model_config = {
         "arbitrary_types_allowed": True,
     }

@@ -75,10 +75,10 @@ class Game:
 
         # ANSI colors (set NO_COLOR=1 to disable)
         color_map = {
-            Street.PRE_FLOP: "\033[38;5;39m",   # blue
-            Street.FLOP: "\033[38;5;34m",       # green
-            Street.TURN: "\033[38;5;214m",      # orange
-            Street.RIVER: "\033[38;5;196m",     # red
+            Street.PRE_FLOP: "\033[38;5;39m",  # blue
+            Street.FLOP: "\033[38;5;34m",  # green
+            Street.TURN: "\033[38;5;214m",  # orange
+            Street.RIVER: "\033[38;5;196m",  # red
             Street.SHOWDOWN: "\033[38;5;201m",  # magenta
         }
         reset = "\033[0m"
