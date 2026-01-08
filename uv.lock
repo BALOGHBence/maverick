@@ -525,7 +525,6 @@ dependencies = [
     { name = "numpy" },
     { name = "pandas" },
     { name = "pydantic" },
-    { name = "pypokerengine" },
 ]
 
 [package.dev-dependencies]
@@ -542,7 +541,6 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.4.0" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "pypokerengine", specifier = ">=1.0.1" },
 ]
 
 [package.metadata.requires-dev]
@@ -916,12 +914,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/b0/77/a5b8c569bf593b014
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/21/705964c7812476f378728bdf590ca4b771ec72385c533964653c68e86bdc/pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b", size = 1225217, upload-time = "2025-06-21T13:39:07.939Z" },
 ]
-
-[[package]]
-name = "pypokerengine"
-version = "1.0.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/47/ed/4518f3e9505a05a2c29d699a2ae612217e6ffcb27d91b5403061d6320056/PyPokerEngine-1.0.1.tar.gz", hash = "sha256:6ddb11d0341c7267c83d7e2254427fde92e2e66d3eb9f7228499f58169dbcb9c", size = 44974, upload-time = "2017-04-02T03:58:58.956Z" }
 
 [[package]]
 name = "pytest"
