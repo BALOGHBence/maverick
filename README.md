@@ -117,6 +117,18 @@ make html
 # View the documentation by opening docs/build/index.html in a browser
 ```
 
+#### Running Tests
+
+This project uses `pytest` as the test runner (tests are written using `unittest`).
+
+```bash
+# Install dev dependencies (includes pytest)
+uv sync --group dev
+
+# Run tests
+uv run pytest
+```
+
 ## Basic Git Commands
 
 Here are some essential Git commands for working with this repository:
