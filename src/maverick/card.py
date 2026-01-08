@@ -19,7 +19,7 @@ class Card(BaseModel):
         all_cards = [cls(suit=s, rank=r) for s in suits for r in ranks]
         selected = random.sample(all_cards, n)
         return selected if n > 1 else selected[0]
-    
+
     def utf8(self) -> str:
         """Return the UTF-8 representation of the card."""
         suit_symbols = {

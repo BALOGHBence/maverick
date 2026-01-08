@@ -147,10 +147,10 @@ class Game:
 
         # ANSI colors (set NO_COLOR=1 to disable)
         color_map = {
-            Street.PRE_FLOP: "\033[38;5;39m",   # blue
-            Street.FLOP: "\033[38;5;34m",       # green
-            Street.TURN: "\033[38;5;214m",      # orange
-            Street.RIVER: "\033[38;5;196m",     # red
+            Street.PRE_FLOP: "\033[38;5;39m",  # blue
+            Street.FLOP: "\033[38;5;34m",  # green
+            Street.TURN: "\033[38;5;214m",  # orange
+            Street.RIVER: "\033[38;5;196m",  # red
             Street.SHOWDOWN: "\033[38;5;201m",  # magenta
         }
         reset = "\033[0m"
@@ -326,7 +326,9 @@ class Game:
                 # Check if we have enough players to continue
                 active_players = [p for p in self.state.players if p.stack > 0]
                 if len(self.state.players) < self.min_players:
-                    self._log("Not enough players to continue, ending game.", logging.INFO)
+                    self._log(
+                        "Not enough players to continue, ending game.", logging.INFO
+                    )
                     self.state.state_type = GameStateType.GAME_OVER
                     self._event_queue.append(GameEventType.GAME_ENDED)
                 else:
@@ -340,7 +342,8 @@ class Game:
                     # Ready for next hand
                     if self.state.hand_number >= self.max_hands:
                         self._log(
-                            "Reached maximum number of hands, ending game.", logging.INFO
+                            "Reached maximum number of hands, ending game.",
+                            logging.INFO,
                         )
                         self.state.state_type = GameStateType.GAME_OVER
                         self._event_queue.append(GameEventType.GAME_ENDED)
@@ -643,21 +646,30 @@ class Game:
         self.state.deck.deal(1)  # Burn card
         flop_cards = self.state.deck.deal(3)
         self.state.community_cards.extend(flop_cards)
-        self._log(f"Dealt flop. Community cards: {[card.utf8() for card in self.state.community_cards]}", logging.INFO)
+        self._log(
+            f"Dealt flop. Community cards: {[card.utf8() for card in self.state.community_cards]}",
+            logging.INFO,
+        )
 
     def _deal_turn(self) -> None:
         """Deal the turn (4th community card)."""
         self.state.deck.deal(1)  # Burn card
         turn_card = self.state.deck.deal(1)[0]
         self.state.community_cards.append(turn_card)
-        self._log(f"Dealt turn. Community cards: {[card.utf8() for card in self.state.community_cards]}", logging.INFO)
+        self._log(
+            f"Dealt turn. Community cards: {[card.utf8() for card in self.state.community_cards]}",
+            logging.INFO,
+        )
 
     def _deal_river(self) -> None:
         """Deal the river (5th community card)."""
         self.state.deck.deal(1)  # Burn card
         river_card = self.state.deck.deal(1)[0]
         self.state.community_cards.append(river_card)
-        self._log(f"Dealt river. Community cards: {[card.utf8() for card in self.state.community_cards]}", logging.INFO)
+        self._log(
+            f"Dealt river. Community cards: {[card.utf8() for card in self.state.community_cards]}",
+            logging.INFO,
+        )
 
     def _handle_showdown(self) -> None:
         """Handle SHOWDOWN state - determine winner and award pot."""
