@@ -6,7 +6,10 @@ architecture. The game manages player actions, betting rounds, card dealing, and
 pot distribution.
 """
 
-from typing import Optional
+from typing import Optional, Deque
+from collections import deque
+import logging
+
 from pydantic import BaseModel, Field
 
 from .card import Card
@@ -17,36 +20,12 @@ from .enums import (
     GameStateType,
     PlayerState,
     Street,
-    PlayerPosition,
 )
 from .hand import Hand
 from .holding import Holding
 from .player import Player
 
-__all__ = [
-    "GameState",
-    "GameEvent",
-    "Game",
-]
-
-
-class GameEvent(BaseModel):
-    """
-    Represents an event that occurs during the game.
-
-    Events are used to trigger state transitions and notify observers
-    of significant occurrences in the game.
-    """
-
-    event_type: GameEventType
-    player_id: Optional[str] = None
-    action: Optional[ActionType] = None
-    amount: Optional[int] = None
-    cards: Optional[list[Card]] = None
-    data: dict = Field(default_factory=dict)
-
-    class Config:
-        arbitrary_types_allowed = True
+__all__ = ["GameState", "Game"]
 
 
 class GameState(BaseModel):
@@ -125,29 +104,28 @@ class Game:
     """
     Texas Hold'em Poker Game.
 
-    This class implements a complete Texas Hold'em poker game using a state
-    machine architecture. It manages game flow, player actions, betting rounds,
-    and pot distribution.
+    Implements a Texas Hold'em poker game using an event-driven state machine.
+    The game manages player actions, betting rounds, dealing, and pot distribution.
 
-    The game progresses through defined states:
-    1. WAITING_FOR_PLAYERS: Game is waiting for players to join
-    2. READY: Enough players to start
-    3. DEALING: Dealing hole cards to players
-    4. PRE_FLOP: First betting round (after hole cards)
-    5. FLOP: Second betting round (after 3 community cards)
-    6. TURN: Third betting round (after 4th community card)
-    7. RIVER: Fourth betting round (after 5th community card)
-    8. SHOWDOWN: Players reveal cards and winner is determined
-    9. HAND_COMPLETE: Hand is over, preparing for next hand
-    10. GAME_OVER: Game has ended
+    Parameters
+    ----------
+    small_blind : int, default=10
+        Amount of the small blind bet.
+    big_blind : int, default=20
+        Amount of the big blind bet.
+    min_players : int, default=2
+        Minimum number of players required to start.
+    max_players : int, default=9
+        Maximum number of players allowed at the table.
+    max_hands : int, default=1000
+        Maximum number of hands to play before stopping.
 
-    Example
-    -------
-    >>> game = Game(small_blind=10, big_blind=20)
+    Examples
+    --------
+    >>> game = Game(small_blind=10, big_blind=20, max_hands=40)
     >>> game.add_player(Player(name="Alice", stack=1000))
     >>> game.add_player(Player(name="Bob", stack=1000))
-    >>> game.start_game()
-    >>> game.start_hand()
+    >>> game.start()
     """
 
     def __init__(
@@ -158,36 +136,32 @@ class Game:
         max_players: int = 9,
         max_hands: int = 1000,
     ):
-        """
-        Initialize a new Texas Hold'em game.
-
-        Args:
-            small_blind: Amount of the small blind bet
-            big_blind: Amount of the big blind bet
-            min_players: Minimum number of players required to start
-            max_players: Maximum number of players allowed at the table
-        """
         self.min_players = min_players
         self.max_players = max_players
         self.max_hands = max_hands
         self.state = GameState(small_blind=small_blind, big_blind=big_blind)
-        self.event_history: list[GameEvent] = []
-        self._state_handlers = self._initialize_state_handlers()
+        self._event_queue: Deque[GameEventType] = deque()
+        self._logger = logging.getLogger(self.__class__.__name__)
 
-    def _initialize_state_handlers(self) -> dict[GameStateType, callable]:
-        """Initialize the state transition handlers."""
-        return {
-            GameStateType.WAITING_FOR_PLAYERS: self._handle_waiting_for_players,
-            GameStateType.READY: self._handle_ready,
-            GameStateType.DEALING: self._handle_dealing,
-            GameStateType.PRE_FLOP: self._handle_betting_round,
-            GameStateType.FLOP: self._handle_betting_round,
-            GameStateType.TURN: self._handle_betting_round,
-            GameStateType.RIVER: self._handle_betting_round,
-            GameStateType.SHOWDOWN: self._handle_showdown,
-            GameStateType.HAND_COMPLETE: self._handle_hand_complete,
-            GameStateType.GAME_OVER: self._handle_game_over,
+    def _log(self, message: str, loglevel: int = logging.INFO) -> None:
+
+        # ANSI colors (set NO_COLOR=1 to disable)
+        color_map = {
+            Street.PRE_FLOP: "\033[38;5;39m",   # blue
+            Street.FLOP: "\033[38;5;34m",       # green
+            Street.TURN: "\033[38;5;214m",      # orange
+            Street.RIVER: "\033[38;5;196m",     # red
+            Street.SHOWDOWN: "\033[38;5;201m",  # magenta
         }
+        reset = "\033[0m"
+
+        street = self.state.street
+        street_name = street.name
+
+        street_prefix = f"{color_map.get(street, '')}{street_name}{reset}"
+
+        msg = f"{street_prefix} | {message}"
+        self._logger.log(loglevel, msg)
 
     def add_player(self, player: Player) -> None:
         """
@@ -216,11 +190,12 @@ class Game:
         player.state = PlayerState.ACTIVE
         player.acted_this_street = False
 
+        # Add player to game
         self.state.players.append(player)
 
-        # Update game state if we have enough players
-        if len(self.state.players) >= self.min_players:
-            self._transition_to(GameStateType.READY)
+        # Update game state
+        self._handle_event(GameEventType.PLAYER_JOINED)
+        self._log(f"Player {player.name} joined the game.", logging.INFO)
 
     def remove_player(self, player_id: str) -> None:
         """
@@ -239,53 +214,173 @@ class Game:
         ]:
             raise ValueError("Cannot remove players while hand is in progress")
 
+        # The player to remove
+        player = [p for p in self.state.players if p.id == player_id]
+
+        # Update player list
         self.state.players = [p for p in self.state.players if p.id != player_id]
 
         # Update game state
-        if len(self.state.players) < self.min_players:
-            self._transition_to(GameStateType.WAITING_FOR_PLAYERS)
+        self._handle_event(GameEventType.PLAYER_LEFT)
+        self._log(f"Player {player.name} left the game.", logging.INFO)
 
-    def start_game(self) -> None:
+    def start(self) -> None:
         """
-        Start the game.
+        Starts the game.
 
-        Raises:
-            ValueError: If not enough players to start
+        Kicks off the game's event loop, transitioning through hands until the game ends.
         """
-        if self.state.state_type != GameStateType.READY:
-            raise ValueError("Game is not ready to start")
+        self._log("Game started.", logging.INFO)
+        self._initialize_game()
+        self._event_queue.append(GameEventType.GAME_STARTED)
+        self._drain_event_queue()  # starts the event processing loop
 
-        event = GameEvent(event_type=GameEventType.GAME_START)
-        self._emit_event(event)
-        self.start_hand()
+    def _handle_event(self, event: GameEventType) -> None:
+        match event:
+            case GameEventType.GAME_STARTED:
+                assert self.state.state_type == GameStateType.READY
+                self.state.state_type = GameStateType.STARTED
+                self._start_new_hand()
+                self._event_queue.append(GameEventType.HAND_STARTED)
 
-        hand_count = 0
+            case GameEventType.HAND_STARTED:
+                assert self.state.state_type in [
+                    GameStateType.STARTED,
+                    GameStateType.HAND_COMPLETE,
+                ]
+                self.state.state_type = GameStateType.DEALING
+                self._deal_hole_cards()
+                self._event_queue.append(GameEventType.DEAL_HOLE_CARDS)
 
-        while hand_count < self.max_hands:
-            # Play the current hand
-            self.play_hand()
+            case GameEventType.DEAL_HOLE_CARDS:
+                assert self.state.state_type == GameStateType.DEALING
+                self.state.state_type = GameStateType.PRE_FLOP
+                self._post_blinds()
+                self._event_queue.append(GameEventType.POST_BLINDS)
 
-            # Check if we have enough players to continue
-            active_players = [p for p in self.state.players if p.stack > 0]
-            if len(active_players) < 2:
-                # Not enough players to continue -> game over
-                break
+            case GameEventType.POST_BLINDS:
+                assert self.state.state_type == GameStateType.PRE_FLOP
+                self._take_action_from_current_player()
+                self._event_queue.append(GameEventType.PLAYER_ACTION)
 
-            # Start next hand
-            try:
-                self.start_hand()
-            except Exception:
-                break
-            finally:
-                hand_count += 1
+            case GameEventType.PLAYER_ACTION:
+                if self.state.is_betting_round_complete():
+                    self._complete_betting_round()
+                    self._event_queue.append(GameEventType.BETTING_ROUND_COMPLETED)
+                else:
+                    self._advance_to_next_player()
+                    self._take_action_from_current_player()
+                    self._event_queue.append(GameEventType.PLAYER_ACTION)
 
-    def start_hand(self) -> None:
+            case GameEventType.BETTING_ROUND_COMPLETED:
+                # Progress to next street
+                if len(self.state.get_players_in_hand()) == 1:
+                    # Only one player left -> go to showdown
+                    self.state.state_type = GameStateType.SHOWDOWN
+                    self.state.street = Street.SHOWDOWN
+                    self._handle_showdown()
+                    self._event_queue.append(GameEventType.SHOWDOWN)
+                else:
+                    if self.state.state_type == GameStateType.PRE_FLOP:
+                        self.state.state_type = GameStateType.FLOP
+                        self.state.street = Street.FLOP
+                        self._deal_flop()
+                        self._event_queue.append(GameEventType.DEAL_FLOP)
+                    elif self.state.state_type == GameStateType.FLOP:
+                        self.state.state_type = GameStateType.TURN
+                        self.state.street = Street.TURN
+                        self._deal_turn()
+                        self._event_queue.append(GameEventType.DEAL_TURN)
+                    elif self.state.state_type == GameStateType.TURN:
+                        self.state.state_type = GameStateType.RIVER
+                        self.state.street = Street.RIVER
+                        self._deal_river()
+                        self._event_queue.append(GameEventType.DEAL_RIVER)
+                    elif self.state.state_type == GameStateType.RIVER:
+                        self.state.state_type = GameStateType.SHOWDOWN
+                        self.state.street = Street.SHOWDOWN
+                        self._handle_showdown()
+                        self._event_queue.append(GameEventType.SHOWDOWN)
+
+                self._advance_to_first_active_player()
+
+            case GameEventType.DEAL_FLOP:
+                self._take_action_from_current_player()
+                self._event_queue.append(GameEventType.PLAYER_ACTION)
+
+            case GameEventType.DEAL_TURN:
+                self._take_action_from_current_player()
+                self._event_queue.append(GameEventType.PLAYER_ACTION)
+
+            case GameEventType.DEAL_RIVER:
+                self._take_action_from_current_player()
+                self._event_queue.append(GameEventType.PLAYER_ACTION)
+
+            case GameEventType.SHOWDOWN:
+                self.state.state_type = GameStateType.HAND_COMPLETE
+                self._event_queue.append(GameEventType.HAND_ENDED)
+
+            case GameEventType.HAND_ENDED:
+                self.state.players = [p for p in self.state.players if p.stack > 0]
+
+                # Check if we have enough players to continue
+                active_players = [p for p in self.state.players if p.stack > 0]
+                if len(self.state.players) < self.min_players:
+                    self._log("Not enough players to continue, ending game.", logging.INFO)
+                    self.state.state_type = GameStateType.GAME_OVER
+                    self._event_queue.append(GameEventType.GAME_ENDED)
+                else:
+                    # Move dealer/button position
+                    n_players = len(self.state.players)
+                    self.state.button_position = (
+                        self.state.button_position + 1
+                    ) % n_players
+                    self.state.dealer_index = self.state.button_position
+
+                    # Ready for next hand
+                    if self.state.hand_number >= self.max_hands:
+                        self._log(
+                            "Reached maximum number of hands, ending game.", logging.INFO
+                        )
+                        self.state.state_type = GameStateType.GAME_OVER
+                        self._event_queue.append(GameEventType.GAME_ENDED)
+                    else:
+                        self._start_new_hand()
+                        self._event_queue.append(GameEventType.HAND_STARTED)
+
+            case GameEventType.GAME_ENDED:
+                self._log("Game ended", logging.INFO)
+
+            case GameEventType.PLAYER_JOINED:
+                if self.state.state_type == GameStateType.WAITING_FOR_PLAYERS:
+                    if len(self.state.players) >= self.min_players:
+                        self.state.state_type = GameStateType.READY
+
+            case GameEventType.PLAYER_LEFT:
+                if len(self.state.players) < self.min_players:
+                    self.state.state_type = GameStateType.WAITING_FOR_PLAYERS
+
+            case _:
+                raise ValueError(f"Unknown event: {event}")
+
+    def _drain_event_queue(self) -> None:
+        """Process all queued events."""
+        while self._event_queue:
+            event = self._event_queue.popleft()
+            self._handle_event(event)
+
+    def _initialize_game(self) -> None:
+        self.state.hand_number = 0
+
+    def _start_new_hand(self) -> None:
         """Start a new hand."""
-        if len(self.state.players) < self.min_players:
-            raise ValueError("Not enough players to start hand")
-
         # Increment hand number
         self.state.hand_number += 1
+
+        self._log(f"Starting hand #{self.state.hand_number}", logging.INFO)
+
+        if len(self.state.players) < self.min_players:
+            raise ValueError("Not enough players to start hand")
 
         # Reset deck
         self.state.deck = Deck.standard_deck(shuffle=True)
@@ -302,73 +397,46 @@ class Game:
             if player.stack > 0:
                 player.state = PlayerState.ACTIVE
 
-        event = GameEvent(event_type=GameEventType.HAND_START)
-        self._emit_event(event)
+    def _take_action_from_current_player(self) -> None:
+        current_player = self.state.get_current_player()
 
-        # Transition to dealing state
-        self._transition_to(GameStateType.DEALING)
+        # Skip if no current player or player cannot act
+        if not current_player or current_player.state != PlayerState.ACTIVE:
+            return
 
-    def play_hand(self) -> None:
-        while self.state.state_type not in [
-            GameStateType.SHOWDOWN,
-            GameStateType.HAND_COMPLETE,
-            GameStateType.READY,
-        ]:
-            current_player = self.state.get_current_player()
+        # Get valid actions and min raise
+        valid_actions = self._get_valid_actions(current_player)
+        min_raise = self.state.current_bet + self.state.min_bet
 
-            # Skip if no current player or player cannot act
-            if not current_player or current_player.state != PlayerState.ACTIVE:
-                self._advance_to_next_player()
-                continue
+        # Ask player to decide
+        action, amount = current_player.decide_action(
+            self.state, valid_actions, min_raise
+        )
 
-            # Get valid actions and min raise
-            valid_actions = self._get_valid_actions(current_player)
-            min_raise = self.state.current_bet + self.state.min_bet
+        self._log(
+            f"Player {current_player.name} decided to {action.name} with amount {amount}",
+            logging.INFO,
+        )
 
-            # Ask player to decide
-            action, amount = current_player.decide_action(
-                self.state, valid_actions, min_raise
+        # Execute the action
+        # (player_action automatically advances to next player and transitions states)
+        try:
+            self._register_player_action(current_player.id, action, amount)
+        except ValueError:
+            # Fallback: fold
+            self._log(
+                f"Player {current_player.name} action invalid, folding.",
+                logging.WARNING,
             )
+            self._register_player_action(current_player.id, ActionType.FOLD, 0)
 
-            # Execute the action
-            # (player_action automatically advances to next player and transitions states)
-            try:
-                self.player_action(current_player.id, action, amount)
-            except ValueError as e:
-                # Fallback: fold
-                self.player_action(current_player.id, ActionType.FOLD, 0)
-
-    def _handle_waiting_for_players(self) -> None:
-        """Handle WAITING_FOR_PLAYERS state."""
-        # Wait for players to join
-        pass
-
-    def _handle_ready(self) -> None:
-        """Handle READY state."""
-        # Game is ready but not started yet
-        pass
-
-    def _handle_dealing(self) -> None:
-        """Handle DEALING state - deal hole cards and post blinds."""
-        # Deal hole cards to each player
+    def _deal_hole_cards(self) -> None:
+        """Deal hole cards and post blinds."""
+        self._log("Dealing hole cards", logging.INFO)
         for player in self.state.players:
             if player.state == PlayerState.ACTIVE:
                 cards = self.state.deck.deal(2)
                 player.holding = Holding(cards=cards)
-
-        event = GameEvent(event_type=GameEventType.DEAL_HOLE_CARDS)
-        self._emit_event(event)
-
-        # Post blinds
-        self._post_blinds()
-
-        # Set first player to act (left of big blind)
-        self.state.current_player_index = (self.state.button_position + 3) % len(
-            self.state.players
-        )
-
-        # Transition to pre-flop state
-        self._transition_to(GameStateType.PRE_FLOP)
 
     def _post_blinds(self) -> None:
         """Post small and big blinds."""
@@ -383,6 +451,11 @@ class Game:
         sb_player.stack -= sb_amount
         self.state.pot += sb_amount
 
+        self._log(
+            f"Posting small blind of {sb_amount} by player {sb_player.name}",
+            logging.INFO,
+        )
+
         # Big blind (left of small blind)
         bb_index = (self.state.button_position + 2) % num_players
         bb_player = self.state.players[bb_index]
@@ -392,19 +465,19 @@ class Game:
         bb_player.stack -= bb_amount
         self.state.pot += bb_amount
 
+        self._log(
+            f"Posting big blind of {bb_amount} by player {bb_player.name}", logging.INFO
+        )
+
         self.state.current_bet = self.state.big_blind
         self.state.min_bet = self.state.big_blind
 
-        event = GameEvent(event_type=GameEventType.POST_BLINDS)
-        self._emit_event(event)
+        # Set next player to act (left of big blind)
+        self.state.current_player_index = (self.state.button_position + 3) % len(
+            self.state.players
+        )
 
-    def _handle_betting_round(self) -> None:
-        """Handle betting round states (PRE_FLOP, FLOP, TURN, RIVER)."""
-        # This is called when entering a betting round state
-        # The actual betting happens through player_action() calls
-        pass
-
-    def player_action(
+    def _register_player_action(
         self, player_id: str, action: ActionType, amount: int = 0
     ) -> None:
         """
@@ -496,17 +569,6 @@ class Game:
 
         current_player.acted_this_street = True
 
-        event = GameEvent(
-            event_type=GameEventType.PLAYER_ACTION,
-            player_id=player_id,
-            action=action,
-            amount=amount,
-        )
-        self._emit_event(event)
-
-        # Move to next player
-        self._advance_to_next_player()
-
     def _get_valid_actions(self, player: Player) -> list[ActionType]:
         """Get list of valid actions for a player."""
         actions = [ActionType.FOLD]
@@ -552,52 +614,22 @@ class Game:
         # If we reach here, no players left to act
         self.state.current_player_index = start_index
 
-        # If we've cycled through all players, check betting round completion
-        if self.state.is_betting_round_complete():
-            self._complete_betting_round()
-
     def _complete_betting_round(self) -> None:
-        """Complete the current betting round and transition to next state."""
-        event = GameEvent(event_type=GameEventType.BETTING_ROUND_COMPLETE)
-        self._emit_event(event)
-
+        """Complete the current betting round."""
         # Reset betting round state
         for player in self.state.players:
             player.current_bet = 0
             player.acted_this_street = False
         self.state.current_bet = 0
+        self._log("Betting round complete\n", logging.INFO)
 
-        # Check if we should go to showdown (only one player left)
-        if len(self.state.get_players_in_hand()) == 1:
-            self._transition_to(GameStateType.SHOWDOWN)
-            return
-
-        # Progress to next street
-        if self.state.state_type == GameStateType.PRE_FLOP:
-            self._deal_flop()
-            self.state.street = Street.FLOP
-            self._transition_to(GameStateType.FLOP)
-        elif self.state.state_type == GameStateType.FLOP:
-            self._deal_turn()
-            self.state.street = Street.TURN
-            self._transition_to(GameStateType.TURN)
-        elif self.state.state_type == GameStateType.TURN:
-            self._deal_river()
-            self.state.street = Street.RIVER
-            self._transition_to(GameStateType.RIVER)
-        elif self.state.state_type == GameStateType.RIVER:
-            self.state.street = Street.SHOWDOWN
-            self._transition_to(GameStateType.SHOWDOWN)
-
+    def _advance_to_first_active_player(self) -> None:
+        """Move to the first active player from current position."""
         # Set first player to act (left of button)
         self.state.current_player_index = (self.state.button_position + 1) % len(
             self.state.players
         )
-        # Find first active player
-        self._advance_to_first_active_player()
 
-    def _advance_to_first_active_player(self) -> None:
-        """Move to the first active player from current position."""
         for _ in range(len(self.state.players)):
             player = self.state.players[self.state.current_player_index]
             if player.state == PlayerState.ACTIVE:
@@ -611,27 +643,21 @@ class Game:
         self.state.deck.deal(1)  # Burn card
         flop_cards = self.state.deck.deal(3)
         self.state.community_cards.extend(flop_cards)
-
-        event = GameEvent(event_type=GameEventType.DEAL_FLOP, cards=flop_cards)
-        self._emit_event(event)
+        self._log(f"Dealt flop. Community cards: {[card.utf8() for card in self.state.community_cards]}", logging.INFO)
 
     def _deal_turn(self) -> None:
         """Deal the turn (4th community card)."""
         self.state.deck.deal(1)  # Burn card
         turn_card = self.state.deck.deal(1)[0]
         self.state.community_cards.append(turn_card)
-
-        event = GameEvent(event_type=GameEventType.DEAL_TURN, cards=[turn_card])
-        self._emit_event(event)
+        self._log(f"Dealt turn. Community cards: {[card.utf8() for card in self.state.community_cards]}", logging.INFO)
 
     def _deal_river(self) -> None:
         """Deal the river (5th community card)."""
         self.state.deck.deal(1)  # Burn card
         river_card = self.state.deck.deal(1)[0]
         self.state.community_cards.append(river_card)
-
-        event = GameEvent(event_type=GameEventType.DEAL_RIVER, cards=[river_card])
-        self._emit_event(event)
+        self._log(f"Dealt river. Community cards: {[card.utf8() for card in self.state.community_cards]}", logging.INFO)
 
     def _handle_showdown(self) -> None:
         """Handle SHOWDOWN state - determine winner and award pot."""
@@ -641,30 +667,31 @@ class Game:
             # Only one player left, they win
             winner = players_in_hand[0]
             winner.stack += self.state.pot
-            event = GameEvent(
-                event_type=GameEventType.AWARD_POT,
-                player_id=winner.id,
-                amount=self.state.pot,
+
+            self._log(
+                f"Player {winner.name} wins the pot of {self.state.pot} by default (all others folded).",
+                logging.INFO,
             )
-            self._emit_event(event)
         else:
             # Multiple players - evaluate hands
+            assert len(self.state.community_cards) == 5
             player_scores = []
             for player in players_in_hand:
                 if player.holding:
                     # Find best 5-card hand
-                    all_cards = player.holding.cards + self.state.community_cards
                     best_score = None
-                    for hand in Hand.all_possible_hands(all_cards):
+                    for hand in Hand.all_possible_hands(
+                        player.holding.cards, self.state.community_cards
+                    ):
                         _, score = hand.score()
-                        if best_score is None or score > best_score:
+                        if (best_score is None) or (score > best_score):
                             best_score = score
                     player_scores.append((player, best_score))
 
             # Find winner(s)
             player_scores.sort(key=lambda x: x[1], reverse=True)
-            best_score = player_scores[0][1]
-            winners = [p for p, s in player_scores if s == best_score]
+            highest_score = player_scores[0][1]
+            winners = [p for p, s in player_scores if s == highest_score]
 
             # Sort winners by seat position (closest to button gets remainder chips)
             winners_sorted = sorted(
@@ -678,95 +705,7 @@ class Game:
                 # First 'remainder' winners get 1 extra chip
                 amount = pot_share + (1 if i < remainder else 0)
                 winner.stack += amount
-                event = GameEvent(
-                    event_type=GameEventType.AWARD_POT,
-                    player_id=winner.id,
-                    amount=amount,
+
+                self._log(
+                    f"Player {winner.name} wins {amount} from the pot.", logging.INFO
                 )
-                self._emit_event(event)
-
-        event = GameEvent(event_type=GameEventType.SHOWDOWN)
-        self._emit_event(event)
-
-        # Transition to hand complete
-        self._transition_to(GameStateType.HAND_COMPLETE)
-
-    def _handle_hand_complete(self) -> None:
-        """Handle HAND_COMPLETE state - prepare for next hand or end game."""
-        # Remove players with no chips
-        self.state.players = [p for p in self.state.players if p.stack > 0]
-
-        if len(self.state.players) < self.min_players:
-            event = GameEvent(event_type=GameEventType.GAME_END)
-            self._emit_event(event)
-            self._transition_to(GameStateType.GAME_OVER)
-        else:
-            # Move button
-            for p in self.state.players:
-                p.position = None  # Reset positions
-            n_players = len(self.state.players)
-            self.state.button_position = (self.state.button_position + 1) % n_players
-            self.state.dealer_index = self.state.button_position
-            self.state.players[self.state.dealer_index].position = PlayerPosition.BUTTON
-
-            # Ready for next hand
-            self._transition_to(GameStateType.READY)
-
-    def _handle_game_over(self) -> None:
-        """Handle GAME_OVER state."""
-        # Game is over
-        pass
-
-    def _transition_to(self, new_state: GameStateType) -> None:
-        """
-        Transition to a new game state.
-
-        Args:
-            new_state: The state to transition to
-        """
-        self.state.state_type = new_state
-        if new_state == GameStateType.PRE_FLOP:
-            self.state.street = Street.PRE_FLOP
-
-        # Call the appropriate state handler
-        handler = self._state_handlers.get(new_state)
-        if handler:
-            handler()
-
-    def _emit_event(self, event: GameEvent) -> None:
-        """
-        Emit a game event.
-
-        Args:
-            event: The event to emit
-        """
-        self.event_history.append(event)
-
-    def get_game_info(self) -> dict:
-        """
-        Get current game information.
-
-        Returns:
-            Dictionary containing current game state information
-        """
-        return {
-            "state": self.state.state_type.name,
-            "street": self.state.street.name if self.state.street else None,
-            "hand_number": self.state.hand_number,
-            "pot": self.state.pot,
-            "current_bet": self.state.current_bet,
-            "community_cards": self.state.community_cards,
-            "dealer_index": self.state.dealer_index,
-            "button_position": self.state.button_position,
-            "players": [
-                {
-                    "id": p.id,
-                    "name": p.name,
-                    "stack": p.stack,
-                    "state": p.state.name if p.state else None,
-                    "position": p.position.name if p.position else None,
-                    "current_bet": p.current_bet,
-                }
-                for p in self.state.players
-            ],
-        }

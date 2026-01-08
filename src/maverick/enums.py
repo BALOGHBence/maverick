@@ -158,44 +158,6 @@ class HandType(Enum):
     ROYAL_FLUSH = auto()
 
 
-class PlayerPosition(Enum):
-    """
-    Player position enumeration for Texas Hold'em.
-
-    Positions determine the order of action and strategic advantage during a hand.
-    Action generally proceeds clockwise, with players acting earlier having less
-    information and players acting later having more information.
-
-    Attributes
-    ----------
-    SMALL_BLIND : str
-        The player immediately to the left of the button. Posts the small blind
-        (a forced bet) before cards are dealt and acts early on all postflop streets.
-    BIG_BLIND : str
-        The player to the left of the small blind. Posts the big blind (a forced bet)
-        before cards are dealt and acts early postflop, but last preflop.
-    UNDER_THE_GUN : str
-        The first player to act preflop after the blinds. Acts earliest among
-        non-blind positions and therefore plays under the most informational disadvantage.
-    MIDDLE_POSITION : str
-        Any position between under-the-gun and the cutoff. Acts after early positions
-        but before late positions, with moderate informational advantage.
-    CUT_OFF : str
-        The player immediately to the right of the button. A late position with
-        significant informational advantage and wide opening opportunities.
-    BUTTON : str
-        The dealer position, marked by the dealer button. Acts last on all postflop
-        streets and has the maximum informational advantage.
-    """
-
-    SMALL_BLIND = auto()
-    BIG_BLIND = auto()
-    UNDER_THE_GUN = auto()
-    MIDDLE_POSITION = auto()
-    CUT_OFF = auto()
-    BUTTON = auto()
-
-
 class PlayerState(Enum):
     """
     Player state enumeration.
@@ -231,6 +193,8 @@ class GameStateType(Enum):
         Game is waiting for enough players to join.
     READY : str
         Enough players have joined; game is ready to start.
+    STARTED : str
+        Game has started; hands will begin dealing.
     DEALING : str
         Dealing hole cards to players and posting blinds.
     PRE_FLOP : str
@@ -251,6 +215,7 @@ class GameStateType(Enum):
 
     WAITING_FOR_PLAYERS = auto()
     READY = auto()
+    STARTED = auto()
     DEALING = auto()
     PRE_FLOP = auto()
     FLOP = auto()
@@ -329,10 +294,10 @@ class GameEventType(Enum):
     """
 
     # Game lifecycle events
-    GAME_START = auto()
-    HAND_START = auto()
-    HAND_END = auto()
-    GAME_END = auto()
+    GAME_STARTED = auto()
+    HAND_STARTED = auto()
+    HAND_ENDED = auto()
+    GAME_ENDED = auto()
 
     # Dealing events
     DEAL_HOLE_CARDS = auto()
@@ -342,11 +307,14 @@ class GameEventType(Enum):
 
     # Player action events
     PLAYER_ACTION = auto()
-    BETTING_ROUND_COMPLETE = auto()
+    BETTING_ROUND_COMPLETED = auto()
 
     # Blind events
     POST_BLINDS = auto()
 
     # Showdown events
     SHOWDOWN = auto()
-    AWARD_POT = auto()
+
+    # Table events
+    PLAYER_JOINED = auto()
+    PLAYER_LEFT = auto()

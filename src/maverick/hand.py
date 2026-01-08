@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Iterator
 from itertools import combinations
 
 from pydantic import BaseModel
@@ -24,8 +24,9 @@ class Hand(BaseModel):
         return score_hand(all_cards)
 
     @classmethod
-    def all_possible_hands(cls, cards: list[Card]) -> iter:
-        """Generate all hands."""
-        for combination in combinations(cards, 5):
-            comb_list = list(combination)
-            yield cls(private_cards=comb_list[:2], community_cards=comb_list[2:])
+    def all_possible_hands(
+        cls, private_cards: list[Card], community_cards: list[Card]
+    ) -> Iterator["Hand"]:
+        """Generate all possible hands."""
+        for combination in combinations(community_cards, 3):
+            yield cls(private_cards=private_cards, community_cards=list(combination))
