@@ -95,11 +95,15 @@ class Game:
         """
         Add a player to the game.
 
-        Args:
-            player: Player to add to the game
+        Parameters
+        ----------
+        player : PlayerLike
+            Player to add to the game.
 
-        Raises:
-            ValueError: If table is full or game is in progress
+        Raises
+        ------
+        ValueError
+            If table is full or game is in progress.
         """
         if len(self.state.players) >= self.max_players:
             raise ValueError("Table is full")
@@ -131,11 +135,15 @@ class Game:
         """
         Remove a player from the game.
 
-        Args:
-            player_id: ID of the player to remove
+        Parameters
+        ----------
+        player_id : str
+            ID of the player to remove.
 
-        Raises:
-            ValueError: If player not found or game is in progress
+        Raises
+        ------
+        ValueError
+            If player not found or game is in progress.
         """
         if self.state.state_type not in [
             GameStateType.WAITING_FOR_PLAYERS,
@@ -436,13 +444,19 @@ class Game:
         """
         Process a player action.
 
-        Args:
-            player: The player taking action
-            action: Type of action (FOLD, CHECK, CALL, BET, RAISE, ALL_IN)
-            amount: Amount for BET, RAISE actions
+        Parameters
+        ----------
+        player : PlayerLike
+            The player taking action.
+        action : ActionType
+            Type of action (FOLD, CHECK, CALL, BET, RAISE, ALL_IN).
+        amount : int, default=0
+            Amount for BET, RAISE actions.
 
-        Raises:
-            ValueError: If action is invalid
+        Raises
+        ------
+        ValueError
+            If action is invalid.
         """
         current_player = self.state.get_current_player()
         if not current_player or current_player.id != player.id:
