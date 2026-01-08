@@ -8,6 +8,18 @@ __all__ = ["estimate_holding_strength"]
 def estimate_holding_strength(
     holding: list[Card], n_simulations: int = 1000, n_players: int = 8
 ) -> float:
+    """
+    Estimate the holding strength as the probability of winning against n_players - 1 opponents.
+    
+    Parameters
+    ----------
+    holding : list[Card]
+        The player's holding cards.
+    n_simulations : int, optional
+        The number of Monte Carlo simulations to run (default is 1000).
+    n_players : int, optional
+        The total number of players at the table including the player (default is 8).
+    """
     n_opponents = n_players - 1
     n_holding_cards = len(holding)
     n_community_cards = 5 - n_holding_cards

@@ -144,8 +144,10 @@ class Game:
         ]:
             raise ValueError("Cannot remove players while hand is in progress")
 
-        # The player to remove
-        player = [p for p in self.state.players if p.id == player_id]
+        # Find the player to remove
+        player = next((p for p in self.state.players if p.id == player_id), None)
+        if not player:
+            raise ValueError(f"Player with id {player_id} not found")
 
         # Update player list
         self.state.players = [p for p in self.state.players if p.id != player_id]
@@ -234,7 +236,8 @@ class Game:
                         self._handle_showdown()
                         self._event_queue.append(GameEventType.SHOWDOWN)
 
-                self._advance_to_first_active_player()
+                    # Only advance if not going to showdown
+                    self._advance_to_first_active_player()
 
             case GameEventType.DEAL_FLOP:
                 self._take_action_from_current_player()
@@ -253,12 +256,12 @@ class Game:
                 self._event_queue.append(GameEventType.HAND_ENDED)
 
             case GameEventType.HAND_ENDED:
-                self.state.players = [p for p in self.state.players if p.stack > 0]
-
                 self._log("Hand ended\n", logging.INFO, street_prefix=False)
 
-                # Check if we have enough players to continue
-                active_players = [p for p in self.state.players if p.stack > 0]
+                # Remove broke players before rotating button
+                self.state.players = [p for p in self.state.players if p.stack > 0]
+
+                # Check if we have enough players to continue (after removing broke players)
                 if len(self.state.players) < self.min_players:
                     self._log(
                         "Not enough players to continue, ending game.", logging.INFO
@@ -391,6 +394,8 @@ class Game:
         sb_player.total_contributed = sb_amount
         sb_player.stack -= sb_amount
         self.state.pot += sb_amount
+        if sb_player.stack == 0:
+            sb_player.state = PlayerState.ALL_IN
 
         self._log(
             f"Posting small blind of {sb_amount} by player {sb_player.name}. Remaining stack: {sb_player.stack}",
@@ -405,6 +410,8 @@ class Game:
         bb_player.total_contributed = bb_amount
         bb_player.stack -= bb_amount
         self.state.pot += bb_amount
+        if bb_player.stack == 0:
+            bb_player.state = PlayerState.ALL_IN
 
         self._log(
             f"Posting big blind of {bb_amount} by player {bb_player.name}. Remaining stack: {bb_player.stack}",
@@ -414,10 +421,14 @@ class Game:
         self.state.current_bet = self.state.big_blind
         self.state.min_bet = self.state.big_blind
 
-        # Set next player to act (left of big blind)
-        self.state.current_player_index = (self.state.button_position + 3) % len(
-            self.state.players
-        )
+        # Set next player to act: heads-up is special (button acts first preflop)
+        if num_players == 2:
+            self.state.current_player_index = self.state.button_position
+        else:
+            # Multi-way: left of big blind
+            self.state.current_player_index = (
+                self.state.button_position + 3
+            ) % num_players
 
     def _register_player_action(
         self, player: PlayerLike, action: ActionType, amount: int = 0
@@ -499,9 +510,11 @@ class Game:
             if amount < min_raise:
                 raise ValueError(f"Raise must be at least {min_raise}")
 
-            # Amount is the total bet amount (not just the raise size)
-            call_amount = self.state.current_bet - current_player.current_bet
+            # Amount is the new total bet (e.g., raise to 100)
+            # Calculate how much to add to player's current bet
             total_to_add = amount - current_player.current_bet
+
+            # Cap at stack size (player goes all-in if they don't have enough)
             actual_amount = min(total_to_add, current_player.stack)
             current_player.current_bet += actual_amount
             current_player.total_contributed += actual_amount
@@ -659,13 +672,12 @@ class Game:
             player_scores = []
             for player in players_in_hand:
                 if player.holding:
-                    # Find best 5-card hand
+                    # Find best 5-card hand from 7 cards (2 hole + 5 community)
+                    all_cards = player.holding.cards + self.state.community_cards
                     best_score = None
                     best_hand = None
                     best_hand_type = None
-                    for hand in Hand.all_possible_hands(
-                        player.holding.cards, self.state.community_cards
-                    ):
+                    for hand in Hand.all_possible_hands(all_cards):
                         (hand_type, score) = hand.score()
                         if (best_score is None) or (score > best_score):
                             best_score = score

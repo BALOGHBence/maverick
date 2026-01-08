@@ -78,10 +78,10 @@ def _check_pair(numbers: list[int]) -> float:
 def score_hand(hand: list[Card]) -> Tuple[HandType, float]:
     """
     Classifies and scores a poker hand.
-    
+
     Works with any number of cards (not just 5).
     Returns (HandType, float_score) where higher scores = stronger hands.
-    
+
     Hand ranking (base scores):
     - High Card: 100+
     - Pair: 200+
@@ -112,14 +112,14 @@ def score_hand(hand: list[Card]) -> Tuple[HandType, float]:
     unique_ranks = sorted(set(rank_values))
     is_straight = False
     straight_high_card = 0
-    
+
     if len(unique_ranks) >= 5:
         # Check if any 5 consecutive ranks exist
         for i in range(len(unique_ranks) - 4):
             if unique_ranks[i + 4] - unique_ranks[i] == 4:
                 is_straight = True
                 straight_high_card = unique_ranks[i + 4]
-        
+
         # Special case: A-2-3-4-5 (wheel) - counts as 5-high, not ace-high
         if set([14, 2, 3, 4, 5]).issubset(set(unique_ranks)):
             is_straight = True
@@ -130,7 +130,11 @@ def score_hand(hand: list[Card]) -> Tuple[HandType, float]:
     score = 0.0
 
     # Royal Flush: A-K-Q-J-10 all same suit
-    if is_flush and is_straight and set([14, 13, 12, 11, 10]).issubset(set(rank_values)):
+    if (
+        is_flush
+        and is_straight
+        and set([14, 13, 12, 11, 10]).issubset(set(rank_values))
+    ):
         handtype = HandType.ROYAL_FLUSH
         score = 1000.0
 

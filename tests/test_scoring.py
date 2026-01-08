@@ -182,7 +182,9 @@ class TestScoringRankings(unittest.TestCase):
         self.assertEqual(fh_type, HandType.FULL_HOUSE)
         self.assertEqual(flush_type, HandType.FLUSH)
         self.assertGreater(
-            fh_score, flush_score, f"Full house ({fh_score}) should beat flush ({flush_score})"
+            fh_score,
+            flush_score,
+            f"Full house ({fh_score}) should beat flush ({flush_score})",
         )
 
 
@@ -518,7 +520,7 @@ class TestStraightFlushAndRoyalFlush(unittest.TestCase):
         ]
         royal_type, royal_score = score_hand(royal)
         sf_type, sf_score = score_hand(straight_flush)
-        
+
         self.assertEqual(royal_type, HandType.ROYAL_FLUSH)
         self.assertEqual(sf_type, HandType.STRAIGHT_FLUSH)
         self.assertGreater(royal_score, sf_score)
