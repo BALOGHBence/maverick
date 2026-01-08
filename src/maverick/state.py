@@ -43,9 +43,10 @@ class GameState(BaseModel):
     # Hand tracking
     hand_number: int = 0
     button_position: int = 0
-
-    class Config:
-        arbitrary_types_allowed = True
+    
+    model_config = {
+        "arbitrary_types_allowed": True,
+    }
 
     def get_active_players(self) -> list[PlayerLike]:
         """Return list of players who haven't folded and have chips."""
