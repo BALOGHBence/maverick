@@ -211,3 +211,7 @@ __marimo__/
 
 # Sphinx-Autosummary
 docs/source/_autosummary/
+
+# Ignore files in scratch directory, except for .gitkeep
+scratch/*
+!scratch/.gitkeep
