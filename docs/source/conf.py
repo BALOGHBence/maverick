@@ -26,6 +26,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
+    "sphinx.ext.autosummary",
 ]
 
 templates_path = ["_templates"]
@@ -53,9 +54,9 @@ napoleon_attr_annotations = True
 autodoc_default_options = {
     "members": True,
     "member-order": "bysource",
-    "special-members": "__init__",
-    "undoc-members": True,
     "exclude-members": "__weakref__",
+    "imported-members": False,
+    "inherited-members": False,
 }
 
 # -- Options for HTML output -------------------------------------------------

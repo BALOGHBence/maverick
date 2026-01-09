@@ -4,74 +4,59 @@ API Reference
 This section provides detailed documentation for all classes and functions
 in the Maverick library.
 
-Core Modules
+Core Classes
 ------------
 
-Game Module
-~~~~~~~~~~~
+.. autosummary::
+   :toctree: _autosummary
+   :recursive:
 
-.. automodule:: maverick.game
-   :members:
-   :show-inheritance:
-
-Protocol Module
-~~~~~~~~~~~~~~~
-
-.. automodule:: maverick.protocol
-   :members:
-   :show-inheritance:
-
-Player Module
-~~~~~~~~~~~~~
-
-.. automodule:: maverick.player
-   :members:
-   :show-inheritance:
+   maverick.game.Game
+   maverick.state.GameState
+   maverick.protocol.PlayerLike
+   maverick.player.Player
 
 Card and Deck
 -------------
 
-Card Module
-~~~~~~~~~~~
+.. autosummary::
+   :toctree: _autosummary
+   :recursive:
 
-.. automodule:: maverick.card
-   :members:
-   :show-inheritance:
-
-Deck Module
-~~~~~~~~~~~
-
-.. automodule:: maverick.deck
-   :members:
-   :show-inheritance:
+   maverick.card.Card
+   maverick.deck.Deck
 
 Hand Evaluation
 ---------------
 
-Hand Module
-~~~~~~~~~~~
+.. autosummary::
+   :toctree: _autosummary
+   :recursive:
 
-.. automodule:: maverick.hand
-   :members:
-   :show-inheritance:
+   maverick.hand.Hand
+   maverick.holding.Holding
 
-Holding Module
-~~~~~~~~~~~~~~
+Utilities
+---------
 
-.. automodule:: maverick.holding
-   :members:
-   :show-inheritance:
+.. autosummary::
+   :toctree: _autosummary
+   :recursive:
 
-Scoring Module
-~~~~~~~~~~~~~~
-
-.. automodule:: maverick.scoring
-   :members:
-   :show-inheritance:
+   maverick.utils.scoring.score_hand
+   maverick.utils.holding_strength.estimate_holding_strength
 
 Enumerations
 ------------
 
-.. automodule:: maverick.enums
-   :members:
-   :show-inheritance:
+.. autosummary::
+   :toctree: _autosummary
+
+   maverick.enums.Suit
+   maverick.enums.Rank
+   maverick.enums.Street
+   maverick.enums.HandType
+   maverick.enums.PlayerState
+   maverick.enums.GameStateType
+   maverick.enums.ActionType
+   maverick.enums.GameEventType
