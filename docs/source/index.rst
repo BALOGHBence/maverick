@@ -43,7 +43,7 @@ Create a simple game:
    game.add_player(Player(id="p2", name="Bob", stack=1000))
    
    # Start playing
-   game.start_game()
+   game.start()
 
 Table of Contents
 -----------------
@@ -124,20 +124,22 @@ Game Events
 
 The game engine emits events for all significant occurrences:
 
-* ``GAME_START``: Game begins
-* ``HAND_START``: New hand starts
+* ``GAME_STARTED``: Game begins
+* ``PLAYER_JOINED``: Player joins the game
+* ``HAND_STARTED``: New hand starts
+* ``POST_BLINDS``: Blinds posted
 * ``DEAL_HOLE_CARDS``: Hole cards dealt
 * ``DEAL_FLOP``: Flop dealt
 * ``DEAL_TURN``: Turn dealt
 * ``DEAL_RIVER``: River dealt
 * ``PLAYER_ACTION``: Player takes action
-* ``BETTING_ROUND_COMPLETE``: Betting round ends
+* ``BETTING_ROUND_COMPLETED``: Betting round ends
 * ``SHOWDOWN``: Showdown occurs
-* ``AWARD_POT``: Pot awarded to winner
-* ``HAND_END``: Hand ends
-* ``GAME_END``: Game ends
+* ``HAND_ENDED``: Hand ends
+* ``PLAYER_LEFT``: Player leaves the game
+* ``GAME_ENDED``: Game ends
 
-Access event history through ``game.event_history``.
+These events are defined in the :class:`~maverick.enums.GameEventType` enum.
 
 Indices and tables
 ==================

@@ -14,7 +14,7 @@ rule-based bots to sophisticated AI algorithms.
 Player Protocol
 ---------------
 
-All custom player implementations must conform to the ``PlayerProtocol``, which
+All custom player implementations must conform to the :class:`~maverick.protocol.PlayerLike` protocol, which
 defines the required interface for a player. The protocol ensures that your
 custom player can interact with the game engine.
 
