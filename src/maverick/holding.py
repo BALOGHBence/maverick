@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 import random
 from itertools import combinations
 
@@ -6,7 +6,8 @@ from pydantic import BaseModel
 
 from .card import Card
 from .deck import Deck
-from .utils import estimate_holding_strength
+from .utils import estimate_holding_strength, score_hand
+from .enums import HandType
 
 __all__ = ["Holding"]
 
@@ -40,6 +41,13 @@ class Holding(BaseModel):
         """Generate all possible holdings of n cards from the given deck."""
         for combination in combinations(cards, n):
             yield cls(cards=list(combination))
+            
+    def score(self) -> Tuple[HandType, float]:
+        """Classifies and scores the hand.
+
+        Returns (HandType, float_score) where higher scores = stronger hands.
+        """
+        return score_hand(self.cards)
 
     def estimate_strength(self, n_simulations: int = 1000, n_players: int = 8) -> float:
         """

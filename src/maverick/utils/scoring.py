@@ -1,6 +1,8 @@
-from typing import Tuple
+from typing import Tuple,  TYPE_CHECKING
 
-from ..card import Card
+if TYPE_CHECKING:
+    from ..card import Card
+
 from ..enums import HandType
 
 __all__ = ["score_hand"]
@@ -75,7 +77,7 @@ def _check_pair(numbers: list[int]) -> float:
     return score
 
 
-def score_hand(hand: list[Card]) -> Tuple[HandType, float]:
+def score_hand(hand: list["Card"]) -> Tuple["HandType", float]:
     """
     Classifies and scores a poker hand.
 

@@ -32,4 +32,10 @@ class Player(BaseModel):
     def decide_action(
         self, game_state: GameState, valid_actions: list[ActionType], min_raise: int
     ) -> tuple[ActionType, int]:
+        """
+        Decide on an action to take during the player's turn.
+
+        The function should return a tuple containing the chosen ActionType and the amount
+        associated with that action (0 if not applicable).
+        """
         raise NotImplementedError

@@ -1,12 +1,32 @@
-from pydantic import BaseModel
-from .enums import Suit, Rank
 import random
+from typing import Tuple
+
+from pydantic import BaseModel
+
+from .enums import Suit, Rank, HandType
+from .utils.scoring import score_hand
+
 
 __all__ = ["Card"]
 
 
 class Card(BaseModel):
-    """A playing card with a suit and rank."""
+    """A playing card with a suit and rank.
+
+    Parameters
+    ----------
+    suit : Suit
+        The suit of the card (Hearts, Diamonds, Clubs, Spades).
+    rank : Rank
+        The rank of the card (Two through Ace).
+
+    Examples
+    --------
+    >>> from maverick import Card, Suit, Rank
+    >>> card = Card(suit=Suit.HEARTS, rank=Rank.ACE)
+    >>> card.utf8()
+    'A♥'
+    """
 
     suit: Suit
     rank: Rank
@@ -20,6 +40,13 @@ class Card(BaseModel):
         selected = random.sample(all_cards, n)
         return selected if n > 1 else selected[0]
 
+    def score(self) -> Tuple[HandType, float]:
+        """Classifies and scores the card.
+
+        Returns (HandType, float_score) where higher scores = stronger hands.
+        """
+        return score_hand([self])
+    
     def utf8(self) -> str:
         """Return the UTF-8 representation of the card."""
         suit_symbols = {
@@ -44,3 +71,6 @@ class Card(BaseModel):
             Rank.ACE: "A",
         }
         return f"{rank_symbols[self.rank]}{suit_symbols[self.suit]}"
+
+    def __repr__(self) -> str:
+        return self.utf8()

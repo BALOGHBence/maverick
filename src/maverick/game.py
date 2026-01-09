@@ -67,7 +67,7 @@ class Game:
         self.max_hands = max_hands
         self.state = GameState(small_blind=small_blind, big_blind=big_blind)
         self._event_queue: Deque[GameEventType] = deque()
-        self._logger = logging.getLogger(self.__class__.__name__)
+        self._logger = logging.getLogger("maverick")
 
     def _log(
         self, message: str, loglevel: int = logging.INFO, street_prefix: bool = True

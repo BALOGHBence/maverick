@@ -1,16 +1,19 @@
-from ..card import Card
-from ..deck import Deck
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..card import Card
+    
 from .scoring import score_hand
 
 __all__ = ["estimate_holding_strength"]
 
 
 def estimate_holding_strength(
-    holding: list[Card], n_simulations: int = 1000, n_players: int = 8
+    holding: list["Card"], n_simulations: int = 1000, n_players: int = 8
 ) -> float:
     """
     Estimate the holding strength as the probability of winning against n_players - 1 opponents.
-    
+
     Parameters
     ----------
     holding : list[Card]
@@ -20,6 +23,8 @@ def estimate_holding_strength(
     n_players : int, optional
         The total number of players at the table including the player (default is 8).
     """
+    from maverick import Deck
+    
     n_opponents = n_players - 1
     n_holding_cards = len(holding)
     n_community_cards = 5 - n_holding_cards
@@ -31,7 +36,10 @@ def estimate_holding_strength(
         deck = Deck.standard_deck(shuffle=True)
 
         # deal community cards and opponent holdings
-        community_cards = deck.deal(n_community_cards)
+        if n_community_cards > 0:
+            community_cards = deck.deal(n_community_cards)
+        else:
+            community_cards = []
         opponent_holdings = [deck.deal(n_holding_cards) for _ in range(n_opponents)]
 
         # compare scores
