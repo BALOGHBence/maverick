@@ -41,7 +41,7 @@ class Holding(BaseModel):
         """Generate all possible holdings of n cards from the given deck."""
         for combination in combinations(cards, n):
             yield cls(cards=list(combination))
-            
+
     def score(self) -> Tuple[HandType, float]:
         """Classifies and scores the hand.
 

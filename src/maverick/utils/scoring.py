@@ -1,11 +1,13 @@
-from typing import Tuple,  TYPE_CHECKING
+from typing import Tuple, TYPE_CHECKING
+from itertools import combinations
 
 if TYPE_CHECKING:
     from ..card import Card
 
 from ..enums import HandType
 
-__all__ = ["score_hand"]
+
+__all__ = ["score_hand", "find_highest_scoring_hand"]
 
 
 def _check_four_of_a_kind(numbers: list[int]) -> float:
@@ -188,3 +190,43 @@ def score_hand(hand: list["Card"]) -> Tuple["HandType", float]:
         score = 100 + sum([n[i] / (100 ** (i + 1)) for i in range(len(n))])
 
     return handtype, score
+
+
+def find_highest_scoring_hand(
+    private_cards: list["Card"],
+    community_cards: list["Card"],
+    n_min_private: int = 0,
+) -> list["Card"]:
+    """
+    Find the highest scoring 5-card hand from the given private and community cards
+    with at least n_min_private cards from the private cards.
+    """
+
+    all_cards = private_cards + community_cards
+
+    # If we have 5 or fewer cards total, return all of them
+    if len(all_cards) <= 5:
+        return all_cards
+
+    best_hand = None
+    best_score = -1
+
+    # Try all 5-card combinations
+    for hand in combinations(all_cards, 5):
+        # Count how many private cards are in this hand
+        private_count = sum(1 for card in hand if card in private_cards)
+
+        # Skip if doesn't meet minimum private card requirement
+        if private_count < n_min_private:
+            continue
+
+        # Score this hand
+        _, score = score_hand(list(hand))
+
+        # Update best hand if this one is better
+        if score > best_score:
+            best_score = score
+            best_hand = hand
+
+    # Return the best hand found
+    return list(best_hand) if best_hand else []

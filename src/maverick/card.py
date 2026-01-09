@@ -46,7 +46,7 @@ class Card(BaseModel):
         Returns (HandType, float_score) where higher scores = stronger hands.
         """
         return score_hand([self])
-    
+
     def utf8(self) -> str:
         """Return the UTF-8 representation of the card."""
         suit_symbols = {

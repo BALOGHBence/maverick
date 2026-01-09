@@ -383,8 +383,8 @@ class Game:
 
     def _deal_hole_cards(self) -> None:
         """Deal hole cards and post blinds."""
-        dealer = self.state.players[self.state.button_position]
-        self._log(f"Dealing hole cards. Dealer: {dealer.name}", logging.INFO)
+        button = self.state.players[self.state.button_position]
+        self._log(f"Dealing hole cards. Button: {button.name}", logging.INFO)
         for player in self.state.players:
             if player.state == PlayerState.ACTIVE:
                 cards = self.state.deck.deal(2)
