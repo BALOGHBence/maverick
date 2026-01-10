@@ -103,7 +103,7 @@ while game.has_events():
 - `step()` - Process a single event from the queue, returns `True` if an event was processed
 - `has_events()` - Check if there are pending events in the queue
 
-See `demo_step_execution.py` for a complete working example.
+See `sandbox/demo_step_execution.py` for a complete working example.
 
 ### Development
 
