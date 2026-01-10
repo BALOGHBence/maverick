@@ -86,9 +86,12 @@ def estimate_strongest_hand(
 
     # If we have 5 or fewer cards total, return all of them
     if len(all_cards) <= 5:
-        return all_cards
+        strength = estimate_holding_strength(
+            all_cards, n_simulations=n_simulations, n_players=n_players
+        )
+        return all_cards, strength
 
-    best_hand = None
+    best_hand = []
     best_strength = -1.0
 
     # Generate all possible 5-card combinations

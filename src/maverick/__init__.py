@@ -17,6 +17,7 @@ from .utils.scoring import score_hand
 from .game import Game
 from .state import GameState
 from .protocol import PlayerLike
+from .playeraction import PlayerAction
 
 __all__ = [
     "Card",
@@ -36,4 +37,5 @@ __all__ = [
     "GameStateType",
     "ActionType",
     "PlayerLike",
+    "PlayerAction",
 ]

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Optional, Protocol, runtime_checkable
 
 from .enums import ActionType, PlayerState
 from .holding import Holding
+from .playeraction import PlayerAction
 
 if TYPE_CHECKING:
     from .game import GameState
@@ -58,7 +59,7 @@ class PlayerLike(Protocol):
 
     def decide_action(
         self, game_state: "GameState", valid_actions: list[ActionType], min_raise: int
-    ) -> tuple[ActionType, int]:
+    ) -> PlayerAction:
         """
         Decide what action to take given the current game state.
 
@@ -73,8 +74,7 @@ class PlayerLike(Protocol):
 
         Returns
         -------
-        tuple[ActionType, int]
-            A tuple of (action_type, amount) where amount is relevant for
-            BET, RAISE, CALL, and ALL_IN actions.
+        PlayerAction
+            An instance of PlayerAction representing the chosen action.
         """
         ...

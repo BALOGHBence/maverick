@@ -5,12 +5,13 @@ from pydantic import BaseModel, Field
 from .enums import PlayerState, ActionType
 from .holding import Holding
 from .state import GameState
+from .playeraction import PlayerAction
 
 __all__ = ["Player"]
 
 
 class Player(BaseModel):
-    """A player's state during a Texas Hold'em hand/game."""
+    """A player's state during a poker game."""
 
     # Identity / seating
     id: Optional[str] = None
@@ -31,11 +32,12 @@ class Player(BaseModel):
 
     def decide_action(
         self, game_state: GameState, valid_actions: list[ActionType], min_raise: int
-    ) -> tuple[ActionType, int]:
+    ) -> PlayerAction:
         """
         Decide on an action to take during the player's turn.
 
-        The function should return a tuple containing the chosen ActionType and the amount
-        associated with that action (0 if not applicable).
+        The function should return a valid instance of PlayerAction.
         """
-        raise NotImplementedError
+        raise NotImplementedError(
+            "decide_action method must be implemented by subclasses."
+        )

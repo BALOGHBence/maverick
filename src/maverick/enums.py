@@ -146,16 +146,36 @@ class HandType(Enum):
         Ace, King, Queen, Jack, Ten, all of the same suit (best hand).
     """
 
-    HIGH_CARD = auto()
-    PAIR = auto()
-    TWO_PAIR = auto()
-    THREE_OF_A_KIND = auto()
-    STRAIGHT = auto()
-    FLUSH = auto()
-    FULL_HOUSE = auto()
-    FOUR_OF_A_KIND = auto()
-    STRAIGHT_FLUSH = auto()
-    ROYAL_FLUSH = auto()
+    HIGH_CARD = 0
+    PAIR = 1
+    TWO_PAIR = 2
+    THREE_OF_A_KIND = 3
+    STRAIGHT = 4
+    FLUSH = 5
+    FULL_HOUSE = 6
+    FOUR_OF_A_KIND = 7
+    STRAIGHT_FLUSH = 8
+    ROYAL_FLUSH = 9
+
+    def __lt__(self, other):
+        if self.__class__ is other.__class__:
+            return self.value < other.value
+        return NotImplemented
+
+    def __le__(self, other):
+        if self.__class__ is other.__class__:
+            return self.value <= other.value
+        return NotImplemented
+
+    def __gt__(self, other):
+        if self.__class__ is other.__class__:
+            return self.value > other.value
+        return NotImplemented
+
+    def __ge__(self, other):
+        if self.__class__ is other.__class__:
+            return self.value >= other.value
+        return NotImplemented
 
 
 class PlayerState(Enum):

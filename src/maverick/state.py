@@ -27,7 +27,6 @@ class GameState(BaseModel):
     players: list[PlayerLike] = Field(default_factory=list)
     active_players: list[int] = Field(default_factory=list)  # Indices of active players
     current_player_index: int = 0
-    dealer_index: int = 0
 
     # Cards
     deck: Optional[Deck] = None
