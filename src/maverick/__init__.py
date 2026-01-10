@@ -18,6 +18,7 @@ from .game import Game
 from .state import GameState
 from .protocol import PlayerLike
 from .playeraction import PlayerAction
+from .playerstate import PlayerState
 
 __all__ = [
     "Card",
@@ -38,4 +39,5 @@ __all__ = [
     "ActionType",
     "PlayerLike",
     "PlayerAction",
+    "PlayerState",
 ]
