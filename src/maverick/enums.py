@@ -6,7 +6,7 @@ __all__ = [
     "Street",
     "HandType",
     "PlayerPosition",
-    "PlayerState",
+    "PlayerStateType",
     "GameStateType",
     "ActionType",
     "GameEventType",
@@ -178,7 +178,7 @@ class HandType(Enum):
         return NotImplemented
 
 
-class PlayerState(Enum):
+class PlayerStateType(Enum):
     """
     Player state enumeration.
 

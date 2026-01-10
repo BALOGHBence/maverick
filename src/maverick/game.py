@@ -16,7 +16,7 @@ from .enums import (
     ActionType,
     GameEventType,
     GameStateType,
-    PlayerState,
+    PlayerStateType,
     Street,
 )
 from .holding import Holding
@@ -120,13 +120,22 @@ class Game:
         ]:
             raise ValueError("Cannot add players while game is in progress")
 
-        # Assign seat number
-        if player.seat is None:
-            player.seat = len(self.state.players)
+        # Initialize player state if needed
+        from .playerstate import PlayerState
 
-        # Set initial state
-        player.state = PlayerState.ACTIVE
-        player.acted_this_street = False
+        if player.state is None:
+            player.state = PlayerState(
+                seat=len(self.state.players),
+                state_type=PlayerStateType.ACTIVE,
+            )
+        else:
+            # Assign seat number if not set
+            if player.state.seat is None:
+                player.state.seat = len(self.state.players)
+            
+            # Ensure state_type is set
+            if player.state.state_type is None:
+                player.state.state_type = PlayerStateType.ACTIVE
 
         # Add player to game
         self.state.players.append(player)
@@ -273,7 +282,7 @@ class Game:
                 self._log("Hand ended\n", logging.INFO, street_prefix=False)
 
                 # Remove broke players before rotating button
-                self.state.players = [p for p in self.state.players if p.stack > 0]
+                self.state.players = [p for p in self.state.players if p.state.stack > 0]
 
                 # Check if we have enough players to continue
                 if len(self.state.players) < self.min_players:
@@ -348,12 +357,12 @@ class Game:
 
         # Reset players
         for player in self.state.players:
-            player.current_bet = 0
-            player.total_contributed = 0
-            player.acted_this_street = False
-            player.holding = None
-            if player.stack > 0:
-                player.state = PlayerState.ACTIVE
+            player.state.current_bet = 0
+            player.state.total_contributed = 0
+            player.state.acted_this_street = False
+            player.state.holding = None
+            if player.state.stack > 0:
+                player.state.state_type = PlayerStateType.ACTIVE
 
         # Reset street
         self.state.street = Street.PRE_FLOP
@@ -362,7 +371,7 @@ class Game:
         current_player = self.state.get_current_player()
 
         # Skip if no current player or player cannot act
-        if not current_player or current_player.state != PlayerState.ACTIVE:
+        if not current_player or current_player.state.state_type != PlayerStateType.ACTIVE:
             return
 
         # Get valid actions and min raise
@@ -399,9 +408,9 @@ class Game:
         button = self.state.players[self.state.button_position]
         self._log(f"Dealing hole cards. Button: {button.name}", logging.INFO)
         for player in self.state.players:
-            if player.state == PlayerState.ACTIVE:
+            if player.state.state_type == PlayerStateType.ACTIVE:
                 cards = self.state.deck.deal(2)
-                player.holding = Holding(cards=cards)
+                player.state.holding = Holding(cards=cards)
 
     def _post_blinds(self) -> None:
         """Post small and big blinds."""
@@ -410,32 +419,32 @@ class Game:
         # Small blind (left of button)
         sb_index = (self.state.button_position + 1) % num_players
         sb_player = self.state.players[sb_index]
-        sb_amount = min(self.state.small_blind, sb_player.stack)
-        sb_player.current_bet = sb_amount
-        sb_player.total_contributed = sb_amount
-        sb_player.stack -= sb_amount
+        sb_amount = min(self.state.small_blind, sb_player.state.stack)
+        sb_player.state.current_bet = sb_amount
+        sb_player.state.total_contributed = sb_amount
+        sb_player.state.stack -= sb_amount
         self.state.pot += sb_amount
-        if sb_player.stack == 0:
-            sb_player.state = PlayerState.ALL_IN
+        if sb_player.state.stack == 0:
+            sb_player.state.state_type = PlayerStateType.ALL_IN
 
         self._log(
-            f"Posting small blind of {sb_amount} by player {sb_player.name}. Remaining stack: {sb_player.stack}",
+            f"Posting small blind of {sb_amount} by player {sb_player.name}. Remaining stack: {sb_player.state.stack}",
             logging.INFO,
         )
 
         # Big blind (left of small blind)
         bb_index = (self.state.button_position + 2) % num_players
         bb_player = self.state.players[bb_index]
-        bb_amount = min(self.state.big_blind, bb_player.stack)
-        bb_player.current_bet = bb_amount
-        bb_player.total_contributed = bb_amount
-        bb_player.stack -= bb_amount
+        bb_amount = min(self.state.big_blind, bb_player.state.stack)
+        bb_player.state.current_bet = bb_amount
+        bb_player.state.total_contributed = bb_amount
+        bb_player.state.stack -= bb_amount
         self.state.pot += bb_amount
-        if bb_player.stack == 0:
-            bb_player.state = PlayerState.ALL_IN
+        if bb_player.state.stack == 0:
+            bb_player.state.state_type = PlayerStateType.ALL_IN
 
         self._log(
-            f"Posting big blind of {bb_amount} by player {bb_player.name}. Remaining stack: {bb_player.stack}",
+            f"Posting big blind of {bb_amount} by player {bb_player.name}. Remaining stack: {bb_player.state.stack}",
             logging.INFO,
         )
 
@@ -474,7 +483,7 @@ class Game:
         if not current_player or current_player.id != player.id:
             raise ValueError("Not this player's turn")
 
-        if current_player.state != PlayerState.ACTIVE:
+        if current_player.state.state_type != PlayerStateType.ACTIVE:
             raise ValueError("Player cannot act (folded or all-in)")
 
         # Validate and process action
@@ -483,27 +492,27 @@ class Game:
             raise ValueError(f"Invalid action: {action_type}")
 
         if action_type == ActionType.FOLD:
-            current_player.state = PlayerState.FOLDED
+            current_player.state.state_type = PlayerStateType.FOLDED
             self._log(f"Player {current_player.name} folds.", logging.INFO)
         elif action_type == ActionType.CHECK:
-            if current_player.current_bet != self.state.current_bet:
+            if current_player.state.current_bet != self.state.current_bet:
                 raise ValueError("Cannot check when there is a bet to call")
 
             self._log(f"Player {current_player.name} checks.", logging.INFO)
         elif action_type == ActionType.CALL:
-            call_amount = self.state.current_bet - current_player.current_bet
-            actual_amount = min(call_amount, current_player.stack)
-            current_player.current_bet += actual_amount
-            current_player.total_contributed += actual_amount
-            current_player.stack -= actual_amount
+            call_amount = self.state.current_bet - current_player.state.current_bet
+            actual_amount = min(call_amount, current_player.state.stack)
+            current_player.state.current_bet += actual_amount
+            current_player.state.total_contributed += actual_amount
+            current_player.state.stack -= actual_amount
             self.state.pot += actual_amount
 
             # Check if player is all-in
-            if current_player.stack == 0:
-                current_player.state = PlayerState.ALL_IN
+            if current_player.state.stack == 0:
+                current_player.state.state_type = PlayerStateType.ALL_IN
 
             self._log(
-                f"Player {current_player.name} calls with amount {actual_amount}. Remaining stack: {current_player.stack}.",
+                f"Player {current_player.name} calls with amount {actual_amount}. Remaining stack: {current_player.state.stack}.",
                 logging.INFO,
             )
         elif action_type == ActionType.BET:
@@ -513,22 +522,22 @@ class Game:
             if amount < self.state.min_bet:
                 raise ValueError(f"Bet must be at least {self.state.min_bet}")
 
-            actual_amount = min(amount, current_player.stack)
-            current_player.current_bet = actual_amount
-            current_player.total_contributed += actual_amount
-            current_player.stack -= actual_amount
+            actual_amount = min(amount, current_player.state.stack)
+            current_player.state.current_bet = actual_amount
+            current_player.state.total_contributed += actual_amount
+            current_player.state.stack -= actual_amount
             self.state.pot += actual_amount
             self.state.current_bet = actual_amount
-            if current_player.stack == 0:
-                current_player.state = PlayerState.ALL_IN
+            if current_player.state.stack == 0:
+                current_player.state.state_type = PlayerStateType.ALL_IN
 
             # Reset acted flags for other players
             for p in self.state.players:
-                if p.id != player.id and p.state == PlayerState.ACTIVE:
-                    p.acted_this_street = False
+                if p.id != player.id and p.state.state_type == PlayerStateType.ACTIVE:
+                    p.state.acted_this_street = False
 
             self._log(
-                f"Player {current_player.name} bets amount {actual_amount}. Remaining stack: {current_player.stack}.",
+                f"Player {current_player.name} bets amount {actual_amount}. Remaining stack: {current_player.state.stack}.",
                 logging.INFO,
             )
         elif action_type == ActionType.RAISE:
@@ -538,77 +547,77 @@ class Game:
 
             # Amount is the new total bet (e.g., raise to 100)
             # Calculate how much to add to player's current bet
-            total_to_add = amount - current_player.current_bet
+            total_to_add = amount - current_player.state.current_bet
 
             # Cap at stack size (player goes all-in if they don't have enough)
-            actual_amount = min(total_to_add, current_player.stack)
-            current_player.current_bet += actual_amount
-            current_player.total_contributed += actual_amount
-            current_player.stack -= actual_amount
+            actual_amount = min(total_to_add, current_player.state.stack)
+            current_player.state.current_bet += actual_amount
+            current_player.state.total_contributed += actual_amount
+            current_player.state.stack -= actual_amount
             self.state.pot += actual_amount
-            self.state.current_bet = current_player.current_bet
+            self.state.current_bet = current_player.state.current_bet
 
             # Check if player is all-in
-            if current_player.stack == 0:
-                current_player.state = PlayerState.ALL_IN
+            if current_player.state.stack == 0:
+                current_player.state.state_type = PlayerStateType.ALL_IN
 
             # Reset acted flags for other players
             for p in self.state.players:
-                if p.id != player.id and p.state == PlayerState.ACTIVE:
-                    p.acted_this_street = False
+                if p.id != player.id and p.state.state_type == PlayerStateType.ACTIVE:
+                    p.state.acted_this_street = False
 
             self._log(
-                f"Player {current_player.name} raises to amount {current_player.current_bet}. Remaining stack: {current_player.stack}.",
+                f"Player {current_player.name} raises to amount {current_player.state.current_bet}. Remaining stack: {current_player.state.stack}.",
                 logging.INFO,
             )
         elif action_type == ActionType.ALL_IN:
-            actual_amount = current_player.stack
-            current_player.current_bet += actual_amount
-            current_player.total_contributed += actual_amount
-            current_player.stack = 0
+            actual_amount = current_player.state.stack
+            current_player.state.current_bet += actual_amount
+            current_player.state.total_contributed += actual_amount
+            current_player.state.stack = 0
             self.state.pot += actual_amount
-            current_player.state = PlayerState.ALL_IN
+            current_player.state.state_type = PlayerStateType.ALL_IN
 
-            if current_player.current_bet > self.state.current_bet:
-                self.state.current_bet = current_player.current_bet
+            if current_player.state.current_bet > self.state.current_bet:
+                self.state.current_bet = current_player.state.current_bet
 
                 # Reset acted flags for other players
                 for p in self.state.players:
-                    if p.id != player.id and p.state == PlayerState.ACTIVE:
-                        p.acted_this_street = False
+                    if p.id != player.id and p.state.state_type == PlayerStateType.ACTIVE:
+                        p.state.acted_this_street = False
 
             self._log(
                 f"Player {current_player.name} goes all-in with amount {actual_amount}.",
                 logging.INFO,
             )
 
-        current_player.acted_this_street = True
+        current_player.state.acted_this_street = True
         self._log("Current pot: " + str(self.state.pot), logging.INFO)
 
     def _get_valid_actions(self, player: PlayerLike) -> list[ActionType]:
         """Get list of valid actions for a player."""
         actions = [ActionType.FOLD]
 
-        call_amount = self.state.current_bet - player.current_bet
+        call_amount = self.state.current_bet - player.state.current_bet
 
         if call_amount == 0:
             actions.append(ActionType.CHECK)
         else:
-            if player.stack >= call_amount:
+            if player.state.stack >= call_amount:
                 actions.append(ActionType.CALL)
 
         # Can bet if no one has bet yet
-        if self.state.current_bet == 0 and player.stack >= self.state.min_bet:
+        if self.state.current_bet == 0 and player.state.stack >= self.state.min_bet:
             actions.append(ActionType.BET)
 
         # Can raise if there's a bet to raise
         min_raise_total = self.state.current_bet + self.state.min_bet
-        total_needed_for_min_raise = min_raise_total - player.current_bet
-        if self.state.current_bet > 0 and player.stack >= total_needed_for_min_raise:
+        total_needed_for_min_raise = min_raise_total - player.state.current_bet
+        if self.state.current_bet > 0 and player.state.stack >= total_needed_for_min_raise:
             actions.append(ActionType.RAISE)
 
         # Can always go all-in if you have chips
-        if player.stack > 0:
+        if player.state.stack > 0:
             actions.append(ActionType.ALL_IN)
 
         return actions
@@ -624,7 +633,7 @@ class Game:
                 self.state.current_player_index + 1
             ) % num_players
             player = self.state.players[self.state.current_player_index]
-            if player.state == PlayerState.ACTIVE and not player.acted_this_street:
+            if player.state.state_type == PlayerStateType.ACTIVE and not player.state.acted_this_street:
                 return
 
         # If we reach here, no players left to act
@@ -634,8 +643,8 @@ class Game:
         """Complete the current betting round."""
         # Reset betting round state
         for player in self.state.players:
-            player.current_bet = 0
-            player.acted_this_street = False
+            player.state.current_bet = 0
+            player.state.acted_this_street = False
         self.state.current_bet = 0
         self._log("Betting round complete\n", logging.INFO)
 
@@ -648,7 +657,7 @@ class Game:
 
         for _ in range(len(self.state.players)):
             player = self.state.players[self.state.current_player_index]
-            if player.state == PlayerState.ACTIVE:
+            if player.state.state_type == PlayerStateType.ACTIVE:
                 return
             self.state.current_player_index = (
                 self.state.current_player_index + 1
@@ -691,7 +700,7 @@ class Game:
         if len(players_in_hand) == 1:
             # Only one player left, they win
             winner = players_in_hand[0]
-            winner.stack += self.state.pot
+            winner.state.stack += self.state.pot
             self._log(
                 f"Player {winner.name} wins {self.state.pot} from the pot.",
                 logging.INFO,
@@ -701,10 +710,10 @@ class Game:
             assert len(self.state.community_cards) == 5
             player_scores = []
             for player in players_in_hand:
-                if player.holding:
+                if player.state.holding:
                     # Find best 5-card hand from 7 cards (2 hole + 5 community)
                     best_hand = find_highest_scoring_hand(
-                        player.holding.cards, self.state.community_cards
+                        player.state.holding.cards, self.state.community_cards
                     )
                     best_hand_type, best_score = score_hand(best_hand)
                     player_scores.append((player, best_score))
@@ -724,7 +733,7 @@ class Game:
 
             # Sort winners by seat position (closest to button gets remainder chips)
             winners_sorted = sorted(
-                winners, key=lambda p: p.seat if p.seat is not None else 0
+                winners, key=lambda p: p.state.seat if p.state.seat is not None else 0
             )
 
             # Split pot among winners, distribute remainder chips to winners closest to button
@@ -733,7 +742,7 @@ class Game:
             for i, winner in enumerate(winners_sorted):
                 # First 'remainder' winners get 1 extra chip
                 amount = pot_share + (1 if i < remainder else 0)
-                winner.stack += amount
+                winner.state.stack += amount
                 self._log(
                     f"Player {winner.name} wins {amount} from the pot.", logging.INFO
                 )
