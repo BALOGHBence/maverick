@@ -1,6 +1,5 @@
 import unittest
 
-
 class TestSmokeImports(unittest.TestCase):
     def test_import_package(self) -> None:
         import maverick  # noqa: F401
