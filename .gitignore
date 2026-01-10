@@ -208,3 +208,10 @@ __marimo__/
 
 # MacOS
 .DS_Store
+
+# Sphinx-Autosummary
+docs/source/_autosummary/
+
+# Ignore files in scratch directory, except for .gitkeep
+scratch/*
+!scratch/.gitkeep
