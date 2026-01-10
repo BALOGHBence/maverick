@@ -18,7 +18,7 @@ class Player(BaseModel):
     state: Optional[PlayerState] = None
 
     def decide_action(
-        self, game_state: GameState, valid_actions: list[ActionType], min_raise: int
+        self, game_state: GameState, valid_actions: list[ActionType], min_raise: int  # noqa: ARG002
     ) -> PlayerAction:
         """
         Decide on an action to take during the player's turn.
