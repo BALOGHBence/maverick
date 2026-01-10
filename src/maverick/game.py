@@ -131,7 +131,7 @@ class Game:
             # Assign seat number if not set
             if player.state.seat is None:
                 player.state.seat = len(self.state.players)
-            
+
             # Ensure state_type is set
             if player.state.state_type is None:
                 player.state.state_type = PlayerStateType.ACTIVE
@@ -281,7 +281,9 @@ class Game:
                 self._log("Hand ended\n", logging.INFO, street_prefix=False)
 
                 # Remove broke players before rotating button
-                self.state.players = [p for p in self.state.players if p.state.stack > 0]
+                self.state.players = [
+                    p for p in self.state.players if p.state.stack > 0
+                ]
 
                 # Check if we have enough players to continue
                 if len(self.state.players) < self.min_players:
@@ -370,7 +372,10 @@ class Game:
         current_player = self.state.get_current_player()
 
         # Skip if no current player or player cannot act
-        if not current_player or current_player.state.state_type != PlayerStateType.ACTIVE:
+        if (
+            not current_player
+            or current_player.state.state_type != PlayerStateType.ACTIVE
+        ):
             return
 
         # Get valid actions and min raise
@@ -582,7 +587,10 @@ class Game:
 
                 # Reset acted flags for other players
                 for p in self.state.players:
-                    if p.id != player.id and p.state.state_type == PlayerStateType.ACTIVE:
+                    if (
+                        p.id != player.id
+                        and p.state.state_type == PlayerStateType.ACTIVE
+                    ):
                         p.state.acted_this_street = False
 
             self._log(
@@ -612,7 +620,10 @@ class Game:
         # Can raise if there's a bet to raise
         min_raise_total = self.state.current_bet + self.state.min_bet
         total_needed_for_min_raise = min_raise_total - player.state.current_bet
-        if self.state.current_bet > 0 and player.state.stack >= total_needed_for_min_raise:
+        if (
+            self.state.current_bet > 0
+            and player.state.stack >= total_needed_for_min_raise
+        ):
             actions.append(ActionType.RAISE)
 
         # Can always go all-in if you have chips
@@ -632,7 +643,10 @@ class Game:
                 self.state.current_player_index + 1
             ) % num_players
             player = self.state.players[self.state.current_player_index]
-            if player.state.state_type == PlayerStateType.ACTIVE and not player.state.acted_this_street:
+            if (
+                player.state.state_type == PlayerStateType.ACTIVE
+                and not player.state.acted_this_street
+            ):
                 return
 
         # If we reach here, no players left to act

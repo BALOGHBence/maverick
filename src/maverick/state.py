@@ -50,7 +50,9 @@ class GameState(BaseModel):
     def get_active_players(self) -> list[PlayerLike]:
         """Return list of players who haven't folded and have chips."""
         return [
-            p for p in self.players if p.state.state_type == PlayerStateType.ACTIVE and p.state.stack > 0
+            p
+            for p in self.players
+            if p.state.state_type == PlayerStateType.ACTIVE and p.state.stack > 0
         ]
 
     def get_players_in_hand(self) -> list[PlayerLike]:
