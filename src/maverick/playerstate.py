@@ -2,7 +2,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from .enums import PlayerState as PlayerStateType
+from .enums import PlayerStateType
 from .holding import Holding
 
 __all__ = ["PlayerState"]

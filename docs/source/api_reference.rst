@@ -15,6 +15,7 @@ Core Classes
    maverick.state.GameState
    maverick.protocol.PlayerLike
    maverick.player.Player
+   maverick.playerstate.PlayerState
 
 Card and Deck
 -------------
@@ -56,7 +57,7 @@ Enumerations
    maverick.enums.Rank
    maverick.enums.Street
    maverick.enums.HandType
-   maverick.enums.PlayerState
+   maverick.enums.PlayerStateType
    maverick.enums.GameStateType
    maverick.enums.ActionType
    maverick.enums.GameEventType

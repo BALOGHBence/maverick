@@ -25,13 +25,15 @@ Your custom player class must have the following attributes:
 
 * ``id`` (Optional[str]): Unique identifier for the player
 * ``name`` (Optional[str]): Display name for the player
-* ``seat`` (Optional[int]): Seat number at the table (0-indexed)
-* ``stack`` (int): Current chip count
-* ``holding`` (Optional[Holding]): Current hole cards (None if no cards dealt)
-* ``current_bet`` (int): Amount bet in current betting round
-* ``total_contributed`` (int): Total amount contributed to pot this hand
-* ``state`` (Optional[PlayerState]): Current player state (ACTIVE, FOLDED, ALL_IN)
-* ``acted_this_street`` (bool): Whether player has acted in current betting round
+* ``state`` (Optional[PlayerState]): A PlayerState object containing:
+  
+  * ``seat`` (Optional[int]): Seat number at the table (0-indexed)
+  * ``stack`` (int): Current chip count
+  * ``holding`` (Optional[Holding]): Current hole cards (None if no cards dealt)
+  * ``current_bet`` (int): Amount bet in current betting round
+  * ``total_contributed`` (int): Total amount contributed to pot this hand
+  * ``state_type`` (Optional[PlayerStateType]): Current player state (ACTIVE, FOLDED, ALL_IN)
+  * ``acted_this_street`` (bool): Whether player has acted in current betting round
 
 Required Methods
 ~~~~~~~~~~~~~~~~
@@ -88,7 +90,7 @@ Here's a simple example of a custom player that always calls or checks:
             if ActionType.CHECK in valid_actions:
                 return (ActionType.CHECK, 0)
             elif ActionType.CALL in valid_actions:
-                call_amount = game_state.current_bet - self.current_bet
+                call_amount = game_state.current_bet - self.state.current_bet
                 return (ActionType.CALL, call_amount)
             else:
                 return (ActionType.FOLD, 0)
@@ -124,7 +126,7 @@ Here's a more sophisticated player that plays aggressively:
                     # Raise between min_raise and 3x current bet
                     raise_amount = random.randint(
                         min_raise, 
-                        min(game_state.current_bet * 3, self.stack)
+                        min(game_state.current_bet * 3, self.state.stack)
                     )
                     return (ActionType.RAISE, raise_amount)
             
@@ -133,13 +135,13 @@ Here's a more sophisticated player that plays aggressively:
                 if random.random() < self.aggression_factor:
                     bet_amount = random.randint(
                         game_state.min_bet,
-                        min(game_state.big_blind * 3, self.stack)
+                        min(game_state.big_blind * 3, self.state.stack)
                     )
                     return (ActionType.BET, bet_amount)
             
             # Otherwise call or check
             if ActionType.CALL in valid_actions:
-                call_amount = game_state.current_bet - self.current_bet
+                call_amount = game_state.current_bet - self.state.current_bet
                 return (ActionType.CALL, call_amount)
             
             if ActionType.CHECK in valid_actions:
@@ -180,7 +182,7 @@ Here's an example that uses hand strength to make decisions:
                     bet_amount = game_state.big_blind * 3
                     return (ActionType.BET, bet_amount)
                 elif ActionType.CALL in valid_actions:
-                    call_amount = game_state.current_bet - self.current_bet
+                    call_amount = game_state.current_bet - self.state.current_bet
                     return (ActionType.CALL, call_amount)
                 elif ActionType.CHECK in valid_actions:
                     return (ActionType.CHECK, 0)
@@ -191,7 +193,7 @@ Here's an example that uses hand strength to make decisions:
                     return (ActionType.CHECK, 0)
                 elif ActionType.CALL in valid_actions:
                     # Only call if bet is reasonable
-                    call_amount = game_state.current_bet - self.current_bet
+                    call_amount = game_state.current_bet - self.state.current_bet
                     if call_amount <= game_state.big_blind * 2:
                         return (ActionType.CALL, call_amount)
             
@@ -207,10 +209,10 @@ Here's an example that uses hand strength to make decisions:
             This is a simplified evaluation. In practice, you would
             consider community cards, pot odds, and opponent behavior.
             """
-            if not self.holding or len(self.holding.cards) < 2:
+            if not self.state.holding or len(self.state.holding.cards) < 2:
                 return 0.0
             
-            card1, card2 = self.holding.cards
+            card1, card2 = self.state.holding.cards
             
             # Pair
             if card1.rank == card2.rank:
@@ -286,7 +288,7 @@ Example: Using Game Information
         community = game_state.community_cards
         
         # Make decision based on this information
-        if players_in_hand == 2 and pot_size > self.stack:
+        if players_in_hand == 2 and pot_size > self.state.stack:
             # Heads up for a big pot - play cautiously
             if ActionType.CHECK in valid_actions:
                 return (ActionType.CHECK, 0)

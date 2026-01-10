@@ -5,7 +5,7 @@ from .enums import (
     Rank,
     HandType,
     Street,
-    PlayerState,
+    PlayerStateType,
     GameStateType,
     ActionType,
     GameEventType,
@@ -18,6 +18,7 @@ from .game import Game
 from .state import GameState
 from .protocol import PlayerLike
 from .playeraction import PlayerAction
+from .playerstate import PlayerState
 
 __all__ = [
     "Card",
@@ -26,7 +27,7 @@ __all__ = [
     "Rank",
     "HandType",
     "Street",
-    "PlayerState",
+    "PlayerStateType",
     "Player",
     "Hand",
     "Holding",
@@ -38,4 +39,5 @@ __all__ = [
     "ActionType",
     "PlayerLike",
     "PlayerAction",
+    "PlayerState",
 ]
