@@ -23,6 +23,7 @@ from .holding import Holding
 from .protocol import PlayerLike
 from .state import GameState
 from .playeraction import PlayerAction
+from .playerstate import PlayerState
 from .utils import find_highest_scoring_hand, score_hand
 
 __all__ = ["Game"]
@@ -121,8 +122,6 @@ class Game:
             raise ValueError("Cannot add players while game is in progress")
 
         # Initialize player state if needed
-        from .playerstate import PlayerState
-
         if player.state is None:
             player.state = PlayerState(
                 seat=len(self.state.players),
