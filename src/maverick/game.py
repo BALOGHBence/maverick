@@ -593,16 +593,14 @@ class Game:
                 logging.INFO,
             )
         elif action_type == ActionType.RAISE:
-            min_raise = self.state.current_bet + self.state.min_bet
+            # IMPORRANT: amount is what the player wants to pur from their stack into the pot,
+            # not the amount to raise TO
+            min_raise = self.state.min_bet
             if amount < min_raise:
                 raise ValueError(f"Raise must be at least {min_raise}")
 
-            # Amount is the new total bet (e.g., raise to 100)
-            # Calculate how much to add to player's current bet
-            total_to_add = amount - current_player.state.current_bet
-
             # Cap at stack size (player goes all-in if they don't have enough)
-            actual_amount = min(total_to_add, current_player.state.stack)
+            actual_amount = min(amount, current_player.state.stack)
             current_player.state.current_bet += actual_amount
             current_player.state.total_contributed += actual_amount
             current_player.state.stack -= actual_amount
@@ -647,7 +645,7 @@ class Game:
             )
 
         current_player.state.acted_this_street = True
-        self._log("Current pot: " + str(self.state.pot), logging.INFO)
+        self._log(f"Current pot: {self.state.pot} | Current bet: {self.state.current_bet}", logging.INFO)
 
     def _get_valid_actions(self, player: PlayerLike) -> list[ActionType]:
         """Get list of valid actions for a player."""
