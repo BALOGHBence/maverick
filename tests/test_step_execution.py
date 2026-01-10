@@ -28,8 +28,12 @@ class TestStepExecution(unittest.TestCase):
     def test_step_processes_single_event(self) -> None:
         """Test that step processes exactly one event."""
         game = Game(small_blind=1, big_blind=2, max_hands=1)
-        game.add_player(FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0)))
-        game.add_player(CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1)))
+        game.add_player(
+            FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0))
+        )
+        game.add_player(
+            CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1))
+        )
 
         # Initialize game and add initial event
         game._initialize_game()
@@ -37,27 +41,31 @@ class TestStepExecution(unittest.TestCase):
 
         # Verify we have events
         self.assertTrue(game.has_events())
-        
+
         # Process one event (GAME_STARTED)
         result = game.step()
         self.assertTrue(result)
-        
+
         # Game state should have changed to STARTED (and HAND_STARTED event queued)
         self.assertEqual(game.state.state_type, GameStateType.STARTED)
         self.assertTrue(game.has_events())  # Should have HAND_STARTED queued
-        
+
         # Process next event (HAND_STARTED)
         result = game.step()
         self.assertTrue(result)
-        
+
         # Now state should be DEALING
         self.assertEqual(game.state.state_type, GameStateType.DEALING)
 
     def test_step_by_step_execution_completes_game(self) -> None:
         """Test that stepping through all events completes a game."""
         game = Game(small_blind=1, big_blind=2, max_hands=1)
-        game.add_player(FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0)))
-        game.add_player(CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1)))
+        game.add_player(
+            FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0))
+        )
+        game.add_player(
+            CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1))
+        )
 
         # Initialize game and add initial event
         game._initialize_game()
@@ -79,17 +87,25 @@ class TestStepExecution(unittest.TestCase):
         """Test that step-by-step execution produces same result as start()."""
         # Game 1: using start()
         game1 = Game(small_blind=1, big_blind=2, max_hands=1)
-        game1.add_player(FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0)))
-        game1.add_player(CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1)))
+        game1.add_player(
+            FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0))
+        )
+        game1.add_player(
+            CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1))
+        )
         game1.start()
 
         # Game 2: using step()
         game2 = Game(small_blind=1, big_blind=2, max_hands=1)
-        game2.add_player(FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0)))
-        game2.add_player(CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1)))
+        game2.add_player(
+            FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0))
+        )
+        game2.add_player(
+            CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1))
+        )
         game2._initialize_game()
         game2._event_queue.append(GameEventType.GAME_STARTED)
-        
+
         while game2.step():
             pass
 
@@ -100,8 +116,12 @@ class TestStepExecution(unittest.TestCase):
     def test_multiple_hands_with_step(self) -> None:
         """Test that step-by-step execution works for multiple hands."""
         game = Game(small_blind=1, big_blind=2, max_hands=2)
-        game.add_player(FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0)))
-        game.add_player(CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1)))
+        game.add_player(
+            FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0))
+        )
+        game.add_player(
+            CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1))
+        )
 
         # Initialize and start
         game._initialize_game()
