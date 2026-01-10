@@ -8,7 +8,7 @@ __all__ = ["TightAggressiveBot"]
 
 class TightAggressiveBot(Player):
     """A bot that is selective with starting hands, but bets and raises assertively when involved.
-    
+
     - **Key Traits:** Discipline, strong value betting, positional awareness.
     - **Strengths:** Consistently profitable, difficult to exploit.
     - **Weaknesses:** Can become predictable if overly rigid.
