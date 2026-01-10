@@ -329,9 +329,57 @@ class Game:
 
     def _drain_event_queue(self) -> None:
         """Process all queued events."""
-        while self._event_queue:
+        while self.step():
+            pass
+
+    def step(self) -> bool:
+        """
+        Process a single event from the event queue.
+
+        This allows for step-by-step execution of the game, processing one event
+        at a time instead of running the entire game loop.
+
+        Returns
+        -------
+        bool
+            True if an event was processed, False if the queue was empty.
+
+        Examples
+        --------
+        >>> game = Game(small_blind=10, big_blind=20, max_hands=1)
+        >>> game.add_player(Player(name="Alice", stack=1000))
+        >>> game.add_player(Player(name="Bob", stack=1000))
+        >>> game._initialize_game()
+        >>> game._event_queue.append(GameEventType.GAME_STARTED)
+        >>> while game.step():
+        ...     # Process one event at a time
+        ...     pass
+        """
+        if self.has_events():
             event = self._event_queue.popleft()
             self._handle_event(event)
+            return True
+        return False
+
+    def has_events(self) -> bool:
+        """
+        Check if there are pending events in the queue.
+
+        Returns
+        -------
+        bool
+            True if there are events to process, False otherwise.
+
+        Examples
+        --------
+        >>> game = Game()
+        >>> game.has_events()
+        False
+        >>> game._event_queue.append(GameEventType.GAME_STARTED)
+        >>> game.has_events()
+        True
+        """
+        return len(self._event_queue) > 0
 
     def _initialize_game(self) -> None:
         self.state.hand_number = 0
