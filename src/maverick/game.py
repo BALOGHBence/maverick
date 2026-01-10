@@ -329,9 +329,8 @@ class Game:
 
     def _drain_event_queue(self) -> None:
         """Process all queued events."""
-        while self._event_queue:
-            event = self._event_queue.popleft()
-            self._handle_event(event)
+        while self.step():
+            pass
 
     def step(self) -> bool:
         """
@@ -356,7 +355,7 @@ class Game:
         ...     # Process one event at a time
         ...     pass
         """
-        if self._event_queue:
+        if self.has_events():
             event = self._event_queue.popleft()
             self._handle_event(event)
             return True
