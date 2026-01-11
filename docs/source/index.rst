@@ -54,6 +54,7 @@ Table of Contents
    
    texas_holdem_rules
    custom_players
+   player_archetypes
    complete_example
    api_reference
 
