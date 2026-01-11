@@ -29,7 +29,10 @@ class ScaredMoneyBot(Player):
         if ActionType.CALL in valid_actions:
             call_amount = game_state.current_bet - self.state.current_bet
             # Scared money only calls tiny amounts
-            if call_amount <= game_state.big_blind and call_amount <= self.state.stack * 0.05:
+            if (
+                call_amount <= game_state.big_blind
+                and call_amount <= self.state.stack * 0.05
+            ):
                 return PlayerAction(
                     player_id=self.id, action_type=ActionType.CALL, amount=call_amount
                 )

@@ -10,10 +10,12 @@ __all__ = ["PlayerAction"]
 class PlayerAction(BaseModel):
     """Represents an action taken by a player during their turn in a game."""
 
-    player_id: str = Field(..., description="Unique identifier of the player taking the action.")
+    player_id: str = Field(
+        ..., description="Unique identifier of the player taking the action."
+    )
     action_type: ActionType = Field(..., description="Type of action being taken.")
     amount: Optional[int] = Field(
-        default=None, 
+        default=None,
         ge=0,
         description=(
             "Amount for BET or RAISE. None for CALL, CHECK, or FOLD. "

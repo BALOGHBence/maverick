@@ -21,7 +21,7 @@ class GTOBot(Player):
         """Play balanced, theoretically sound poker."""
         # GTO bot aims for balance - mixing actions to be unexploitable
         # Uses consistent bet sizing and balanced ranges
-        
+
         # Standard GTO bet sizing - typically 50-75% pot
         pot_bet = int(game_state.pot * 0.66)
 
