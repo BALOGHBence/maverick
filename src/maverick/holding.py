@@ -29,16 +29,34 @@ class Holding(BaseModel):
     cards: list[Card]
 
     @classmethod
-    def random(cls, deck: Optional[Deck] = None):
+    def random(cls, *, n: int = 2, deck: Optional[Deck] = None) -> "Holding":
+        """Generate a random holding of 2 cards.
+
+        Parameters
+        ----------
+        n : int, optional
+            The number of cards in the holding (default is 2).
+        deck : Deck, optional
+            An optional deck to draw cards from. If not provided, random cards will be
+            generated.
+        """
         if deck:
-            cards = random.sample(deck.cards, 2)
+            cards = random.sample(deck.cards, n)
         else:
-            cards = Card.random(2)
+            cards = Card.random(n=n)
         return cls(cards=cards)
 
     @classmethod
     def all_possible_holdings(cls, cards: list[Card], n: int = 2) -> iter:
-        """Generate all possible holdings of n cards from the given deck."""
+        """Generate all possible holdings of n cards from the given deck.
+
+        Parameters
+        ----------
+        cards : list[Card]
+            The list of cards to choose from.
+        n : int, optional
+            The number of cards in each holding (default is 2).
+        """
         for combination in combinations(cards, n):
             yield cls(cards=list(combination))
 
@@ -49,18 +67,16 @@ class Holding(BaseModel):
         """
         return score_hand(self.cards)
 
-    def estimate_strength(self, n_simulations: int = 1000, n_players: int = 8) -> float:
+    def estimate_strength(self, **kwargs) -> float:
         """
         Estimate the strength of the holding via Monte Carlo simulation.
 
         Returns a number between 0 and 1, representing the probability of the current hand
         being the strongest.
+
+        The keyword arguments are passed to `estimate_holding_strength`.
         """
-        return estimate_holding_strength(
-            holding=self.cards,
-            n_simulations=n_simulations,
-            n_players=n_players,
-        )
+        return estimate_holding_strength(holding=self.cards, **kwargs)
 
     def __repr__(self) -> str:
         return " ".join([card.utf8() for card in self.cards])

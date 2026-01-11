@@ -25,7 +25,9 @@ class TiltedBot(Player):
         # Often goes all-in on tilt
         if ActionType.ALL_IN in valid_actions and self.state.stack < game_state.pot * 2:
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.ALL_IN, amount=self.state.stack
+                player_id=self.id,
+                action_type=ActionType.ALL_IN,
+                amount=self.state.stack,
             )
 
         # Raise aggressively without much thought

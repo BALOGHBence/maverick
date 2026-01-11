@@ -24,9 +24,7 @@ class WhaleBot(Player):
         # Raise big - whale loves to gamble
         if ActionType.RAISE in valid_actions:
             # Huge raises
-            raise_amount = min(
-                max(min_raise * 3, game_state.pot), self.state.stack
-            )
+            raise_amount = min(max(min_raise * 3, game_state.pot), self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
             )
@@ -52,7 +50,9 @@ class WhaleBot(Player):
         # Even all-in doesn't scare a whale
         if ActionType.ALL_IN in valid_actions:
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.ALL_IN, amount=self.state.stack
+                player_id=self.id,
+                action_type=ActionType.ALL_IN,
+                amount=self.state.stack,
             )
 
         # Check if must

@@ -72,5 +72,37 @@ class Card(BaseModel):
         }
         return f"{rank_symbols[self.rank]}{suit_symbols[self.suit]}"
 
+    def code(self) -> str:
+        """Return short canonical card code (e.g. Ah, Td, Ks)."""
+        rank_codes = {
+            Rank.TWO: "2",
+            Rank.THREE: "3",
+            Rank.FOUR: "4",
+            Rank.FIVE: "5",
+            Rank.SIX: "6",
+            Rank.SEVEN: "7",
+            Rank.EIGHT: "8",
+            Rank.NINE: "9",
+            Rank.TEN: "T",
+            Rank.JACK: "J",
+            Rank.QUEEN: "Q",
+            Rank.KING: "K",
+            Rank.ACE: "A",
+        }
+        suit_codes = {
+            Suit.HEARTS: "h",
+            Suit.DIAMONDS: "d",
+            Suit.CLUBS: "c",
+            Suit.SPADES: "s",
+        }
+        return f"{rank_codes[self.rank]}{suit_codes[self.suit]}"
+
+    def text(self) -> str:
+        """Return human-readable text representation."""
+        return f"{self.rank.name.title()} of {self.suit.name.title()}"
+
     def __repr__(self) -> str:
+        return f"Card({self.code()})"
+
+    def __str__(self) -> str:
         return self.utf8()

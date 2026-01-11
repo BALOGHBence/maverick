@@ -37,7 +37,7 @@ class TightAggressiveBot(Player):
             # Value bet: 2/3 pot or 2-3x BB
             bet_amount = min(
                 max(int(game_state.pot * 0.66), game_state.big_blind * 2),
-                self.state.stack
+                self.state.stack,
             )
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount

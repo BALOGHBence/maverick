@@ -97,6 +97,16 @@ def score_hand(hand: list["Card"]) -> Tuple["HandType", float]:
     - Four of a Kind: 800+
     - Straight Flush: 900+
     - Royal Flush: 1000
+
+    Parameters
+    ----------
+    hand : list[Card]
+        The list of cards in the hand.
+
+    Returns
+    -------
+    tuple[HandType, float]
+        A tuple containing the hand type and its score.
     """
 
     assert len(hand) > 0, "At least one card is required to score a hand."
@@ -196,20 +206,34 @@ def find_highest_scoring_hand(
     private_cards: list["Card"],
     community_cards: list["Card"],
     n_min_private: int = 0,
-) -> list["Card"]:
+) -> tuple[list["Card"], "HandType", float]:
     """
     Find the highest scoring 5-card hand from the given private and community cards
     with at least n_min_private cards from the private cards.
+
+    Parameters
+    ----------
+    private_cards : list[Card]
+        The player's private cards.
+    community_cards : list[Card]
+        The community cards on the table.
+    n_min_private : int, optional
+        The minimum number of private cards that must be included in the hand (default is 0).
+
+    Returns
+    -------
+    tuple[list[Card], HandType, float]
+        A tuple containing the best 5-card hand, its hand type, and its score.
     """
 
     all_cards = private_cards + community_cards
 
     # If we have 5 or fewer cards total, return all of them
     if len(all_cards) <= 5:
-        return all_cards
+        return all_cards, *score_hand(all_cards)
 
     best_hand = None
-    best_score = -1
+    best_score = -1.0
 
     # Try all 5-card combinations
     for hand in combinations(all_cards, 5):
@@ -228,5 +252,8 @@ def find_highest_scoring_hand(
             best_score = score
             best_hand = hand
 
+    if best_hand is None:
+        return [], None, 0.0
+
     # Return the best hand found
-    return list(best_hand) if best_hand else []
+    return list(best_hand), *score_hand(list(best_hand))

@@ -39,7 +39,9 @@ class ManiacBot(Player):
         # Will even go all-in on marginal situations
         if ActionType.ALL_IN in valid_actions and self.state.stack <= game_state.pot:
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.ALL_IN, amount=self.state.stack
+                player_id=self.id,
+                action_type=ActionType.ALL_IN,
+                amount=self.state.stack,
             )
 
         # Call if can't raise or bet

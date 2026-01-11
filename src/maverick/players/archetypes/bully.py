@@ -45,7 +45,9 @@ class BullyBot(Player):
         # Will call to see showdown and apply pressure
         if ActionType.CALL in valid_actions:
             call_amount = game_state.current_bet - self.state.current_bet
-            if call_amount <= self.state.stack * 0.3:  # Willing to call reasonable amounts
+            if (
+                call_amount <= self.state.stack * 0.3
+            ):  # Willing to call reasonable amounts
                 return PlayerAction(
                     player_id=self.id, action_type=ActionType.CALL, amount=call_amount
                 )

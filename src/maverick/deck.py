@@ -108,7 +108,7 @@ class Deck(BaseModel):
 
         return dealt_cards
 
-    def shuffle(self, n: int = 1) -> None:
+    def shuffle(self, n: int = 1) -> "Deck":
         """Shuffle the deck of cards n times.
 
         Parameters
@@ -124,3 +124,21 @@ class Deck(BaseModel):
             random.shuffle(self.cards)
 
         return self
+
+    def missing_cards(self) -> list[Card]:
+        """Return the list of cards missing from the deck."""
+        full_deck = Deck.build()
+        missing = [card for card in full_deck.cards if card not in self.cards]
+        return missing
+
+    def remove_cards(self, cards_to_remove: list[Card]) -> None:
+        """Remove specified cards from the deck.
+
+        Parameters
+        ----------
+        cards_to_remove : list[Card]
+            The list of cards to remove from the deck.
+        """
+        for card in cards_to_remove:
+            if card in self.cards:
+                self.cards.remove(card)

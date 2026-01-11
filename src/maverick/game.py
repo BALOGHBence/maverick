@@ -24,7 +24,7 @@ from .protocol import PlayerLike
 from .state import GameState
 from .playeraction import PlayerAction
 from .playerstate import PlayerState
-from .utils import find_highest_scoring_hand, score_hand
+from .utils import find_highest_scoring_hand
 
 __all__ = ["Game"]
 
@@ -645,7 +645,10 @@ class Game:
             )
 
         current_player.state.acted_this_street = True
-        self._log(f"Current pot: {self.state.pot} | Current bet: {self.state.current_bet}", logging.INFO)
+        self._log(
+            f"Current pot: {self.state.pot} | Current bet: {self.state.current_bet}",
+            logging.INFO,
+        )
 
     def _get_valid_actions(self, player: PlayerLike) -> list[ActionType]:
         """Get list of valid actions for a player."""
@@ -771,10 +774,16 @@ class Game:
             for player in players_in_hand:
                 if player.state.holding:
                     # Find best 5-card hand from 7 cards (2 hole + 5 community)
-                    best_hand = find_highest_scoring_hand(
+                    player_holding = " ".join(
+                        card.utf8() for card in player.state.holding.cards
+                    )
+                    self._log(
+                        f"Player {player.name} has holding {player_holding} at showdown,",
+                        logging.INFO,
+                    )
+                    best_hand, best_hand_type, best_score = find_highest_scoring_hand(
                         player.state.holding.cards, self.state.community_cards
                     )
-                    best_hand_type, best_score = score_hand(best_hand)
                     player_scores.append((player, best_score))
                     self._log(
                         (
@@ -791,7 +800,7 @@ class Game:
             winners = [p for p, s in player_scores if s == highest_score]
 
             # Sort winners by seat position (closest to button gets remainder chips)
-            winners_sorted = sorted(
+            winners_sorted: list[PlayerLike] = sorted(
                 winners, key=lambda p: p.state.seat if p.state.seat is not None else 0
             )
 
