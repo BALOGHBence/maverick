@@ -774,6 +774,13 @@ class Game:
             for player in players_in_hand:
                 if player.state.holding:
                     # Find best 5-card hand from 7 cards (2 hole + 5 community)
+                    player_holding = " ".join(
+                        card.utf8() for card in player.state.holding.cards
+                    )
+                    self._log(
+                        f"Player {player.name} has holding {player_holding} at showdown,",
+                        logging.INFO,
+                    )
                     best_hand, best_hand_type, best_score = find_highest_scoring_hand(
                         player.state.holding.cards, self.state.community_cards
                     )
@@ -793,7 +800,7 @@ class Game:
             winners = [p for p, s in player_scores if s == highest_score]
 
             # Sort winners by seat position (closest to button gets remainder chips)
-            winners_sorted = sorted(
+            winners_sorted: list[PlayerLike] = sorted(
                 winners, key=lambda p: p.state.seat if p.state.seat is not None else 0
             )
 

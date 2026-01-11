@@ -86,11 +86,6 @@ def score_hand(hand: list["Card"]) -> Tuple["HandType", float]:
     Works with any number of cards (not just 5).
     Returns (HandType, float_score) where higher scores = stronger hands.
 
-    .. note::
-        The utility function `find_highest_scoring_hand` supercedes this function for
-        finding the best 5-card hand from a larger set of cards and it returns the same
-        result for less than or equal to 5 cards, hence it can be used in most scenarios.
-
     Hand ranking (base scores):
     - High Card: 100+
     - Pair: 200+
@@ -238,7 +233,7 @@ def find_highest_scoring_hand(
         return all_cards, *score_hand(all_cards)
 
     best_hand = None
-    best_score = -1
+    best_score = -1.0
 
     # Try all 5-card combinations
     for hand in combinations(all_cards, 5):
