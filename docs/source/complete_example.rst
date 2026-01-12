@@ -21,7 +21,7 @@ First, let's configure logging to see what's happening in the game:
 
 .. code-block:: python
 
-    from maverick import Game, Player, ActionType, GameState, Street
+    from maverick import Game, Player, ActionType, Street
     from maverick.players import FoldBot
     import logging
 
@@ -49,7 +49,7 @@ A simple bot that always calls or checks, never raising:
         
         def decide_action(
             self, 
-            game_state: GameState, 
+            game: Game, 
             valid_actions: list[ActionType], 
             min_raise: int
         ) -> tuple[ActionType, int]:
@@ -57,7 +57,7 @@ A simple bot that always calls or checks, never raising:
             if ActionType.CHECK in valid_actions:
                 return (ActionType.CHECK, 0)
             elif ActionType.CALL in valid_actions:
-                call_amount = game_state.current_bet - self.current_bet
+                call_amount = game.state.current_bet - self.current_bet
                 if call_amount <= self.stack:
                     return (ActionType.CALL, call_amount)
             return (ActionType.FOLD, 0)
@@ -74,7 +74,7 @@ A bot that likes to bet and raise:
         
         def decide_action(
             self, 
-            game_state: GameState, 
+            game: Game, 
             valid_actions: list[ActionType], 
             min_raise: int
         ) -> tuple[ActionType, int]:
@@ -87,13 +87,13 @@ A bot that likes to bet and raise:
             
             # Otherwise bet if possible
             if ActionType.BET in valid_actions:
-                bet_amount = game_state.big_blind * 2
+                bet_amount = game.state.big_blind * 2
                 if bet_amount <= self.stack:
                     return (ActionType.BET, bet_amount)
             
             # Call if we can't bet/raise
             if ActionType.CALL in valid_actions:
-                call_amount = game_state.current_bet - self.current_bet
+                call_amount = game.state.current_bet - self.current_bet
                 if call_amount <= self.stack:
                     return (ActionType.CALL, call_amount)
             
@@ -116,37 +116,37 @@ A bot that makes decisions based on game state and pot odds:
         
         def decide_action(
             self, 
-            game_state: GameState, 
+            game: Game, 
             valid_actions: list[ActionType], 
             min_raise: int
         ) -> tuple[ActionType, int]:
             """Make strategic decisions based on game state."""
             # Simple strategy: aggressive early, cautious later
-            pot_size = game_state.pot
+            pot_size = game.state.pot
             
             # On pre-flop, be selective
-            if game_state.street == Street.PRE_FLOP:
+            if game.state.street == Street.PRE_FLOP:
                 if ActionType.CHECK in valid_actions:
                     return (ActionType.CHECK, 0)
                 elif ActionType.CALL in valid_actions:
-                    call_amount = game_state.current_bet - self.current_bet
+                    call_amount = game.state.current_bet - self.current_bet
                     # Only call small bets pre-flop
-                    if call_amount <= game_state.big_blind * 3:
+                    if call_amount <= game.state.big_blind * 3:
                         if call_amount <= self.stack:
                             return (ActionType.CALL, call_amount)
                 return (ActionType.FOLD, 0)
             
             # Post-flop, consider pot size
-            if ActionType.BET in valid_actions and pot_size < game_state.big_blind * 10:
+            if ActionType.BET in valid_actions and pot_size < game.state.big_blind * 10:
                 bet_amount = pot_size // 2
-                if bet_amount <= self.stack and bet_amount >= game_state.min_bet:
+                if bet_amount <= self.stack and bet_amount >= game.state.min_bet:
                     return (ActionType.BET, bet_amount)
             
             if ActionType.CHECK in valid_actions:
                 return (ActionType.CHECK, 0)
             
             if ActionType.CALL in valid_actions:
-                call_amount = game_state.current_bet - self.current_bet
+                call_amount = game.state.current_bet - self.current_bet
                 # Use pot odds to decide
                 if call_amount <= pot_size // 3 and call_amount <= self.stack:
                     return (ActionType.CALL, call_amount)
@@ -231,7 +231,7 @@ This example demonstrates several key concepts:
 **Player Decision Making**
   Each player's ``decide_action()`` method receives:
   
-  * ``game_state``: Complete game state (pot, bets, community cards, street, etc.)
+  * ``game``: The game instance (access state via game.state for pot, bets, community cards, street, etc.)
   * ``valid_actions``: List of legal actions the player can take
   * ``min_raise``: Minimum amount required for a raise
   
