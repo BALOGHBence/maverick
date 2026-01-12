@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from ...player import Player
 from ...enums import ActionType
 from ...playeraction import PlayerAction
-from ...utils import estimate_holding_strength, find_highest_scoring_hand
+from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:
     from ...game import Game
@@ -49,8 +49,7 @@ class LoosePassiveBot(Player):
                 n_players=len(game.state.get_players_in_hand()),
             )
 
-        # Loose passive has terrible standards
-        weak_hand = hand_equity > 0.20  # Still plays weak hands
+        # Loose passive has terrible standards - evaluates but doesn't use properly
 
         # Check when possible
         if ActionType.CHECK in valid_actions:

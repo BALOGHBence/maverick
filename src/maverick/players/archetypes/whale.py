@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from ...player import Player
 from ...enums import ActionType
 from ...playeraction import PlayerAction
-from ...utils import estimate_holding_strength, find_highest_scoring_hand
+from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:
     from ...game import Game
@@ -49,8 +49,7 @@ class WhaleBot(Player):
                 n_players=len(game.state.get_players_in_hand()),
             )
 
-        # Whale plays everything - loves action more than equity
-        any_cards = hand_equity > 0.10  # Plays almost anything
+        # Whale plays everything - loves action more than equity, evaluates but gambles anyway
 
         # Raise big - whale loves to gamble
         if ActionType.RAISE in valid_actions:

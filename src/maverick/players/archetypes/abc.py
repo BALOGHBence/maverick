@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from ...player import Player
 from ...enums import ActionType
 from ...playeraction import PlayerAction
-from ...utils import estimate_holding_strength, find_highest_scoring_hand
+from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:
     from ...game import Game
@@ -52,7 +52,6 @@ class ABCBot(Player):
         # Textbook thresholds for ABC play
         strong_hand = hand_equity > 0.65
         decent_hand = hand_equity > 0.45
-        marginal_hand = hand_equity > 0.30
 
         # Standard value bet with strong hands
         if ActionType.BET in valid_actions and strong_hand:

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from ...player import Player
 from ...enums import ActionType
 from ...playeraction import PlayerAction
-from ...utils import estimate_holding_strength, find_highest_scoring_hand
+from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:
     from ...game import Game
@@ -50,7 +50,6 @@ class TightPassiveBot(Player):
             )
 
         # Tight passive requires very strong equity
-        premium_hand = hand_equity > 0.75
         strong_hand = hand_equity > 0.60
 
         # Check is always preferred when free

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from ...player import Player
 from ...enums import ActionType
 from ...playeraction import PlayerAction
-from ...utils import estimate_holding_strength, find_highest_scoring_hand
+from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:
     from ...game import Game
@@ -48,7 +48,7 @@ class ManiacBot(Player):
                 n_players=len(game.state.get_players_in_hand()),
             )
 
-        # Maniac plays everything - hand strength barely matters
+        # Maniac plays everything - hand strength barely matters, evaluates but ignores
         # Always try to raise first
         if ActionType.RAISE in valid_actions:
             # Maniac raises big - 4-5x or more
