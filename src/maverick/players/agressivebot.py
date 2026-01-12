@@ -1,6 +1,5 @@
 from ..player import Player
 from ..enums import ActionType
-from ..state import GameState
 from ..playeraction import PlayerAction
 
 __all__ = ["AggressiveBot"]
@@ -10,7 +9,7 @@ class AggressiveBot(Player):
     """An aggressive bot that frequently bets and raises."""
 
     def decide_action(
-        self, game_state: GameState, valid_actions: list[ActionType], min_raise: int
+        self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
         """Bet or raise aggressively."""
         # Try to raise if possible
@@ -23,7 +22,7 @@ class AggressiveBot(Player):
 
         # Otherwise bet if possible
         if ActionType.BET in valid_actions:
-            bet_amount = game_state.big_blind * 2
+            bet_amount = game.state.big_blind * 2
             if bet_amount <= self.state.stack:
                 return PlayerAction(
                     player_id=self.id, action_type=ActionType.BET, amount=bet_amount
@@ -31,7 +30,7 @@ class AggressiveBot(Player):
 
         # Call if we can't bet/raise
         if ActionType.CALL in valid_actions:
-            call_amount = game_state.current_bet - self.state.current_bet
+            call_amount = game.state.current_bet - self.state.current_bet
             if call_amount <= self.state.stack:
                 return PlayerAction(
                     player_id=self.id, action_type=ActionType.CALL, amount=call_amount

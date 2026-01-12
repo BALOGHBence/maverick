@@ -1,6 +1,5 @@
 from ...player import Player
 from ...enums import ActionType
-from ...state import GameState
 from ...playeraction import PlayerAction
 
 __all__ = ["BullyBot"]
@@ -16,7 +15,7 @@ class BullyBot(Player):
     """
 
     def decide_action(
-        self, game_state: GameState, valid_actions: list[ActionType], min_raise: int
+        self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
         """Use stack size to pressure opponents with big bets."""
         # Bully plays based on stack advantage
@@ -26,7 +25,7 @@ class BullyBot(Player):
         if ActionType.RAISE in valid_actions:
             # Overbet to intimidate - 4-6x typical
             raise_amount = min(
-                max(min_raise * 2, game_state.big_blind * 6), self.state.stack
+                max(min_raise * 2, game.state.big_blind * 6), self.state.stack
             )
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
@@ -35,16 +34,16 @@ class BullyBot(Player):
         # Overbets to put pressure
         if ActionType.BET in valid_actions:
             # Bully bets big - often pot-sized or more
-            bet_amount = min(game_state.pot, self.state.stack)
-            if bet_amount < game_state.big_blind * 2:
-                bet_amount = min(game_state.big_blind * 4, self.state.stack)
+            bet_amount = min(game.state.pot, self.state.stack)
+            if bet_amount < game.state.big_blind * 2:
+                bet_amount = min(game.state.big_blind * 4, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Will call to see showdown and apply pressure
         if ActionType.CALL in valid_actions:
-            call_amount = game_state.current_bet - self.state.current_bet
+            call_amount = game.state.current_bet - self.state.current_bet
             if (
                 call_amount <= self.state.stack * 0.3
             ):  # Willing to call reasonable amounts

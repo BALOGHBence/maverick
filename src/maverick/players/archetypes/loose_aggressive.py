@@ -1,6 +1,5 @@
 from ...player import Player
 from ...enums import ActionType, Street
-from ...state import GameState
 from ...playeraction import PlayerAction
 
 __all__ = ["LooseAggressiveBot"]
@@ -16,14 +15,14 @@ class LooseAggressiveBot(Player):
     """
 
     def decide_action(
-        self, game_state: GameState, valid_actions: list[ActionType], min_raise: int
+        self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
         """Play aggressively with a wide range of hands."""
         # LAG player tends to raise or bet frequently
         if ActionType.RAISE in valid_actions:
             # Aggressive raises - often 3-4x the big blind or current bet
             raise_amount = min(
-                max(min_raise, game_state.big_blind * 3), self.state.stack
+                max(min_raise, game.state.big_blind * 3), self.state.stack
             )
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
@@ -31,14 +30,14 @@ class LooseAggressiveBot(Player):
 
         if ActionType.BET in valid_actions:
             # Aggressive bets
-            bet_amount = min(game_state.big_blind * 3, self.state.stack)
+            bet_amount = min(game.state.big_blind * 3, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Even when can't raise/bet, still call frequently
         if ActionType.CALL in valid_actions:
-            call_amount = game_state.current_bet - self.state.current_bet
+            call_amount = game.state.current_bet - self.state.current_bet
             if call_amount <= self.state.stack:
                 return PlayerAction(
                     player_id=self.id, action_type=ActionType.CALL, amount=call_amount

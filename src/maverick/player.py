@@ -1,11 +1,13 @@
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from pydantic import BaseModel
 
 from .enums import ActionType
-from .state import GameState
 from .playeraction import PlayerAction
 from .playerstate import PlayerState
+
+if TYPE_CHECKING:
+    from .game import Game
 
 __all__ = ["Player"]
 
@@ -19,7 +21,7 @@ class Player(BaseModel):
 
     def decide_action(
         self,
-        game_state: GameState,
+        game: "Game",
         valid_actions: list[ActionType],
         min_raise: int,  # noqa: ARG002
     ) -> PlayerAction:
@@ -27,6 +29,20 @@ class Player(BaseModel):
         Decide on an action to take during the player's turn.
 
         The function should return a valid instance of PlayerAction.
+
+        Parameters
+        ----------
+        game : Game
+            The game instance containing the current state.
+        valid_actions : list[ActionType]
+            List of valid actions the player can take.
+        min_raise : int
+            Minimum amount for a raise action.
+
+        Returns
+        -------
+        PlayerAction
+            An instance of PlayerAction representing the chosen action.
         """
         raise NotImplementedError(
             "decide_action method must be implemented by subclasses."

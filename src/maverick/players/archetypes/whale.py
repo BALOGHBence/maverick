@@ -1,6 +1,5 @@
 from ...player import Player
 from ...enums import ActionType
-from ...state import GameState
 from ...playeraction import PlayerAction
 
 __all__ = ["WhaleBot"]
@@ -16,7 +15,7 @@ class WhaleBot(Player):
     """
 
     def decide_action(
-        self, game_state: GameState, valid_actions: list[ActionType], min_raise: int
+        self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
         """Play extremely loose and gamble with large sums."""
         # Whale plays almost everything and bets big
@@ -24,7 +23,7 @@ class WhaleBot(Player):
         # Raise big - whale loves to gamble
         if ActionType.RAISE in valid_actions:
             # Huge raises
-            raise_amount = min(max(min_raise * 3, game_state.pot), self.state.stack)
+            raise_amount = min(max(min_raise * 3, game.state.pot), self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
             )
@@ -32,16 +31,16 @@ class WhaleBot(Player):
         # Big bets
         if ActionType.BET in valid_actions:
             # Whale bets big
-            bet_amount = min(game_state.pot, self.state.stack)
-            if bet_amount < game_state.big_blind * 3:
-                bet_amount = min(game_state.big_blind * 5, self.state.stack)
+            bet_amount = min(game.state.pot, self.state.stack)
+            if bet_amount < game.state.big_blind * 3:
+                bet_amount = min(game.state.big_blind * 5, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Calls everything (loves action)
         if ActionType.CALL in valid_actions:
-            call_amount = game_state.current_bet - self.state.current_bet
+            call_amount = game.state.current_bet - self.state.current_bet
             if call_amount <= self.state.stack:
                 return PlayerAction(
                     player_id=self.id, action_type=ActionType.CALL, amount=call_amount

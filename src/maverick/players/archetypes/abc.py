@@ -1,6 +1,5 @@
 from ...player import Player
 from ...enums import ActionType
-from ...state import GameState
 from ...playeraction import PlayerAction
 
 __all__ = ["ABCBot"]
@@ -16,7 +15,7 @@ class ABCBot(Player):
     """
 
     def decide_action(
-        self, game_state: GameState, valid_actions: list[ActionType], min_raise: int
+        self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
         """Play straightforward, textbook poker."""
         # ABC player follows standard poker guidelines
@@ -29,7 +28,7 @@ class ABCBot(Player):
         # Standard value bet
         if ActionType.BET in valid_actions:
             # Textbook bet: 50-75% of pot or 2-3x BB
-            bet_amount = min(game_state.big_blind * 2, self.state.stack)
+            bet_amount = min(game.state.big_blind * 2, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )
@@ -44,9 +43,9 @@ class ABCBot(Player):
 
         # Call with proper pot odds
         if ActionType.CALL in valid_actions:
-            call_amount = game_state.current_bet - self.state.current_bet
+            call_amount = game.state.current_bet - self.state.current_bet
             # ABC calls with 3:1 pot odds or better
-            if call_amount <= self.state.stack and call_amount * 3 <= game_state.pot:
+            if call_amount <= self.state.stack and call_amount * 3 <= game.state.pot:
                 return PlayerAction(
                     player_id=self.id, action_type=ActionType.CALL, amount=call_amount
                 )

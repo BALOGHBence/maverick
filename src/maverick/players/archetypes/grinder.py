@@ -1,6 +1,5 @@
 from ...player import Player
 from ...enums import ActionType
-from ...state import GameState
 from ...playeraction import PlayerAction
 
 __all__ = ["GrinderBot"]
@@ -16,7 +15,7 @@ class GrinderBot(Player):
     """
 
     def decide_action(
-        self, game_state: GameState, valid_actions: list[ActionType], min_raise: int
+        self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
         """Play solid, consistent poker focused on long-term EV."""
         # Grinder plays ABC poker - consistent and disciplined
@@ -28,7 +27,7 @@ class GrinderBot(Player):
 
         # Bet for value - standard sizing
         if ActionType.BET in valid_actions:
-            bet_amount = min(game_state.big_blind * 2, self.state.stack)
+            bet_amount = min(game.state.big_blind * 2, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )
@@ -42,9 +41,9 @@ class GrinderBot(Player):
 
         # Call with good pot odds
         if ActionType.CALL in valid_actions:
-            call_amount = game_state.current_bet - self.state.current_bet
+            call_amount = game.state.current_bet - self.state.current_bet
             # Basic pot odds calculation - call if getting 2:1 or better
-            if call_amount <= self.state.stack and call_amount <= game_state.pot * 0.5:
+            if call_amount <= self.state.stack and call_amount <= game.state.pot * 0.5:
                 return PlayerAction(
                     player_id=self.id, action_type=ActionType.CALL, amount=call_amount
                 )
