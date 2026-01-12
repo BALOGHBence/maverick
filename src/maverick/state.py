@@ -67,23 +67,25 @@ class GameState(BaseModel):
         return None
 
     def is_betting_round_complete(self) -> bool:
-        """Check if the current betting round is complete."""
-        active = self.get_active_players()
+        """Betting round is complete when no further action is possible/required."""
+        in_hand = [p for p in self.players if p.state.state_type != PlayerStateType.FOLDED]
 
-        # If only one player left, betting is complete
-        if len(self.get_players_in_hand()) <= 1:
+        # If only one player remains, hand is effectively over
+        if len(in_hand) <= 1:
             return True
 
-        # All players must have acted
-        if not all(p.state.acted_this_street for p in active):
+        can_act = [p for p in in_hand if p.state.state_type == PlayerStateType.ACTIVE]
+
+        # If nobody can act (everyone left is all-in), betting is complete
+        if not can_act:
+            return True
+
+        # Everyone who can act must have acted since the last reopen
+        if not all(p.state.acted_this_street for p in can_act):
             return False
 
-        # All active players must have equal bets or be all-in
-        for player in active:
-            if (
-                player.state.state_type != PlayerStateType.ALL_IN
-                and player.state.current_bet != self.current_bet
-            ):
-                return False
+        # Everyone who can act must have matched the current bet
+        if not all(p.state.current_bet == self.current_bet for p in can_act):
+            return False
 
         return True

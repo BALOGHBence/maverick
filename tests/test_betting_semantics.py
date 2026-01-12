@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from maverick import Game as GameType
 
 
-class TestBot(Player):
+class MockPlayer(Player):
     """A test bot that follows scripted actions."""
     
     def __init__(self, actions=None, **kwargs):
@@ -45,9 +45,9 @@ class TestMinimumRaiseTracking(unittest.TestCase):
         """Test that last_raise_size is set to big blind after blinds."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000),
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000),
                      actions=[(ActionType.FOLD, None)])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000),
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000),
                      actions=[(ActionType.FOLD, None)])
         
         game.add_player(p1)
@@ -65,9 +65,9 @@ class TestMinimumRaiseTracking(unittest.TestCase):
         """Test that last_raise_size is updated when first bet is made."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000),
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000),
                      actions=[(ActionType.CHECK, None)])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000),
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000),
                      actions=[(ActionType.BET, 50)])
         
         game.add_player(p1)
@@ -104,10 +104,10 @@ class TestMinimumRaiseTracking(unittest.TestCase):
         """Test that last_raise_size is updated when a raise is made."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000),
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000),
                      actions=[(ActionType.RAISE, 40)])
         # P1 raises by 40 (to 60 total)
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000),
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000),
                      actions=[(ActionType.FOLD, None)])
         
         game.add_player(p1)
@@ -134,9 +134,9 @@ class TestNLHERaiseValidation(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
         # 3-player game
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
-        p3 = TestBot(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
         
         game.add_player(p1)
         game.add_player(p2)
@@ -164,9 +164,9 @@ class TestNLHERaiseValidation(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
         # 3-player game
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
-        p3 = TestBot(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
         
         game.add_player(p1)
         game.add_player(p2)
@@ -196,10 +196,10 @@ class TestNonReopeningAllIn(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
         # 3-player game
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
         # P3 has only 30 chips total
-        p3 = TestBot(id="p3", name="P3", state=PlayerState(stack=30), actions=[])
+        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=30), actions=[])
         
         game.add_player(p1)
         game.add_player(p2)
@@ -244,10 +244,10 @@ class TestNonReopeningAllIn(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
         # 3-player game
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
         # P3 has 40 chips total (enough for call + min raise)
-        p3 = TestBot(id="p3", name="P3", state=PlayerState(stack=40), actions=[])
+        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=40), actions=[])
         
         game.add_player(p1)
         game.add_player(p2)
@@ -294,11 +294,11 @@ class TestShortStackCall(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
         # 3-player game: P1 has only 25 chips
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=25),
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=25),
                      actions=[(ActionType.FOLD, None)])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000),
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000),
                      actions=[(ActionType.CALL, None)])
-        p3 = TestBot(id="p3", name="P3", state=PlayerState(stack=1000),
+        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=1000),
                      actions=[(ActionType.CALL, None)])
         
         game.add_player(p1)
@@ -321,7 +321,7 @@ class TestShortStackCall(unittest.TestCase):
         """Test that CALL is not valid when player has zero chips."""
         game = Game(small_blind=10, big_blind=20)
         
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=0),
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=0),
                      actions=[])
         
         game.add_player(p1)
@@ -349,7 +349,7 @@ class TestRaiseBySemantics(unittest.TestCase):
                 return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
         
         p1 = MinRaiseBot(id="p1", name="P1", state=PlayerState(stack=1000))
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000),
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000),
                      actions=[(ActionType.FOLD, None)])
         
         game.add_player(p1)
@@ -371,10 +371,10 @@ class TestRaiseBySemantics(unittest.TestCase):
         """Test that RAISE.amount is added to player's current bet."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000),
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000),
                      actions=[(ActionType.RAISE, 40)])
         # Raise by 40 on top of current bet
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000),
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000),
                      actions=[(ActionType.FOLD, None)])
         
         game.add_player(p1)
@@ -404,9 +404,9 @@ class TestBettingRoundCompletion(unittest.TestCase):
         """Test that betting round completes when active players have acted and matched bets."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=100),
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=100),
                      actions=[(ActionType.CALL, None)])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=100),
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=100),
                      actions=[(ActionType.CHECK, None)])
         
         game.add_player(p1)
@@ -435,9 +435,9 @@ class TestShowdownStateMachine(unittest.TestCase):
         """Test that current_player_index is not advanced when entering showdown."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=100),
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=100),
                      actions=[(ActionType.FOLD, None)])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=100),
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=100),
                      actions=[(ActionType.FOLD, None)])
         
         game.add_player(p1)
@@ -458,9 +458,9 @@ class TestMinimumRaiseEnforcement(unittest.TestCase):
         """Test that a raise smaller than last_raise_size is rejected."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000),
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000),
                      actions=[])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000),
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000),
                      actions=[])
         
         game.add_player(p1)
@@ -482,11 +482,11 @@ class TestMinimumRaiseEnforcement(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
         # 3-player game to avoid heads-up complications
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=25),
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=25),
                      actions=[])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000),
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000),
                      actions=[])
-        p3 = TestBot(id="p3", name="P3", state=PlayerState(stack=1000),
+        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=1000),
                      actions=[])
         
         game.add_player(p1)
@@ -517,9 +517,9 @@ class TestRaiseZeroIncrease(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
         # 3-player game
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
-        p3 = TestBot(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
         
         game.add_player(p1)
         game.add_player(p2)
@@ -546,9 +546,9 @@ class TestRaiseZeroIncrease(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
         # 3-player game
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
-        p3 = TestBot(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
         
         game.add_player(p1)
         game.add_player(p2)
@@ -579,9 +579,9 @@ class TestReopenLogicWithZeroRaise(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
         # 3-player game
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
-        p3 = TestBot(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
         
         game.add_player(p1)
         game.add_player(p2)
@@ -619,8 +619,8 @@ class TestPreflopInitialization(unittest.TestCase):
         """Test that after posting blinds, last_raise_size equals big blind."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         
-        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
+        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
         
         game.add_player(p1)
         game.add_player(p2)
