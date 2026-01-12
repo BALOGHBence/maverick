@@ -432,7 +432,7 @@ class Game:
 
         # Ask player to decide
         action: PlayerAction = current_player.decide_action(
-            self.state, valid_actions, min_raise
+            self, valid_actions, min_raise
         )
 
         # Execute the action

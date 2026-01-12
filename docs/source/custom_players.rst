@@ -44,7 +44,7 @@ The most important method you must implement is:
 
     def decide_action(
         self, 
-        game_state: GameState, 
+        game: Game, 
         valid_actions: list[ActionType], 
         min_raise: int
     ) -> tuple[ActionType, int]:
@@ -52,7 +52,7 @@ The most important method you must implement is:
         Decide what action to take given the current game state.
 
         Args:
-            game_state: Current state of the game
+            game: The game instance containing the current state
             valid_actions: List of valid actions the player can take
             min_raise: Minimum amount for a raise action
 
@@ -82,7 +82,7 @@ Here's a simple example of a custom player that always calls or checks:
         
         def decide_action(
             self, 
-            game_state: GameState, 
+            game: Game, 
             valid_actions: list[ActionType], 
             min_raise: int
         ) -> tuple[ActionType, int]:
@@ -90,7 +90,7 @@ Here's a simple example of a custom player that always calls or checks:
             if ActionType.CHECK in valid_actions:
                 return (ActionType.CHECK, 0)
             elif ActionType.CALL in valid_actions:
-                call_amount = game_state.current_bet - self.state.current_bet
+                call_amount = game.state.current_bet - self.state.current_bet
                 return (ActionType.CALL, call_amount)
             else:
                 return (ActionType.FOLD, 0)
@@ -114,7 +114,7 @@ Here's a more sophisticated player that plays aggressively:
         
         def decide_action(
             self, 
-            game_state: GameState, 
+            game: Game, 
             valid_actions: list[ActionType], 
             min_raise: int
         ) -> tuple[ActionType, int]:
@@ -126,7 +126,7 @@ Here's a more sophisticated player that plays aggressively:
                     # Raise between min_raise and 3x current bet
                     raise_amount = random.randint(
                         min_raise, 
-                        min(game_state.current_bet * 3, self.state.stack)
+                        min(game.state.current_bet * 3, self.state.stack)
                     )
                     return (ActionType.RAISE, raise_amount)
             
@@ -134,14 +134,14 @@ Here's a more sophisticated player that plays aggressively:
             if ActionType.BET in valid_actions:
                 if random.random() < self.aggression_factor:
                     bet_amount = random.randint(
-                        game_state.min_bet,
-                        min(game_state.big_blind * 3, self.state.stack)
+                        game.state.min_bet,
+                        min(game.state.big_blind * 3, self.state.stack)
                     )
                     return (ActionType.BET, bet_amount)
             
             # Otherwise call or check
             if ActionType.CALL in valid_actions:
-                call_amount = game_state.current_bet - self.state.current_bet
+                call_amount = game.state.current_bet - self.state.current_bet
                 return (ActionType.CALL, call_amount)
             
             if ActionType.CHECK in valid_actions:
@@ -164,7 +164,7 @@ Here's an example that uses hand strength to make decisions:
         
         def decide_action(
             self, 
-            game_state: GameState, 
+            game: Game, 
             valid_actions: list[ActionType], 
             min_raise: int
         ) -> tuple[ActionType, int]:
@@ -179,10 +179,10 @@ Here's an example that uses hand strength to make decisions:
                     raise_amount = min_raise * 2
                     return (ActionType.RAISE, raise_amount)
                 elif ActionType.BET in valid_actions:
-                    bet_amount = game_state.big_blind * 3
+                    bet_amount = game.state.big_blind * 3
                     return (ActionType.BET, bet_amount)
                 elif ActionType.CALL in valid_actions:
-                    call_amount = game_state.current_bet - self.state.current_bet
+                    call_amount = game.state.current_bet - self.state.current_bet
                     return (ActionType.CALL, call_amount)
                 elif ActionType.CHECK in valid_actions:
                     return (ActionType.CHECK, 0)
@@ -193,8 +193,8 @@ Here's an example that uses hand strength to make decisions:
                     return (ActionType.CHECK, 0)
                 elif ActionType.CALL in valid_actions:
                     # Only call if bet is reasonable
-                    call_amount = game_state.current_bet - self.state.current_bet
-                    if call_amount <= game_state.big_blind * 2:
+                    call_amount = game.state.current_bet - self.state.current_bet
+                    if call_amount <= game.state.big_blind * 2:
                         return (ActionType.CALL, call_amount)
             
             # Weak hand - fold
@@ -202,7 +202,7 @@ Here's an example that uses hand strength to make decisions:
                 return (ActionType.CHECK, 0)
             return (ActionType.FOLD, 0)
         
-        def _evaluate_hand_strength(self, game_state: GameState) -> float:
+        def _evaluate_hand_strength(self, game: Game) -> float:
             """
             Evaluate hand strength on a scale from 0.0 to 1.0.
             
@@ -257,10 +257,10 @@ Game State Attributes
 Useful Methods
 ~~~~~~~~~~~~~~
 
-* ``game_state.get_active_players()``: Get players who haven't folded and have chips
-* ``game_state.get_players_in_hand()``: Get players still in the hand (not folded)
-* ``game_state.get_current_player()``: Get the player whose turn it is
-* ``game_state.is_betting_round_complete()``: Check if betting round is done
+* ``game.state.get_active_players()``: Get players who haven't folded and have chips
+* ``game.state.get_players_in_hand()``: Get players still in the hand (not folded)
+* ``game.state.get_current_player()``: Get the player whose turn it is
+* ``game.state.is_betting_round_complete()``: Check if betting round is done
 
 Example: Using Game Information
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -269,23 +269,23 @@ Example: Using Game Information
 
     def decide_action(
         self, 
-        game_state: GameState, 
+        game: Game, 
         valid_actions: list[ActionType], 
         min_raise: int
     ) -> tuple[ActionType, int]:
         """Make decisions based on game information."""
         
         # Check how many players are still in
-        players_in_hand = len(game_state.get_players_in_hand())
+        players_in_hand = len(game.state.get_players_in_hand())
         
         # Get pot size
-        pot_size = game_state.pot
+        pot_size = game.state.pot
         
         # Check what street we're on
-        street = game_state.street
+        street = game.state.street
         
         # See community cards (if any)
-        community = game_state.community_cards
+        community = game.state.community_cards
         
         # Make decision based on this information
         if players_in_hand == 2 and pot_size > self.state.stack:
@@ -398,7 +398,7 @@ You can maintain internal state to track opponent patterns:
         
         def decide_action(
             self, 
-            game_state: GameState, 
+            game: Game, 
             valid_actions: list[ActionType], 
             min_raise: int
         ) -> tuple[ActionType, int]:
@@ -429,7 +429,7 @@ You can listen to game events to gather information:
         
         def decide_action(
             self, 
-            game_state: GameState, 
+            game: Game, 
             valid_actions: list[ActionType], 
             min_raise: int
         ) -> tuple[ActionType, int]:

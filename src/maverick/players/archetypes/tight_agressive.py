@@ -1,7 +1,11 @@
+from typing import TYPE_CHECKING
+
 from ...player import Player
 from ...enums import ActionType
-from ...state import GameState
 from ...playeraction import PlayerAction
+
+if TYPE_CHECKING:
+    from ...game import Game
 
 __all__ = ["TightAggressiveBot"]
 
@@ -16,7 +20,7 @@ class TightAggressiveBot(Player):
     """
 
     def decide_action(
-        self, game_state: GameState, valid_actions: list[ActionType], min_raise: int
+        self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
         """Play selectively but aggressively when involved."""
         # TAG player is selective pre-flop but aggressive post-flop
@@ -26,7 +30,7 @@ class TightAggressiveBot(Player):
         if ActionType.RAISE in valid_actions:
             # Standard 3x raise
             raise_amount = min(
-                max(min_raise, game_state.big_blind * 3), self.state.stack
+                max(min_raise, game.state.big_blind * 3), self.state.stack
             )
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
@@ -36,7 +40,7 @@ class TightAggressiveBot(Player):
         if ActionType.BET in valid_actions:
             # Value bet: 2/3 pot or 2-3x BB
             bet_amount = min(
-                max(int(game_state.pot * 0.66), game_state.big_blind * 2),
+                max(int(game.state.pot * 0.66), game.state.big_blind * 2),
                 self.state.stack,
             )
             return PlayerAction(
@@ -45,9 +49,9 @@ class TightAggressiveBot(Player):
 
         # Call selectively with good odds
         if ActionType.CALL in valid_actions:
-            call_amount = game_state.current_bet - self.state.current_bet
+            call_amount = game.state.current_bet - self.state.current_bet
             # TAG calls with proper odds (better than 3:1)
-            if call_amount <= self.state.stack and call_amount * 3 <= game_state.pot:
+            if call_amount <= self.state.stack and call_amount * 3 <= game.state.pot:
                 return PlayerAction(
                     player_id=self.id, action_type=ActionType.CALL, amount=call_amount
                 )

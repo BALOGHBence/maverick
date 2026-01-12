@@ -11,7 +11,7 @@ from .enums import ActionType
 from .playeraction import PlayerAction
 
 if TYPE_CHECKING:
-    from .game import GameState
+    from .game import Game
     from .playerstate import PlayerState
 
 __all__ = ["PlayerLike"]
@@ -40,15 +40,15 @@ class PlayerLike(Protocol):
     state: Optional["PlayerState"]
 
     def decide_action(
-        self, game_state: "GameState", valid_actions: list[ActionType], min_raise: int
+        self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
         """
         Decide what action to take given the current game state.
 
         Parameters
         ----------
-        game_state : GameState
-            Current state of the game.
+        game : Game
+            The game instance containing the current state.
         valid_actions : list[ActionType]
             List of valid actions the player can take.
         min_raise : int
