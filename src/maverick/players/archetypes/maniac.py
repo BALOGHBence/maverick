@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 from ...player import Player
 from ...enums import ActionType
 from ...playeraction import PlayerAction
-from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:
     from ...game import Game
@@ -28,27 +27,9 @@ class ManiacBot(Player):
         self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
         """Bet or raise aggressively at every opportunity, largely ignoring hand strength."""
-        # Evaluate hand strength but mostly ignore it
-        private_cards = self.state.holding.cards
-        community_cards = game.state.community_cards
-        
-        # Quick evaluation but doesn't matter much
-        if community_cards:
-            hand_equity = estimate_holding_strength(
-                private_cards,
-                community_cards=community_cards,
-                n_min_private=0,
-                n_simulations=50,  # Maniac doesn't care much
-                n_players=len(game.state.get_players_in_hand()),
-            )
-        else:
-            hand_equity = estimate_holding_strength(
-                private_cards,
-                n_simulations=25,
-                n_players=len(game.state.get_players_in_hand()),
-            )
+        # NOTE: ManiacBot doesn't rely on hand strength estimation. In fact it doesn't
+        # even look at the cards at all. It just plays everything aggressively.
 
-        # Maniac plays everything - hand strength barely matters, evaluates but ignores
         # Always try to raise first
         if ActionType.RAISE in valid_actions:
             # Maniac raises big - 4-5x or more
@@ -67,7 +48,10 @@ class ManiacBot(Player):
             )
 
         # Will even go all-in on marginal situations
-        if ActionType.ALL_IN in valid_actions and self.state.stack <= game.state.pot * 2:
+        if (
+            ActionType.ALL_IN in valid_actions
+            and self.state.stack <= game.state.pot * 2
+        ):
             return PlayerAction(
                 player_id=self.id,
                 action_type=ActionType.ALL_IN,

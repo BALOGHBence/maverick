@@ -31,7 +31,7 @@ class ABCBot(Player):
         # Evaluate hand strength
         private_cards = self.state.holding.cards
         community_cards = game.state.community_cards
-        
+
         # Get hand equity if there are community cards
         if community_cards:
             hand_equity = estimate_holding_strength(
@@ -73,9 +73,11 @@ class ABCBot(Player):
         if ActionType.CALL in valid_actions:
             call_amount = game.state.current_bet - self.state.current_bet
             # ABC calls with 3:1 pot odds or better and decent hand
-            if (call_amount <= self.state.stack and 
-                call_amount * 3 <= game.state.pot and 
-                decent_hand):
+            if (
+                call_amount <= self.state.stack
+                and call_amount * 3 <= game.state.pot
+                and decent_hand
+            ):
                 return PlayerAction(
                     player_id=self.id, action_type=ActionType.CALL, amount=call_amount
                 )

@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 from ...player import Player
 from ...enums import ActionType
 from ...playeraction import PlayerAction
-from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:
     from ...game import Game
@@ -18,7 +17,7 @@ class WhaleBot(Player):
     equity but the thrill of gambling overrides mathematical considerations. Makes
     huge bets regardless of hand strength.
 
-    - **Key Traits:** Plays almost every hand, makes huge bets, gamblers mentality, 
+    - **Key Traits:** Plays almost every hand, makes huge bets, gamblers mentality,
       ignores hand strength for action.
     - **Strengths:** Creates action, unpredictable, knows equity but doesn't care.
     - **Weaknesses:** Loses money quickly, plays too many weak hands despite knowing better.
@@ -29,27 +28,8 @@ class WhaleBot(Player):
         self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
         """Play extremely loose and gamble with large sums, using hand strength minimally."""
-        # Evaluate hand strength but gamble anyway
-        private_cards = self.state.holding.cards
-        community_cards = game.state.community_cards
-        
-        # Get hand equity but loves gambling
-        if community_cards:
-            hand_equity = estimate_holding_strength(
-                private_cards,
-                community_cards=community_cards,
-                n_min_private=0,
-                n_simulations=200,
-                n_players=len(game.state.get_players_in_hand()),
-            )
-        else:
-            hand_equity = estimate_holding_strength(
-                private_cards,
-                n_simulations=100,
-                n_players=len(game.state.get_players_in_hand()),
-            )
-
-        # Whale plays everything - loves action more than equity, evaluates but gambles anyway
+        # NOTE: WhaleBot doesn't rely on hand strength estimation. In fact it doesn't
+        # even look at the cards at all. It loves action more than equity and plays everything.
 
         # Raise big - whale loves to gamble
         if ActionType.RAISE in valid_actions:

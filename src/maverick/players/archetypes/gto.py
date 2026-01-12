@@ -31,7 +31,7 @@ class GTOBot(Player):
         # Evaluate hand strength
         private_cards = self.state.holding.cards
         community_cards = game.state.community_cards
-        
+
         # Get hand equity
         if community_cards:
             hand_equity = estimate_holding_strength(

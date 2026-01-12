@@ -31,7 +31,7 @@ class TiltedBot(Player):
         # Evaluate hand strength but use it irrationally
         private_cards = self.state.holding.cards
         community_cards = game.state.community_cards
-        
+
         # Get hand equity but overvalue everything on tilt
         if community_cards:
             hand_equity = estimate_holding_strength(
@@ -52,7 +52,11 @@ class TiltedBot(Player):
         tilted_mindset = hand_equity > 0.20  # Thinks anything is good enough
 
         # Often goes all-in on tilt, even with marginal equity
-        if ActionType.ALL_IN in valid_actions and self.state.stack < game.state.pot * 2 and tilted_mindset:
+        if (
+            ActionType.ALL_IN in valid_actions
+            and self.state.stack < game.state.pot * 2
+            and tilted_mindset
+        ):
             return PlayerAction(
                 player_id=self.id,
                 action_type=ActionType.ALL_IN,

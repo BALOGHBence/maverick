@@ -31,7 +31,7 @@ class TightPassiveBot(Player):
         # Evaluate hand strength but still play too passively
         private_cards = self.state.holding.cards
         community_cards = game.state.community_cards
-        
+
         # Get hand equity but require premium to play
         if community_cards:
             hand_equity = estimate_holding_strength(

@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 from ...player import Player
 from ...enums import ActionType
 from ...playeraction import PlayerAction
-from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:
     from ...game import Game
@@ -28,28 +27,8 @@ class LoosePassiveBot(Player):
         self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
         """Call frequently with many hands using hand strength poorly, rarely raise."""
-        # Evaluate hand strength but still play badly
-        private_cards = self.state.holding.cards
-        community_cards = game.state.community_cards
-        
-        # Get hand equity but still call too much
-        if community_cards:
-            hand_equity = estimate_holding_strength(
-                private_cards,
-                community_cards=community_cards,
-                n_min_private=0,
-                n_simulations=200,
-                n_players=len(game.state.get_players_in_hand()),
-            )
-        else:
-            # Pre-flop estimation
-            hand_equity = estimate_holding_strength(
-                private_cards,
-                n_simulations=100,
-                n_players=len(game.state.get_players_in_hand()),
-            )
-
-        # Loose passive has terrible standards - evaluates but doesn't use properly
+        # NOTE: Loose passive doesn't rely on hand strength estimation. In fact it doesn't
+        # even look at the cards at all. It just calls a lot.
 
         # Check when possible
         if ActionType.CHECK in valid_actions:
