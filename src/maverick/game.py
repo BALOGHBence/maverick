@@ -337,9 +337,25 @@ class Game:
                 player.state.holding = Holding(cards=cards)
 
     def _post_blinds(self) -> None:
+        """Post blinds with correct heads-up semantics (button posts SB in HU)."""
         num_players = len(self.state.players)
+        if num_players < 2:
+            raise ValueError("Need at least 2 players to post blinds")
 
-        sb_index = (self.state.button_position + 1) % num_players
+        # Heads-up special case:
+        # - Button is SMALL blind
+        # - Other player is BIG blind
+        if num_players == 2:
+            sb_index = self.state.button_position
+            bb_index = (self.state.button_position + 1) % num_players
+        else:
+            # Multi-way:
+            # - SB = left of button
+            # - BB = left of SB
+            sb_index = (self.state.button_position + 1) % num_players
+            bb_index = (self.state.button_position + 2) % num_players
+
+        # --- Small blind ---
         sb_player = self.state.players[sb_index]
         sb_amount = min(self.state.small_blind, sb_player.state.stack)
         sb_player.state.current_bet = sb_amount
@@ -350,11 +366,12 @@ class Game:
             sb_player.state.state_type = PlayerStateType.ALL_IN
 
         self._log(
-            f"Posting small blind of {sb_amount} by player {sb_player.name}. Remaining stack: {sb_player.state.stack}",
+            f"Posting small blind of {sb_amount} by player {sb_player.name}. "
+            f"Remaining stack: {sb_player.state.stack}",
             logging.INFO,
         )
 
-        bb_index = (self.state.button_position + 2) % num_players
+        # --- Big blind ---
         bb_player = self.state.players[bb_index]
         bb_amount = min(self.state.big_blind, bb_player.state.stack)
         bb_player.state.current_bet = bb_amount
@@ -365,18 +382,24 @@ class Game:
             bb_player.state.state_type = PlayerStateType.ALL_IN
 
         self._log(
-            f"Posting big blind of {bb_amount} by player {bb_player.name}. Remaining stack: {bb_player.state.stack}",
+            f"Posting big blind of {bb_amount} by player {bb_player.name}. "
+            f"Remaining stack: {bb_player.state.stack}",
             logging.INFO,
         )
 
-        self.state.current_bet = self.state.big_blind
+        # Table betting state
+        # IMPORTANT: current_bet should reflect the actual posted BB amount if BB is short-stacked.
+        self.state.current_bet = bb_amount
         self.state.min_bet = self.state.big_blind
-        self.state.last_raise_size = self.state.big_blind
+        self.state.last_raise_size = self.state.big_blind  # preflop min raise increment is BB size
 
+        # Next to act preflop:
+        # - Heads-up: button (SB) acts first
+        # - Multi-way: player left of BB acts first
         if num_players == 2:
-            self.state.current_player_index = self.state.button_position
+            self.state.current_player_index = sb_index
         else:
-            self.state.current_player_index = (self.state.button_position + 3) % num_players
+            self.state.current_player_index = (bb_index + 1) % num_players
 
     def _calculate_raise_components(
         self, player: PlayerLike, chips_to_add: int
