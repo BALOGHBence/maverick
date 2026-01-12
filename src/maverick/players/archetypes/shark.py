@@ -56,11 +56,16 @@ class SharkBot(Player):
         # Exploit with aggressive raises when strong
         if ActionType.RAISE in valid_actions and strong_hand:
             # Size raises based on pot and exploitation
-            raise_amount = min(
-                max(min_raise, int(game.state.pot * 0.75)), self.state.stack
-            )
+            # min_raise is the minimum raise-by increment
+            # Calculate raise-to target (75% of pot above current bet), then convert to raise-by
+            raise_to_target = game.state.current_bet + int(game.state.pot * 0.75)
+            raise_by_amount = raise_to_target - self.state.current_bet
+            # Ensure we meet minimum raise requirement
+            raise_by_amount = max(raise_by_amount, min_raise)
+            # Cap at stack
+            raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
+                player_id=self.id, action_type=ActionType.RAISE, amount=raise_by_amount
             )
 
         # Value bet aggressively when ahead, or bluff with some equity
@@ -82,7 +87,7 @@ class SharkBot(Player):
             # Sharks will call lighter in position or against weaker opponents
             if call_amount <= self.state.stack and call_amount <= game.state.pot * 0.66:
                 return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL, amount=call_amount
+                    player_id=self.id, action_type=ActionType.CALL
                 )
 
         # Check to trap or for pot control

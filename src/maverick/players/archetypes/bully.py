@@ -55,12 +55,12 @@ class BullyBot(Player):
 
         # Big raises to pressure opponents when strong or decent
         if ActionType.RAISE in valid_actions and pressure_hand:
-            # Overbet to intimidate - 4-6x typical
-            raise_amount = min(
-                max(min_raise * 2, game.state.big_blind * 6), self.state.stack
-            )
+            # Overbet to intimidate - 2x minimum raise or 6x BB, whichever is larger
+            # min_raise is the minimum raise-by increment
+            raise_by_amount = max(min_raise * 2, game.state.big_blind * 6)
+            raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
+                player_id=self.id, action_type=ActionType.RAISE, amount=raise_by_amount
             )
 
         # Overbets to put pressure when strong
@@ -80,7 +80,7 @@ class BullyBot(Player):
                 call_amount <= self.state.stack * 0.3
             ):  # Willing to call reasonable amounts
                 return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL, amount=call_amount
+                    player_id=self.id, action_type=ActionType.CALL
                 )
 
         if ActionType.CHECK in valid_actions:

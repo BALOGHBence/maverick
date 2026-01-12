@@ -20,9 +20,7 @@ class CallBot(Player):
         if ActionType.CHECK in valid_actions:
             return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
         elif ActionType.CALL in valid_actions:
-            call_amount = game.state.current_bet - self.state.current_bet
-            if call_amount <= self.state.stack:
-                return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL, amount=call_amount
-                )
+            return PlayerAction(
+                player_id=self.id, action_type=ActionType.CALL
+            )
         return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)

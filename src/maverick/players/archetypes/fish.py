@@ -60,7 +60,7 @@ class FishBot(Player):
             # Fish calls with bad odds and weak hands
             if call_amount <= self.state.stack * 0.4:
                 return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL, amount=call_amount
+                    player_id=self.id, action_type=ActionType.CALL
                 )
 
         # Check when possible (passive)

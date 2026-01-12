@@ -242,24 +242,28 @@ class Game:
                         self.state.street = Street.FLOP
                         self._deal_flop()
                         self._event_queue.append(GameEventType.DEAL_FLOP)
+                        # Advance to first active player for new street
+                        self._advance_to_first_active_player()
                     elif self.state.state_type == GameStateType.FLOP:
                         self.state.state_type = GameStateType.TURN
                         self.state.street = Street.TURN
                         self._deal_turn()
                         self._event_queue.append(GameEventType.DEAL_TURN)
+                        # Advance to first active player for new street
+                        self._advance_to_first_active_player()
                     elif self.state.state_type == GameStateType.TURN:
                         self.state.state_type = GameStateType.RIVER
                         self.state.street = Street.RIVER
                         self._deal_river()
                         self._event_queue.append(GameEventType.DEAL_RIVER)
+                        # Advance to first active player for new street
+                        self._advance_to_first_active_player()
                     elif self.state.state_type == GameStateType.RIVER:
                         self.state.state_type = GameStateType.SHOWDOWN
                         self.state.street = Street.SHOWDOWN
                         self._handle_showdown()
                         self._event_queue.append(GameEventType.SHOWDOWN)
-
-                    # Only advance if not going to showdown
-                    self._advance_to_first_active_player()
+                        # Do NOT advance player position when entering showdown
 
             case GameEventType.DEAL_FLOP:
                 self._take_action_from_current_player()
@@ -403,6 +407,7 @@ class Game:
         self.state.community_cards = []
         self.state.pot = 0
         self.state.current_bet = 0
+        self.state.last_raise_size = 0
 
         # Reset players
         for player in self.state.players:
@@ -426,13 +431,13 @@ class Game:
         ):
             return
 
-        # Get valid actions and min raise
+        # Get valid actions and min raise increment
         valid_actions = self._get_valid_actions(current_player)
-        min_raise = self.state.current_bet + self.state.min_bet
+        min_raise_increment = self.state.last_raise_size
 
         # Ask player to decide
         action: PlayerAction = current_player.decide_action(
-            self, valid_actions, min_raise
+            self, valid_actions, min_raise_increment
         )
 
         # Execute the action
@@ -502,6 +507,7 @@ class Game:
 
         self.state.current_bet = self.state.big_blind
         self.state.min_bet = self.state.big_blind
+        self.state.last_raise_size = self.state.big_blind  # Initial raise size is big blind
 
         # Set next player to act: heads-up is special (button acts first preflop)
         if num_players == 2:
@@ -579,7 +585,11 @@ class Game:
             current_player.state.total_contributed += actual_amount
             current_player.state.stack -= actual_amount
             self.state.pot += actual_amount
+            
+            # Update current_bet and last_raise_size
             self.state.current_bet = actual_amount
+            self.state.last_raise_size = actual_amount  # First bet of the street
+            
             if current_player.state.stack == 0:
                 current_player.state.state_type = PlayerStateType.ALL_IN
 
@@ -593,19 +603,31 @@ class Game:
                 logging.INFO,
             )
         elif action_type == ActionType.RAISE:
-            # IMPORRANT: amount is what the player wants to pur from their stack into the pot,
-            # not the amount to raise TO
-            min_raise = self.state.min_bet
-            if amount < min_raise:
-                raise ValueError(f"Raise must be at least {min_raise}")
+            # IMPORTANT: amount is the raise-by increment, not the raise-to amount
+            min_raise_increment = self.state.last_raise_size
+            
+            # All-in exemption: if player doesn't have enough for min raise, they can still go all-in
+            if amount < min_raise_increment and amount < current_player.state.stack:
+                raise ValueError(f"Raise increment must be at least {min_raise_increment}")
 
             # Cap at stack size (player goes all-in if they don't have enough)
             actual_amount = min(amount, current_player.state.stack)
+            
+            # Calculate old current_bet for determining raise size
+            old_current_bet = self.state.current_bet
+            
             current_player.state.current_bet += actual_amount
             current_player.state.total_contributed += actual_amount
             current_player.state.stack -= actual_amount
             self.state.pot += actual_amount
-            self.state.current_bet = current_player.state.current_bet
+            
+            # Update current_bet and last_raise_size
+            new_current_bet = current_player.state.current_bet
+            self.state.current_bet = new_current_bet
+            
+            # Update last_raise_size: it's the increase in the current_bet
+            raise_size = new_current_bet - old_current_bet
+            self.state.last_raise_size = raise_size
 
             # Check if player is all-in
             if current_player.state.stack == 0:
@@ -617,11 +639,12 @@ class Game:
                     p.state.acted_this_street = False
 
             self._log(
-                f"Player {current_player.name} raises to amount {current_player.state.current_bet}. Remaining stack: {current_player.state.stack}.",
+                f"Player {current_player.name} raises by {actual_amount} to total bet {current_player.state.current_bet}. Remaining stack: {current_player.state.stack}.",
                 logging.INFO,
             )
         elif action_type == ActionType.ALL_IN:
             actual_amount = current_player.state.stack
+            old_current_bet = self.state.current_bet
             current_player.state.current_bet += actual_amount
             current_player.state.total_contributed += actual_amount
             current_player.state.stack = 0
@@ -629,6 +652,9 @@ class Game:
             current_player.state.state_type = PlayerStateType.ALL_IN
 
             if current_player.state.current_bet > self.state.current_bet:
+                # Update last_raise_size if this all-in raises the bet
+                raise_size = current_player.state.current_bet - old_current_bet
+                self.state.last_raise_size = raise_size
                 self.state.current_bet = current_player.state.current_bet
 
                 # Reset acted flags for other players
@@ -659,21 +685,24 @@ class Game:
         if call_amount == 0:
             actions.append(ActionType.CHECK)
         else:
-            if player.state.stack >= call_amount:
+            # Allow CALL if player has any chips and there's an amount to call
+            if call_amount > 0 and player.state.stack > 0:
                 actions.append(ActionType.CALL)
 
         # Can bet if no one has bet yet
         if self.state.current_bet == 0 and player.state.stack >= self.state.min_bet:
             actions.append(ActionType.BET)
 
-        # Can raise if there's a bet to raise
-        min_raise_total = self.state.current_bet + self.state.min_bet
-        total_needed_for_min_raise = min_raise_total - player.state.current_bet
-        if (
-            self.state.current_bet > 0
-            and player.state.stack >= total_needed_for_min_raise
-        ):
-            actions.append(ActionType.RAISE)
+        # Can raise if there's a bet to raise and player has enough for minimum raise increment
+        # OR if player can go all-in (even if less than minimum raise)
+        if self.state.current_bet > 0:
+            min_raise_increment = self.state.last_raise_size
+            call_amount = self.state.current_bet - player.state.current_bet
+            total_needed_for_min_raise = call_amount + min_raise_increment
+            
+            # Can raise if can afford minimum raise, OR has enough to at least call
+            if player.state.stack >= total_needed_for_min_raise:
+                actions.append(ActionType.RAISE)
 
         # Can always go all-in if you have chips
         if player.state.stack > 0:
@@ -708,6 +737,7 @@ class Game:
             player.state.current_bet = 0
             player.state.acted_this_street = False
         self.state.current_bet = 0
+        self.state.last_raise_size = 0  # Reset for next betting round
         self._log("Betting round complete\n", logging.INFO)
 
     def _advance_to_first_active_player(self) -> None:

@@ -65,12 +65,18 @@ class GTOBot(Player):
 
         # Raise with proper sizing when strong
         if ActionType.RAISE in valid_actions and strong_hand:
-            # GTO raises are typically 2.5-3x
-            raise_amount = min(
-                max(min_raise, game.state.current_bet * 2), self.state.stack
-            )
+            # GTO raises are typically 2.5-3x the current bet
+            # min_raise is the minimum raise-by increment
+            call_amount = game.state.current_bet - self.state.current_bet
+            # Calculate raise-to target (2x current bet), then convert to raise-by increment
+            raise_to_target = game.state.current_bet * 2
+            raise_by_amount = raise_to_target - self.state.current_bet
+            # Ensure we meet minimum raise requirement
+            raise_by_amount = max(raise_by_amount, min_raise)
+            # Cap at stack
+            raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
+                player_id=self.id, action_type=ActionType.RAISE, amount=raise_by_amount
             )
 
         # Call with proper odds and medium+ hands
@@ -79,7 +85,7 @@ class GTOBot(Player):
             # GTO calling requires proper pot odds
             if call_amount <= self.state.stack and call_amount <= game.state.pot:
                 return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL, amount=call_amount
+                    player_id=self.id, action_type=ActionType.CALL
                 )
 
         # Check in balanced way

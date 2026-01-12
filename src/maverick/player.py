@@ -37,7 +37,8 @@ class Player(BaseModel):
         valid_actions : list[ActionType]
             List of valid actions the player can take.
         min_raise : int
-            Minimum amount for a raise action.
+            Minimum raise-by increment (chips to add on top of call amount).
+            For RAISE actions, the amount should be at least this value.
 
         Returns
         -------

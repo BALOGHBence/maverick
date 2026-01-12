@@ -64,7 +64,7 @@ class ScaredMoneyBot(Player):
                 and call_amount <= self.state.stack * 0.05
             ):
                 return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL, amount=call_amount
+                    player_id=self.id, action_type=ActionType.CALL
                 )
 
         # Makes tiny bets when forced to bet, even with strong hands
