@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from ...player import Player
 from ...enums import ActionType
 from ...playeraction import PlayerAction
+from ...utils import estimate_holding_strength, find_highest_scoring_hand
 
 if TYPE_CHECKING:
     from ...game import Game
@@ -13,9 +14,14 @@ __all__ = ["FishBot"]
 class FishBot(Player):
     """A generally weak or inexperienced bot that makes systematic, exploitable mistakes.
 
-    - **Key Traits:** Plays too many hands, poor position awareness, excessive calling, inconsistent bet sizing.
+    Has access to hand strength evaluation but misinterprets or ignores the information.
+    Calls with weak hands, misunderstands pot odds, and makes poor decisions even
+    with hand equity data available.
+
+    - **Key Traits:** Plays too many hands, poor position awareness, excessive calling, 
+      inconsistent bet sizing, misuses hand strength information.
     - **Strengths:** Unpredictable in the short term.
-    - **Weaknesses:** Negative expected value over time.
+    - **Weaknesses:** Negative expected value over time, calls with poor equity.
     - **Typical Thought:** *"Maybe this will work."*
     - **Common At:** Low-stakes online games, casual live games.
     """
@@ -23,14 +29,35 @@ class FishBot(Player):
     def decide_action(
         self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
-        """Make exploitable mistakes characteristic of weak players."""
-        # Fish makes poor decisions - plays too many hands, calls too much
-        # Inconsistent sizing, poor understanding of pot odds
+        """Make exploitable mistakes characteristic of weak players, misusing hand strength."""
+        # Evaluate hand strength but use it poorly
+        private_cards = self.state.holding.cards
+        community_cards = game.state.community_cards
+        
+        # Get hand equity but often ignore it
+        if community_cards:
+            hand_equity = estimate_holding_strength(
+                private_cards,
+                community_cards=community_cards,
+                n_min_private=0,
+                n_simulations=100,  # Fish doesn't spend much time thinking
+                n_players=len(game.state.get_players_in_hand()),
+            )
+        else:
+            # Pre-flop estimation
+            hand_equity = estimate_holding_strength(
+                private_cards,
+                n_simulations=50,
+                n_players=len(game.state.get_players_in_hand()),
+            )
 
-        # Calls too much (the fish's signature move)
+        # Fish has terrible thresholds - calls with anything
+        any_hand = hand_equity > 0.15  # Plays way too many hands
+
+        # Calls too much (the fish's signature move) - ignores hand strength
         if ActionType.CALL in valid_actions:
             call_amount = game.state.current_bet - self.state.current_bet
-            # Fish calls with bad odds
+            # Fish calls with bad odds and weak hands
             if call_amount <= self.state.stack * 0.4:
                 return PlayerAction(
                     player_id=self.id, action_type=ActionType.CALL, amount=call_amount
@@ -40,7 +67,7 @@ class FishBot(Player):
         if ActionType.CHECK in valid_actions:
             return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
 
-        # Occasionally bets with weird sizing
+        # Occasionally bets with weird sizing, regardless of hand strength
         if ActionType.BET in valid_actions:
             # Inconsistent sizing - sometimes min bet
             bet_amount = min(game.state.big_blind, self.state.stack)
@@ -48,8 +75,8 @@ class FishBot(Player):
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )
 
-        # Rarely raises (not aggressive enough)
-        if ActionType.RAISE in valid_actions:
+        # Rarely raises (not aggressive enough), even with good hands
+        if ActionType.RAISE in valid_actions and any_hand:
             # Weak raises when does raise
             raise_amount = min(min_raise, self.state.stack)
             return PlayerAction(

@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from ...player import Player
 from ...enums import ActionType
 from ...playeraction import PlayerAction
+from ...utils import estimate_holding_strength, find_highest_scoring_hand
 
 if TYPE_CHECKING:
     from ...game import Game
@@ -13,17 +14,43 @@ __all__ = ["WhaleBot"]
 class WhaleBot(Player):
     """An extremely loose bot willing to gamble large sums.
 
-    - **Key Traits:** Plays almost every hand, makes huge bets, gamblers mentality.
-    - **Strengths:** Creates action, unpredictable.
-    - **Weaknesses:** Loses money quickly, plays too many weak hands.
+    Uses hand strength evaluation but loves action and gambles anyway. Understands
+    equity but the thrill of gambling overrides mathematical considerations. Makes
+    huge bets regardless of hand strength.
+
+    - **Key Traits:** Plays almost every hand, makes huge bets, gamblers mentality, 
+      ignores hand strength for action.
+    - **Strengths:** Creates action, unpredictable, knows equity but doesn't care.
+    - **Weaknesses:** Loses money quickly, plays too many weak hands despite knowing better.
     - **Common At:** High-stakes games, recreational millionaires.
     """
 
     def decide_action(
         self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
-        """Play extremely loose and gamble with large sums."""
-        # Whale plays almost everything and bets big
+        """Play extremely loose and gamble with large sums, using hand strength minimally."""
+        # Evaluate hand strength but gamble anyway
+        private_cards = self.state.holding.cards
+        community_cards = game.state.community_cards
+        
+        # Get hand equity but loves gambling
+        if community_cards:
+            hand_equity = estimate_holding_strength(
+                private_cards,
+                community_cards=community_cards,
+                n_min_private=0,
+                n_simulations=200,
+                n_players=len(game.state.get_players_in_hand()),
+            )
+        else:
+            hand_equity = estimate_holding_strength(
+                private_cards,
+                n_simulations=100,
+                n_players=len(game.state.get_players_in_hand()),
+            )
+
+        # Whale plays everything - loves action more than equity
+        any_cards = hand_equity > 0.10  # Plays almost anything
 
         # Raise big - whale loves to gamble
         if ActionType.RAISE in valid_actions:

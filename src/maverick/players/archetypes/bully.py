@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from ...player import Player
 from ...enums import ActionType
 from ...playeraction import PlayerAction
+from ...utils import estimate_holding_strength, find_highest_scoring_hand
 
 if TYPE_CHECKING:
     from ...game import Game
@@ -13,21 +14,47 @@ __all__ = ["BullyBot"]
 class BullyBot(Player):
     """A bot that uses stack size and intimidation to control the table.
 
-    - **Key Traits:** Overbets, fast actions, pressure plays.
-    - **Strengths:** Exploits fearful or inexperienced opponents.
-    - **Weaknesses:** Overplays weak holdings.
+    Uses hand strength evaluation to identify when to apply maximum pressure with
+    large bets. Leverages hand equity to make calculated intimidation plays and
+    pressure opponents with overbets when ahead.
+
+    - **Key Traits:** Overbets, fast actions, pressure plays, uses hand strength for intimidation.
+    - **Strengths:** Exploits fearful or inexperienced opponents, leverages hand equity.
+    - **Weaknesses:** Overplays weak holdings when not disciplined.
     - **Common At:** Deep-stack live games.
     """
 
     def decide_action(
         self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
-        """Use stack size to pressure opponents with big bets."""
-        # Bully plays based on stack advantage
-        # More aggressive when having a bigger stack relative to pot
+        """Use stack size and hand strength to pressure opponents with big bets."""
+        # Evaluate hand strength
+        private_cards = self.state.holding.cards
+        community_cards = game.state.community_cards
+        
+        # Get hand equity
+        if community_cards:
+            hand_equity = estimate_holding_strength(
+                private_cards,
+                community_cards=community_cards,
+                n_min_private=0,
+                n_simulations=400,
+                n_players=len(game.state.get_players_in_hand()),
+            )
+        else:
+            # Pre-flop estimation
+            hand_equity = estimate_holding_strength(
+                private_cards,
+                n_simulations=200,
+                n_players=len(game.state.get_players_in_hand()),
+            )
 
-        # Big raises to pressure opponents
-        if ActionType.RAISE in valid_actions:
+        # Bully thresholds - willing to pressure with decent equity
+        strong_hand = hand_equity > 0.60
+        pressure_hand = hand_equity > 0.40
+
+        # Big raises to pressure opponents when strong or decent
+        if ActionType.RAISE in valid_actions and pressure_hand:
             # Overbet to intimidate - 4-6x typical
             raise_amount = min(
                 max(min_raise * 2, game.state.big_blind * 6), self.state.stack
@@ -36,8 +63,8 @@ class BullyBot(Player):
                 player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
             )
 
-        # Overbets to put pressure
-        if ActionType.BET in valid_actions:
+        # Overbets to put pressure when strong
+        if ActionType.BET in valid_actions and strong_hand:
             # Bully bets big - often pot-sized or more
             bet_amount = min(game.state.pot, self.state.stack)
             if bet_amount < game.state.big_blind * 2:

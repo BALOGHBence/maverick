@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from ...player import Player
 from ...enums import ActionType
 from ...playeraction import PlayerAction
+from ...utils import estimate_holding_strength, find_highest_scoring_hand
 
 if TYPE_CHECKING:
     from ...game import Game
@@ -13,16 +14,41 @@ __all__ = ["ManiacBot"]
 class ManiacBot(Player):
     """A bot that is ultra-aggressive and unpredictable.
 
-    - **Key Traits:** Constant betting and raising, massive bluffs.
+    Has access to hand strength evaluation but largely ignores it in favor of
+    maximum aggression. Plays almost every hand aggressively regardless of equity,
+    creating chaos at the table.
+
+    - **Key Traits:** Constant betting and raising, massive bluffs, ignores hand strength.
     - **Strengths:** Creates confusion and short-term chaos.
-    - **Weaknesses:** Burns chips rapidly over time.
+    - **Weaknesses:** Burns chips rapidly over time, poor equity management.
     - **Common At:** Short bursts in live and online play.
     """
 
     def decide_action(
         self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
-        """Bet or raise aggressively at every opportunity."""
+        """Bet or raise aggressively at every opportunity, largely ignoring hand strength."""
+        # Evaluate hand strength but mostly ignore it
+        private_cards = self.state.holding.cards
+        community_cards = game.state.community_cards
+        
+        # Quick evaluation but doesn't matter much
+        if community_cards:
+            hand_equity = estimate_holding_strength(
+                private_cards,
+                community_cards=community_cards,
+                n_min_private=0,
+                n_simulations=50,  # Maniac doesn't care much
+                n_players=len(game.state.get_players_in_hand()),
+            )
+        else:
+            hand_equity = estimate_holding_strength(
+                private_cards,
+                n_simulations=25,
+                n_players=len(game.state.get_players_in_hand()),
+            )
+
+        # Maniac plays everything - hand strength barely matters
         # Always try to raise first
         if ActionType.RAISE in valid_actions:
             # Maniac raises big - 4-5x or more
@@ -41,7 +67,7 @@ class ManiacBot(Player):
             )
 
         # Will even go all-in on marginal situations
-        if ActionType.ALL_IN in valid_actions and self.state.stack <= game.state.pot:
+        if ActionType.ALL_IN in valid_actions and self.state.stack <= game.state.pot * 2:
             return PlayerAction(
                 player_id=self.id,
                 action_type=ActionType.ALL_IN,

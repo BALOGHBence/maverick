@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from ...player import Player
 from ...enums import ActionType
 from ...playeraction import PlayerAction
+from ...utils import estimate_holding_strength, find_highest_scoring_hand
 
 if TYPE_CHECKING:
     from ...game import Game
@@ -13,21 +14,49 @@ __all__ = ["LoosePassiveBot"]
 class LoosePassiveBot(Player):
     """A bot that plays too many hands and calls too often (calling station).
 
-    - **Key Traits:** Limping, calling with weak or marginal hands.
-    - **Strengths:** Pays off strong hands.
-    - **Weaknesses:** Long-term losing style.
+    Uses hand strength evaluation but still calls with weak equity. Understands
+    pot odds in theory but applies them poorly, calling with insufficient equity
+    and playing passively even with strong hands.
+
+    - **Key Traits:** Limping, calling with weak or marginal hands, uses hand strength poorly.
+    - **Strengths:** Pays off strong hands, occasionally has hand equity on their side.
+    - **Weaknesses:** Long-term losing style, calls with insufficient equity.
     - **Common At:** Casual home games and low-stakes casinos.
     """
 
     def decide_action(
         self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
-        """Call frequently with many hands, rarely raise."""
+        """Call frequently with many hands using hand strength poorly, rarely raise."""
+        # Evaluate hand strength but still play badly
+        private_cards = self.state.holding.cards
+        community_cards = game.state.community_cards
+        
+        # Get hand equity but still call too much
+        if community_cards:
+            hand_equity = estimate_holding_strength(
+                private_cards,
+                community_cards=community_cards,
+                n_min_private=0,
+                n_simulations=200,
+                n_players=len(game.state.get_players_in_hand()),
+            )
+        else:
+            # Pre-flop estimation
+            hand_equity = estimate_holding_strength(
+                private_cards,
+                n_simulations=100,
+                n_players=len(game.state.get_players_in_hand()),
+            )
+
+        # Loose passive has terrible standards
+        weak_hand = hand_equity > 0.20  # Still plays weak hands
+
         # Check when possible
         if ActionType.CHECK in valid_actions:
             return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
 
-        # Call almost anything
+        # Call almost anything, even with weak equity
         if ActionType.CALL in valid_actions:
             call_amount = game.state.current_bet - self.state.current_bet
             # Call as long as we have chips (calling station behavior)
