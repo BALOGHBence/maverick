@@ -126,6 +126,166 @@ class TestMinimumRaiseTracking(unittest.TestCase):
         self.assertEqual(game.state.current_bet, 60)
 
 
+class TestNLHERaiseValidation(unittest.TestCase):
+    """Test NLHE minimum raise validation based on raise size, not total chips."""
+
+    def test_illegal_call_plus_tiny_raise_rejected(self):
+        """Test that call+tiny raise is rejected when raise size is too small."""
+        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        
+        # 3-player game
+        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
+        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        p3 = TestBot(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
+        
+        game.add_player(p1)
+        game.add_player(p2)
+        game.add_player(p3)
+        
+        game._initialize_game()
+        game._start_new_hand()
+        game._deal_hole_cards()
+        game._post_blinds()
+        
+        # After blinds: current_bet=20 (BB), last_raise_size=20
+        # P1 is button, has bet=0
+        # P1 wants to raise to 30 (call 20 + raise 10)
+        # raise_size = 30 - 20 = 10, which is < 20, should be rejected
+        
+        action = PlayerAction(player_id=p1.id, action_type=ActionType.RAISE, amount=30)
+        
+        with self.assertRaises(ValueError) as context:
+            game._register_player_action(p1, action)
+        
+        self.assertIn("Raise size must be at least", str(context.exception))
+
+    def test_legal_raise_by_accepted(self):
+        """Test that a legal raise meeting minimum is accepted."""
+        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        
+        # 3-player game
+        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
+        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        p3 = TestBot(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
+        
+        game.add_player(p1)
+        game.add_player(p2)
+        game.add_player(p3)
+        
+        game._initialize_game()
+        game._start_new_hand()
+        game._deal_hole_cards()
+        game._post_blinds()
+        
+        # After blinds: current_bet=20 (BB), last_raise_size=20
+        # P1 wants to raise to 40 (call 20 + raise 20)
+        # raise_size = 40 - 20 = 20, which equals minimum, should be accepted
+        
+        action = PlayerAction(player_id=p1.id, action_type=ActionType.RAISE, amount=40)
+        game._register_player_action(p1, action)
+        
+        self.assertEqual(game.state.current_bet, 40)
+        self.assertEqual(game.state.last_raise_size, 20)
+
+
+class TestNonReopeningAllIn(unittest.TestCase):
+    """Test that short all-ins don't reopen betting."""
+
+    def test_short_all_in_does_not_reopen_betting(self):
+        """Test that an all-in below minimum raise doesn't reset acted_this_street."""
+        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        
+        # 3-player game
+        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
+        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        # P3 has only 30 chips total
+        p3 = TestBot(id="p3", name="P3", state=PlayerState(stack=30), actions=[])
+        
+        game.add_player(p1)
+        game.add_player(p2)
+        game.add_player(p3)
+        
+        game._initialize_game()
+        game._start_new_hand()
+        game._deal_hole_cards()
+        game._post_blinds()
+        
+        # After blinds: P2 has SB=10, P3 has BB=20 (leaving 10 chips)
+        # current_bet=20, last_raise_size=20
+        
+        # P1 calls
+        action = PlayerAction(player_id=p1.id, action_type=ActionType.CALL)
+        game._register_player_action(p1, action)
+        self.assertTrue(p1.state.acted_this_street)
+        
+        # P2 calls (completing the call to BB)
+        game.state.current_player_index = 1
+        action = PlayerAction(player_id=p2.id, action_type=ActionType.CALL)
+        game._register_player_action(p2, action)
+        self.assertTrue(p2.state.acted_this_street)
+        
+        # P3 (BB) goes all-in with remaining 10 chips
+        # This increases bet from 20 to 30, raise_size = 10 < 20
+        # Should NOT reopen betting
+        game.state.current_player_index = 2
+        old_last_raise = game.state.last_raise_size
+        action = PlayerAction(player_id=p3.id, action_type=ActionType.ALL_IN)
+        game._register_player_action(p3, action)
+        
+        # Check that betting was not reopened
+        self.assertTrue(p1.state.acted_this_street, "P1's acted flag should not be reset")
+        self.assertTrue(p2.state.acted_this_street, "P2's acted flag should not be reset")
+        self.assertEqual(game.state.last_raise_size, old_last_raise, 
+                        "last_raise_size should not change")
+        self.assertEqual(game.state.current_bet, 30)
+
+    def test_all_in_meeting_min_raise_reopens_betting(self):
+        """Test that an all-in meeting minimum raise does reopen betting."""
+        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        
+        # 3-player game
+        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
+        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        # P3 has 40 chips total (enough for call + min raise)
+        p3 = TestBot(id="p3", name="P3", state=PlayerState(stack=40), actions=[])
+        
+        game.add_player(p1)
+        game.add_player(p2)
+        game.add_player(p3)
+        
+        game._initialize_game()
+        game._start_new_hand()
+        game._deal_hole_cards()
+        game._post_blinds()
+        
+        # After blinds: P3 has BB=20 (leaving 20 chips)
+        # current_bet=20, last_raise_size=20
+        
+        # P1 calls
+        action = PlayerAction(player_id=p1.id, action_type=ActionType.CALL)
+        game._register_player_action(p1, action)
+        self.assertTrue(p1.state.acted_this_street)
+        
+        # P2 calls
+        game.state.current_player_index = 1
+        action = PlayerAction(player_id=p2.id, action_type=ActionType.CALL)
+        game._register_player_action(p2, action)
+        self.assertTrue(p2.state.acted_this_street)
+        
+        # P3 (BB) goes all-in with remaining 20 chips
+        # This increases bet from 20 to 40, raise_size = 20 >= 20
+        # SHOULD reopen betting
+        game.state.current_player_index = 2
+        action = PlayerAction(player_id=p3.id, action_type=ActionType.ALL_IN)
+        game._register_player_action(p3, action)
+        
+        # Check that betting WAS reopened
+        self.assertFalse(p1.state.acted_this_street, "P1's acted flag should be reset")
+        self.assertFalse(p2.state.acted_this_street, "P2's acted flag should be reset")
+        self.assertEqual(game.state.last_raise_size, 20)
+        self.assertEqual(game.state.current_bet, 40)
+
+
 class TestShortStackCall(unittest.TestCase):
     """Test that short-stack players can call with less than the full amount."""
 
@@ -347,6 +507,28 @@ class TestMinimumRaiseEnforcement(unittest.TestCase):
         valid = game._get_valid_actions(p1)
         self.assertNotIn(ActionType.RAISE, valid)
         self.assertIn(ActionType.ALL_IN, valid)
+
+
+class TestPreflopInitialization(unittest.TestCase):
+    """Test that preflop state is initialized correctly."""
+
+    def test_preflop_last_raise_size_equals_big_blind(self):
+        """Test that after posting blinds, last_raise_size equals big blind."""
+        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        
+        p1 = TestBot(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
+        p2 = TestBot(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        
+        game.add_player(p1)
+        game.add_player(p2)
+        
+        game._initialize_game()
+        game._start_new_hand()
+        game._deal_hole_cards()
+        game._post_blinds()
+        
+        self.assertEqual(game.state.current_bet, 20)
+        self.assertEqual(game.state.last_raise_size, 20)
 
 
 if __name__ == "__main__":

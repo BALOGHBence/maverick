@@ -518,6 +518,43 @@ class Game:
                 self.state.button_position + 3
             ) % num_players
 
+    def _calculate_raise_components(
+        self, player: PlayerLike, chips_to_add: int
+    ) -> tuple[int, int, int, int, int, bool]:
+        """
+        Calculate components of a raise action.
+        
+        Returns
+        -------
+        tuple[int, int, int, int, int, bool]
+            (player_add, player_bet_after, new_table_bet, call_part, raise_size, is_all_in)
+        """
+        stack_before = player.state.stack
+        player_bet_before = player.state.current_bet
+        old_table_bet = self.state.current_bet
+        
+        # Cap chips to add at stack size
+        player_add = min(chips_to_add, stack_before)
+        
+        # Calculate new player bet
+        player_bet_after = player_bet_before + player_add
+        
+        # New table bet is the higher of old bet or player's new bet
+        new_table_bet = max(old_table_bet, player_bet_after)
+        
+        # Calculate call and raise portions
+        call_needed = max(0, old_table_bet - player_bet_before)
+        call_part = min(call_needed, player_add)
+        raise_part = player_add - call_part
+        
+        # Raise size is the increase in the table bet
+        raise_size = new_table_bet - old_table_bet
+        
+        # Is this an all-in?
+        is_all_in = (player_add >= stack_before)
+        
+        return (player_add, player_bet_after, new_table_bet, call_part, raise_size, is_all_in)
+
     def _register_player_action(self, player: PlayerLike, action: PlayerAction) -> None:
         """
         Process a player action.
@@ -603,70 +640,84 @@ class Game:
                 logging.INFO,
             )
         elif action_type == ActionType.RAISE:
-            # IMPORTANT: amount is the raise-by increment, not the raise-to amount
-            min_raise_increment = self.state.last_raise_size
+            # IMPORTANT: amount is the raise-by increment (chips from stack)
+            # This may include a call portion + a raise portion
             
-            # All-in exemption: if player doesn't have enough for min raise, they can still go all-in
-            if amount < min_raise_increment and amount < current_player.state.stack:
-                raise ValueError(f"Raise increment must be at least {min_raise_increment}")
-
-            # Cap at stack size (player goes all-in if they don't have enough)
-            actual_amount = min(amount, current_player.state.stack)
+            # Store old values before modifications
+            old_table_bet = self.state.current_bet
+            old_last_raise_size = self.state.last_raise_size
             
-            # Calculate old current_bet for determining raise size
-            old_current_bet = self.state.current_bet
+            # Calculate raise components
+            player_add, player_bet_after, new_table_bet, call_part, raise_size, is_all_in = \
+                self._calculate_raise_components(current_player, amount)
             
-            current_player.state.current_bet += actual_amount
-            current_player.state.total_contributed += actual_amount
-            current_player.state.stack -= actual_amount
-            self.state.pot += actual_amount
+            # Validate minimum raise (only for non-all-in raises)
+            if not is_all_in and raise_size < old_last_raise_size:
+                raise ValueError(
+                    f"Raise size must be at least {old_last_raise_size} (attempted {raise_size})"
+                )
             
-            # Update current_bet and last_raise_size
-            new_current_bet = current_player.state.current_bet
-            self.state.current_bet = new_current_bet
+            # Apply the action
+            current_player.state.current_bet = player_bet_after
+            current_player.state.total_contributed += player_add
+            current_player.state.stack -= player_add
+            self.state.pot += player_add
+            self.state.current_bet = new_table_bet
             
-            # Update last_raise_size: it's the increase in the current_bet
-            raise_size = new_current_bet - old_current_bet
-            self.state.last_raise_size = raise_size
-
             # Check if player is all-in
-            if current_player.state.stack == 0:
+            if is_all_in:
                 current_player.state.state_type = PlayerStateType.ALL_IN
-
-            # Reset acted flags for other players
-            for p in self.state.players:
-                if p.id != player.id and p.state.state_type == PlayerStateType.ACTIVE:
-                    p.state.acted_this_street = False
-
+            
+            # Determine if this reopens betting
+            reopens_betting = (raise_size >= old_last_raise_size)
+            
+            if reopens_betting:
+                # Update last_raise_size and reset acted flags
+                self.state.last_raise_size = raise_size
+                for p in self.state.players:
+                    if p.id != player.id and p.state.state_type == PlayerStateType.ACTIVE:
+                        p.state.acted_this_street = False
+            # else: short all-in raise - don't reopen betting, don't update last_raise_size
+            
             self._log(
-                f"Player {current_player.name} raises by {actual_amount} to total bet {current_player.state.current_bet}. Remaining stack: {current_player.state.stack}.",
+                f"Player {current_player.name} raises by {player_add} (call: {call_part}, raise: {raise_size}) "
+                f"to total bet {player_bet_after}. Remaining stack: {current_player.state.stack}.",
                 logging.INFO,
             )
         elif action_type == ActionType.ALL_IN:
-            actual_amount = current_player.state.stack
-            old_current_bet = self.state.current_bet
-            current_player.state.current_bet += actual_amount
-            current_player.state.total_contributed += actual_amount
+            # Store old values before modifications
+            old_table_bet = self.state.current_bet
+            old_last_raise_size = self.state.last_raise_size
+            
+            # Calculate raise components
+            chips_to_add = current_player.state.stack
+            player_add, player_bet_after, new_table_bet, call_part, raise_size, is_all_in = \
+                self._calculate_raise_components(current_player, chips_to_add)
+            
+            # Apply the action
+            current_player.state.current_bet = player_bet_after
+            current_player.state.total_contributed += player_add
             current_player.state.stack = 0
-            self.state.pot += actual_amount
+            self.state.pot += player_add
             current_player.state.state_type = PlayerStateType.ALL_IN
-
-            if current_player.state.current_bet > self.state.current_bet:
-                # Update last_raise_size if this all-in raises the bet
-                raise_size = current_player.state.current_bet - old_current_bet
-                self.state.last_raise_size = raise_size
-                self.state.current_bet = current_player.state.current_bet
-
-                # Reset acted flags for other players
-                for p in self.state.players:
-                    if (
-                        p.id != player.id
-                        and p.state.state_type == PlayerStateType.ACTIVE
-                    ):
-                        p.state.acted_this_street = False
+            
+            # Update table bet if increased
+            if new_table_bet > old_table_bet:
+                self.state.current_bet = new_table_bet
+                
+                # Determine if this reopens betting
+                reopens_betting = (raise_size >= old_last_raise_size)
+                
+                if reopens_betting:
+                    # Update last_raise_size and reset acted flags
+                    self.state.last_raise_size = raise_size
+                    for p in self.state.players:
+                        if p.id != player.id and p.state.state_type == PlayerStateType.ACTIVE:
+                            p.state.acted_this_street = False
+                # else: short all-in raise - don't reopen betting, don't update last_raise_size
 
             self._log(
-                f"Player {current_player.name} goes all-in with amount {actual_amount}.",
+                f"Player {current_player.name} goes all-in with {player_add} chips.",
                 logging.INFO,
             )
 
