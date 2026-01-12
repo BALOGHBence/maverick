@@ -651,6 +651,10 @@ class Game:
             player_add, player_bet_after, new_table_bet, call_part, raise_size, is_all_in = \
                 self._calculate_raise_components(current_player, amount)
             
+            # Validate that RAISE actually increases the table bet
+            if raise_size == 0:
+                raise ValueError("RAISE must increase the table bet")
+            
             # Validate minimum raise (only for non-all-in raises)
             if not is_all_in and raise_size < old_last_raise_size:
                 raise ValueError(
@@ -669,7 +673,8 @@ class Game:
                 current_player.state.state_type = PlayerStateType.ALL_IN
             
             # Determine if this reopens betting
-            reopens_betting = (raise_size >= old_last_raise_size)
+            # Must have raise_size > 0 AND meet minimum raise requirement
+            reopens_betting = (raise_size > 0 and raise_size >= old_last_raise_size)
             
             if reopens_betting:
                 # Update last_raise_size and reset acted flags
@@ -706,7 +711,8 @@ class Game:
                 self.state.current_bet = new_table_bet
                 
                 # Determine if this reopens betting
-                reopens_betting = (raise_size >= old_last_raise_size)
+                # Must have raise_size > 0 AND meet minimum raise requirement
+                reopens_betting = (raise_size > 0 and raise_size >= old_last_raise_size)
                 
                 if reopens_betting:
                     # Update last_raise_size and reset acted flags
