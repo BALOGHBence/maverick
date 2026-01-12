@@ -13,17 +13,23 @@ __all__ = ["WhaleBot"]
 class WhaleBot(Player):
     """An extremely loose bot willing to gamble large sums.
 
-    - **Key Traits:** Plays almost every hand, makes huge bets, gamblers mentality.
-    - **Strengths:** Creates action, unpredictable.
-    - **Weaknesses:** Loses money quickly, plays too many weak hands.
+    Uses hand strength evaluation but loves action and gambles anyway. Understands
+    equity but the thrill of gambling overrides mathematical considerations. Makes
+    huge bets regardless of hand strength.
+
+    - **Key Traits:** Plays almost every hand, makes huge bets, gamblers mentality,
+      ignores hand strength for action.
+    - **Strengths:** Creates action, unpredictable, knows equity but doesn't care.
+    - **Weaknesses:** Loses money quickly, plays too many weak hands despite knowing better.
     - **Common At:** High-stakes games, recreational millionaires.
     """
 
     def decide_action(
         self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
-        """Play extremely loose and gamble with large sums."""
-        # Whale plays almost everything and bets big
+        """Play extremely loose and gamble with large sums, using hand strength minimally."""
+        # NOTE: WhaleBot doesn't rely on hand strength estimation. In fact it doesn't
+        # even look at the cards at all. It loves action more than equity and plays everything.
 
         # Raise big - whale loves to gamble
         if ActionType.RAISE in valid_actions:

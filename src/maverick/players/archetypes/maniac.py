@@ -13,16 +13,23 @@ __all__ = ["ManiacBot"]
 class ManiacBot(Player):
     """A bot that is ultra-aggressive and unpredictable.
 
-    - **Key Traits:** Constant betting and raising, massive bluffs.
+    Has access to hand strength evaluation but largely ignores it in favor of
+    maximum aggression. Plays almost every hand aggressively regardless of equity,
+    creating chaos at the table.
+
+    - **Key Traits:** Constant betting and raising, massive bluffs, ignores hand strength.
     - **Strengths:** Creates confusion and short-term chaos.
-    - **Weaknesses:** Burns chips rapidly over time.
+    - **Weaknesses:** Burns chips rapidly over time, poor equity management.
     - **Common At:** Short bursts in live and online play.
     """
 
     def decide_action(
         self, game: "Game", valid_actions: list[ActionType], min_raise: int
     ) -> PlayerAction:
-        """Bet or raise aggressively at every opportunity."""
+        """Bet or raise aggressively at every opportunity, largely ignoring hand strength."""
+        # NOTE: ManiacBot doesn't rely on hand strength estimation. In fact it doesn't
+        # even look at the cards at all. It just plays everything aggressively.
+
         # Always try to raise first
         if ActionType.RAISE in valid_actions:
             # Maniac raises big - 4-5x or more
@@ -41,7 +48,10 @@ class ManiacBot(Player):
             )
 
         # Will even go all-in on marginal situations
-        if ActionType.ALL_IN in valid_actions and self.state.stack <= game.state.pot:
+        if (
+            ActionType.ALL_IN in valid_actions
+            and self.state.stack <= game.state.pot * 2
+        ):
             return PlayerAction(
                 player_id=self.id,
                 action_type=ActionType.ALL_IN,
