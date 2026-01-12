@@ -1,6 +1,11 @@
+from typing import TYPE_CHECKING
+
 from ..player import Player
 from ..enums import ActionType
 from ..playeraction import PlayerAction
+
+if TYPE_CHECKING:
+    from ..game import Game
 
 __all__ = ["FoldBot"]
 
