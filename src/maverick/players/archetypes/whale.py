@@ -51,9 +51,7 @@ class WhaleBot(Player):
 
         # Calls everything (loves action)
         if ActionType.CALL in valid_actions:
-            return PlayerAction(
-                player_id=self.id, action_type=ActionType.CALL
-            )
+            return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
         # Even all-in doesn't scare a whale
         if ActionType.ALL_IN in valid_actions:

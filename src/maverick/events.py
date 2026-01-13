@@ -5,11 +5,13 @@ This module defines an immutable GameEvent payload that represents
 a snapshot of what happened in the game at a specific point in time.
 """
 
-from typing import Optional
+from typing import Optional, Any
+import time, uuid
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
-from .enums import GameEventType, Street, ActionType
+from .enums import GameEventType, Street
+from .playeraction import PlayerAction
 
 __all__ = ["GameEvent"]
 
@@ -31,24 +33,23 @@ class GameEvent(BaseModel):
         The current betting street.
     player_id : Optional[str]
         ID of the player involved in the event, if applicable.
-    action : Optional[ActionType]
-        Type of action taken, if applicable (for PLAYER_ACTION events).
-    amount : Optional[int]
-        Amount involved in the action, if applicable.
-    pot : int
-        Current pot size.
-    current_bet : int
-        Current bet amount on the table.
+    action : Optional[PlayerAction]
+        The action taken by the player, if applicable.
+    payload : dict[str, Any]
+        Additional event-specific data.
     """
 
+    id: str = Field(default_factory=lambda: uuid.uuid4().hex)
+    ts: float = Field(default_factory=time.time)
     type: GameEventType
+
     hand_number: int
     street: Street
+
     player_id: Optional[str] = None
-    action: Optional[ActionType] = None
-    amount: Optional[int] = None
-    pot: int
-    current_bet: int
+    action: Optional[PlayerAction] = None
+
+    payload: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(
         frozen=True,  # Makes the model immutable

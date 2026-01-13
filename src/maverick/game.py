@@ -8,8 +8,8 @@ pot distribution.
 
 from __future__ import annotations
 
-from typing import Deque, Callable, Optional
-from collections import deque, defaultdict
+from typing import Deque, Optional
+from collections import deque
 import logging
 from warnings import warn
 
@@ -23,11 +23,12 @@ from .enums import (
 )
 from .events import GameEvent
 from .holding import Holding
-from .protocol import PlayerLike
+from .protocol import PlayerLike, EventHandler
 from .state import GameState
 from .playeraction import PlayerAction
 from .playerstate import PlayerState
 from .utils import find_highest_scoring_hand
+from .eventbus import EventBus
 
 __all__ = ["Game"]
 
@@ -38,6 +39,21 @@ class Game:
 
     Implements a Texas Hold'em poker game using an event-driven state machine.
     The game manages player actions, betting rounds, dealing, and pot distribution.
+
+    Parameters
+    ----------
+    small_blind : int
+        Amount for the small blind.
+    big_blind : int
+        Amount for the big blind.
+    min_players : int
+        Minimum number of players to start the game.
+    max_players : int
+        Maximum number of players allowed at the table.
+    max_hands : int
+        Maximum number of hands to play before ending the game.
+    strict : bool
+        If True, exceptions in event handlers will propagate. Otherwise, they will be logged.
     """
 
     def __init__(
@@ -47,6 +63,7 @@ class Game:
         min_players: int = 2,
         max_players: int = 9,
         max_hands: int = 1000,
+        strict: bool = False,
     ):
         self.min_players = min_players
         self.max_players = max_players
@@ -54,7 +71,12 @@ class Game:
         self.state = GameState(small_blind=small_blind, big_blind=big_blind)
         self._event_queue: Deque[GameEventType] = deque()
         self._logger = logging.getLogger("maverick")
-        self._listeners: dict[GameEventType, list[Callable[[GameEvent], None]]] = defaultdict(list)
+        self._strict = strict
+
+        self._events = EventBus(strict=strict)
+        self.game_history: list[GameEvent] = []
+        self.hand_history: list[GameEvent] = []
+        self.street_history: list[GameEvent] = []
 
     def _log(
         self,
@@ -80,7 +102,9 @@ class Game:
         msg = f"{street_prefix_msg} | {message}" if street_prefix else message
         self._logger.log(loglevel, msg, **kwargs)
 
-    def on(self, event_type: GameEventType, handler: Callable[[GameEvent], None]) -> None:
+    def subscribe(
+        self, event_type: GameEventType, handler: EventHandler, **kwargs
+    ) -> str:
         """
         Register a handler for a specific game event type.
 
@@ -91,10 +115,20 @@ class Game:
         ----------
         event_type : GameEventType
             The type of event to listen for.
-        handler : Callable[[GameEvent], None]
+        handler : EventHandler
             A callable that accepts a GameEvent and returns None.
         """
-        self._listeners[event_type].append(handler)
+        return self._events.subscribe(event_type, handler, **kwargs)
+
+    def unsubscribe(self, token: str) -> None:
+        """Unsubscribe a handler using its token.
+
+        Parameters
+        ----------
+        token : str
+            The subscription token returned by the subscribe method.
+        """
+        return self._events.unsubscribe(token)
 
     def _emit(self, event: GameEvent) -> None:
         """
@@ -108,45 +142,39 @@ class Game:
         event : GameEvent
             The event to emit to handlers.
         """
-        handlers = self._listeners.get(event.type, [])
-        for handler in handlers:
-            try:
-                handler(event)
-            except Exception:
-                self._logger.warning(
-                    f"Exception in event handler for {event.type.name}",
-                    exc_info=True,
-                )
+        self.game_history.append(event)
+        self.hand_history.append(event)
+        self.street_history.append(event)
 
-        # Call player-level hooks if they exist
-        if event.player_id:
-            player = next((p for p in self.state.players if p.id == event.player_id), None)
-            if player and hasattr(player, "on_event") and callable(getattr(player, "on_event")):
+        # external listeners
+        self._events.emit(event, self)
+
+        # player hooks
+        for p in self.state.players:
+            fn = getattr(p, "on_event", None)
+            if callable(fn):
                 try:
-                    player.on_event(event)
+                    fn(event, self)
                 except Exception:
                     self._logger.warning(
-                        f"Exception in player {player.name} on_event hook for {event.type.name}",
+                        f"Exception in player {p.name} on_event hook for {event.type.name}",
                         exc_info=True,
                     )
-        else:
-            # For non-player-specific events, call on_event for all players
-            for player in self.state.players:
-                if hasattr(player, "on_event") and callable(getattr(player, "on_event")):
-                    try:
-                        player.on_event(event)
-                    except Exception:
-                        self._logger.warning(
-                            f"Exception in player {player.name} on_event hook for {event.type.name}",
-                            exc_info=True,
-                        )
+            specific = getattr(p, f"on_{event.type.name.lower()}", None)
+            if callable(specific):
+                try:
+                    specific(event, self)
+                except Exception:
+                    self._logger.warning(
+                        f"Exception in player {p.name} {specific.__name__} hook for {event.type.name}",
+                        exc_info=True,
+                    )
 
     def _create_event(
         self,
         event_type: GameEventType,
         player_id: Optional[str] = None,
         action: Optional[ActionType] = None,
-        amount: Optional[int] = None,
     ) -> GameEvent:
         """
         Create a GameEvent with current game state.
@@ -159,8 +187,6 @@ class Game:
             ID of the player involved in the event.
         action : Optional[ActionType]
             Type of action taken (for PLAYER_ACTION events).
-        amount : Optional[int]
-            Amount involved in the action.
 
         Returns
         -------
@@ -173,9 +199,6 @@ class Game:
             street=self.state.street,
             player_id=player_id,
             action=action,
-            amount=amount,
-            pot=self.state.pot,
-            current_bet=self.state.current_bet,
         )
 
     def add_player(self, player: PlayerLike) -> None:
@@ -267,7 +290,9 @@ class Game:
             case GameEventType.PLAYER_ACTION:
                 if self.state.is_betting_round_complete():
                     self._complete_betting_round()
-                    self._emit(self._create_event(GameEventType.BETTING_ROUND_COMPLETED))
+                    self._emit(
+                        self._create_event(GameEventType.BETTING_ROUND_COMPLETED)
+                    )
                     self._event_queue.append(GameEventType.BETTING_ROUND_COMPLETED)
                 else:
                     self._advance_to_next_player()
@@ -310,7 +335,11 @@ class Game:
                         self._emit(self._create_event(GameEventType.SHOWDOWN))
                         self._event_queue.append(GameEventType.SHOWDOWN)
 
-            case GameEventType.DEAL_FLOP | GameEventType.DEAL_TURN | GameEventType.DEAL_RIVER:
+            case (
+                GameEventType.DEAL_FLOP
+                | GameEventType.DEAL_TURN
+                | GameEventType.DEAL_RIVER
+            ):
                 self._take_action_from_current_player()
                 self._event_queue.append(GameEventType.PLAYER_ACTION)
 
@@ -322,7 +351,9 @@ class Game:
             case GameEventType.HAND_ENDED:
                 self._log("Hand ended\n", logging.INFO, street_prefix=False)
 
-                self.state.players = [p for p in self.state.players if p.state.stack > 0]
+                self.state.players = [
+                    p for p in self.state.players if p.state.stack > 0
+                ]
 
                 if len(self.state.players) < self.min_players:
                     self._log(
@@ -332,7 +363,9 @@ class Game:
                     self._event_queue.append(GameEventType.GAME_ENDED)
                 else:
                     n_players = len(self.state.players)
-                    self.state.button_position = (self.state.button_position + 1) % n_players
+                    self.state.button_position = (
+                        self.state.button_position + 1
+                    ) % n_players
 
                     if self.state.hand_number >= self.max_hands:
                         self._log(
@@ -503,7 +536,9 @@ class Game:
         # IMPORTANT: current_bet should reflect the actual posted BB amount if BB is short-stacked.
         self.state.current_bet = bb_amount
         self.state.min_bet = self.state.big_blind
-        self.state.last_raise_size = self.state.big_blind  # preflop min raise increment is BB size
+        self.state.last_raise_size = (
+            self.state.big_blind
+        )  # preflop min raise increment is BB size
 
         # Next to act preflop:
         # - Heads-up: button (SB) acts first
@@ -536,9 +571,16 @@ class Game:
         # Amount the table bet increases by (0 if player didn't exceed old_table_bet)
         raise_size = new_table_bet - old_table_bet
 
-        is_all_in = (player_add >= stack_before)
+        is_all_in = player_add >= stack_before
 
-        return (player_add, player_bet_after, new_table_bet, call_part, raise_size, is_all_in)
+        return (
+            player_add,
+            player_bet_after,
+            new_table_bet,
+            call_part,
+            raise_size,
+            is_all_in,
+        )
 
     def _reset_acted_flags_for_reopen(self, raiser_id: str) -> None:
         """
@@ -648,7 +690,7 @@ class Game:
                 current_player.state.state_type = PlayerStateType.ALL_IN
 
             # Reopen betting ONLY on a full raise (>= old_last_raise_size)
-            reopens_betting = (raise_size >= old_last_raise_size)
+            reopens_betting = raise_size >= old_last_raise_size
 
             if reopens_betting:
                 self.state.last_raise_size = raise_size
@@ -686,7 +728,7 @@ class Game:
                 self.state.current_bet = new_table_bet
 
                 # Reopen betting ONLY if raise_size meets minimum
-                reopens_betting = (raise_size >= old_last_raise_size)
+                reopens_betting = raise_size >= old_last_raise_size
                 if reopens_betting:
                     self.state.last_raise_size = raise_size
                     self._reset_acted_flags_for_reopen(raiser_id=current_player.id)
@@ -709,8 +751,7 @@ class Game:
             self._create_event(
                 GameEventType.PLAYER_ACTION,
                 player_id=current_player.id,
-                action=action_type,
-                amount=amount,
+                action=action,
             )
         )
 
@@ -753,7 +794,9 @@ class Game:
         num_players = len(self.state.players)
 
         for _ in range(num_players):
-            self.state.current_player_index = (self.state.current_player_index + 1) % num_players
+            self.state.current_player_index = (
+                self.state.current_player_index + 1
+            ) % num_players
             p = self.state.players[self.state.current_player_index]
 
             if p.state.state_type != PlayerStateType.ACTIVE:
@@ -776,13 +819,17 @@ class Game:
         self._log("Betting round complete\n", logging.INFO)
 
     def _advance_to_first_active_player(self) -> None:
-        self.state.current_player_index = (self.state.button_position + 1) % len(self.state.players)
+        self.state.current_player_index = (self.state.button_position + 1) % len(
+            self.state.players
+        )
 
         for _ in range(len(self.state.players)):
             player = self.state.players[self.state.current_player_index]
             if player.state.state_type == PlayerStateType.ACTIVE:
                 return
-            self.state.current_player_index = (self.state.current_player_index + 1) % len(self.state.players)
+            self.state.current_player_index = (
+                self.state.current_player_index + 1
+            ) % len(self.state.players)
 
     def _deal_flop(self) -> None:
         self.state.deck.deal(1)
@@ -826,7 +873,9 @@ class Game:
             player_scores: list[tuple[PlayerLike, float]] = []
             for player in players_in_hand:
                 if player.state.holding:
-                    player_holding = " ".join(card.utf8() for card in player.state.holding.cards)
+                    player_holding = " ".join(
+                        card.utf8() for card in player.state.holding.cards
+                    )
                     self._log(
                         f"Player {player.name} has holding {player_holding} at showdown,",
                         logging.INFO,

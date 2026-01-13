@@ -50,18 +50,19 @@ class Player(BaseModel):
             "decide_action method must be implemented by subclasses."
         )
 
-    def on_event(self, event: "GameEvent") -> None:
+    def on_event(self, event: "GameEvent", game: "Game") -> None:
         """
         Optional hook called when a game event occurs.
 
         This method is called synchronously after global event handlers.
-        It allows players to observe game events without affecting engine logic.
         Exceptions in this method are caught and logged by the engine.
 
         Parameters
         ----------
         event : GameEvent
             The game event that occurred.
+        game : Game
+            The game instance containing the current state.
 
         Notes
         -----
