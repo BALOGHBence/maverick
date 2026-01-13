@@ -26,6 +26,7 @@ dev = [
     "pydata-sphinx-theme>=0.16.0",
     "matplotlib>=3.10.8",
     "scipy>=1.16.3",
+    "pytest-cov>=7.0.0",
 ]
 
 [tool.pytest.ini_options]

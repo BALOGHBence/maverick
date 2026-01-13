@@ -1,0 +1,49 @@
+[run]
+# Measure coverage for the maverick package
+source = maverick
+
+# Look for source files in the src directory
+source_pkgs = maverick
+
+# Include branch coverage in addition to statement coverage
+branch = True
+
+# Omit specific files or directories from coverage
+omit =
+    */tests/*
+    */test_*.py
+    */__pycache__/*
+    */site-packages/*
+    .venv/*
+
+[report]
+# Show line numbers of missing coverage
+show_missing = True
+
+# Precision for coverage percentage
+precision = 2
+
+# Exclude lines from coverage report
+exclude_lines =
+    # Standard pragma to exclude lines
+    pragma: no cover
+    
+    # Don't complain about missing debug-only code
+    def __repr__
+    
+    # Don't complain if tests don't hit defensive assertion code
+    raise AssertionError
+    raise NotImplementedError
+    
+    # Don't complain if non-runnable code isn't run
+    if __name__ == .__main__.:
+    
+    # Don't complain about abstract methods
+    @(abc\.)?abstractmethod
+
+[html]
+# Directory to write the HTML report
+directory = htmlcov
+
+# Title for the HTML report
+title = Maverick Coverage Report
