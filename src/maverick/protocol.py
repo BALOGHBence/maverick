@@ -13,8 +13,16 @@ from .playeraction import PlayerAction
 if TYPE_CHECKING:
     from .game import Game
     from .playerstate import PlayerState
+    from .events import GameEvent
 
-__all__ = ["PlayerLike"]
+__all__ = ["PlayerLike", "EventHandler"]
+
+
+@runtime_checkable
+class EventHandler(Protocol):
+    """A protocol defining the signature for event handler callables."""
+
+    def __call__(self, event: "GameEvent", game: "Game") -> None: ...
 
 
 @runtime_checkable

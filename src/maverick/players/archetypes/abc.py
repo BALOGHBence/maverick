@@ -78,9 +78,7 @@ class ABCBot(Player):
                 and call_amount * 3 <= game.state.pot
                 and decent_hand
             ):
-                return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL
-                )
+                return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
         # Check when it's free
         if ActionType.CHECK in valid_actions:

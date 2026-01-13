@@ -35,9 +35,7 @@ class AggressiveBot(Player):
 
         # Call if we can't bet/raise
         if ActionType.CALL in valid_actions:
-            return PlayerAction(
-                player_id=self.id, action_type=ActionType.CALL
-            )
+            return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
         # Check if possible
         if ActionType.CHECK in valid_actions:

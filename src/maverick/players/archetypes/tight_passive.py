@@ -61,9 +61,7 @@ class TightPassiveBot(Player):
             call_amount = game.state.current_bet - self.state.current_bet
             # Only call if it's less than 10% of stack and pot is worth it
             if call_amount <= self.state.stack * 0.1:
-                return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL
-                )
+                return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
         # Fold in most other situations (never raises or bets, even with premium)
         return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)

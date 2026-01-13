@@ -68,7 +68,9 @@ class GameState(BaseModel):
 
     def is_betting_round_complete(self) -> bool:
         """Betting round is complete when no further action is possible/required."""
-        in_hand = [p for p in self.players if p.state.state_type != PlayerStateType.FOLDED]
+        in_hand = [
+            p for p in self.players if p.state.state_type != PlayerStateType.FOLDED
+        ]
 
         # If only one player remains, hand is effectively over
         if len(in_hand) <= 1:

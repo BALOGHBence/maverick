@@ -79,9 +79,7 @@ class TightAggressiveBot(Player):
             call_amount = game.state.current_bet - self.state.current_bet
             # TAG calls with proper odds (better than 3:1)
             if call_amount <= self.state.stack and call_amount * 3 <= game.state.pot:
-                return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL
-                )
+                return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
         # Check when free
         if ActionType.CHECK in valid_actions:

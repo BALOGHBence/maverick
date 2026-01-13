@@ -20,7 +20,5 @@ class CallBot(Player):
         if ActionType.CHECK in valid_actions:
             return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
         elif ActionType.CALL in valid_actions:
-            return PlayerAction(
-                player_id=self.id, action_type=ActionType.CALL
-            )
+            return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
         return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)

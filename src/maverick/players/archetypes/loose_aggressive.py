@@ -71,9 +71,7 @@ class LooseAggressiveBot(Player):
 
         # Even when can't raise/bet, still call frequently
         if ActionType.CALL in valid_actions:
-            return PlayerAction(
-                player_id=self.id, action_type=ActionType.CALL
-            )
+            return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
         if ActionType.CHECK in valid_actions:
             return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)

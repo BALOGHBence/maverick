@@ -36,9 +36,7 @@ class LoosePassiveBot(Player):
 
         # Call almost anything, even with weak equity
         if ActionType.CALL in valid_actions:
-            return PlayerAction(
-                player_id=self.id, action_type=ActionType.CALL
-            )
+            return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
         # Rarely bet, but will if no one else has
         if ActionType.BET in valid_actions:

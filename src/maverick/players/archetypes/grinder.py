@@ -72,9 +72,7 @@ class GrinderBot(Player):
             call_amount = game.state.current_bet - self.state.current_bet
             # Basic pot odds calculation - call if getting 2:1 or better
             if call_amount <= self.state.stack and call_amount <= game.state.pot * 0.5:
-                return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL
-                )
+                return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
         # Check when free
         if ActionType.CHECK in valid_actions:

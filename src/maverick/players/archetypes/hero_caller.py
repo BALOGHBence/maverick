@@ -58,9 +58,7 @@ class HeroCallerBot(Player):
             call_amount = game.state.current_bet - self.state.current_bet
             # Hero caller calls even big bets (often incorrectly)
             if call_amount <= self.state.stack * 0.6:
-                return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL
-                )
+                return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
         # Check when possible
         if ActionType.CHECK in valid_actions:
