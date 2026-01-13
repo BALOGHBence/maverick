@@ -3,10 +3,15 @@
 import unittest
 from typing import TYPE_CHECKING
 
-from maverick import Game, GameEvent, GameEventType, ActionType
-from maverick.player import Player
-from maverick.playeraction import PlayerAction
-from maverick.playerstate import PlayerState
+from maverick import (
+    Game,
+    GameEvent,
+    GameEventType,
+    ActionType,
+    Player,
+    PlayerAction,
+    PlayerState,
+)
 
 if TYPE_CHECKING:
     from maverick import Game as GameType
@@ -18,7 +23,7 @@ class EventRecorder:
     def __init__(self):
         self.events = []
 
-    def record(self, event: GameEvent):
+    def record(self, event: GameEvent, game: Game):
         self.events.append(event)
 
     def clear(self):
@@ -44,11 +49,15 @@ class MockPlayer(Player):
         if self._action_index < len(self._actions):
             action_type, amount = self._actions[self._action_index]
             self._action_index += 1
-            return PlayerAction(player_id=self.id, action_type=action_type, amount=amount)
+            return PlayerAction(
+                player_id=self.id,
+                action_type=action_type,
+                amount=amount if amount is not None else 0,
+            )
         # Default to fold
         return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
 
-    def on_event(self, event: GameEvent) -> None:
+    def on_event(self, event: GameEvent, game: Game) -> None:
         """Record events for testing."""
         self.observed_events.append(event)
 
@@ -64,12 +73,10 @@ class TestGameEventModel(unittest.TestCase):
             type=GameEventType.HAND_STARTED,
             hand_number=1,
             street=Street.PRE_FLOP,
-            pot=0,
-            current_bet=0,
         )
 
         with self.assertRaises(Exception):  # Pydantic raises ValidationError or similar
-            event.pot = 100
+            event.hand_number = 100
 
     def test_game_event_forbids_extra_fields(self):
         """Test that GameEvent rejects extra fields."""
@@ -80,8 +87,6 @@ class TestGameEventModel(unittest.TestCase):
                 type=GameEventType.HAND_STARTED,
                 hand_number=1,
                 street=Street.PRE_FLOP,
-                pot=0,
-                current_bet=0,
                 extra_field="should_fail",  # This should be rejected
             )
 
@@ -89,16 +94,16 @@ class TestGameEventModel(unittest.TestCase):
 class TestEventSubscription(unittest.TestCase):
     """Test event subscription and handler registration."""
 
-    def test_on_method_registers_handler(self):
-        """Test that on() method registers a handler."""
+    def test_subscribe_method_registers_handler(self):
+        """Test that subscribe() method registers a handler."""
         game = Game(small_blind=10, big_blind=20)
         recorder = EventRecorder()
 
-        game.on(GameEventType.GAME_STARTED, recorder.record)
+        token = game.subscribe(GameEventType.GAME_STARTED, recorder.record)
 
-        # Verify handler is registered
-        self.assertIn(GameEventType.GAME_STARTED, game._listeners)
-        self.assertEqual(len(game._listeners[GameEventType.GAME_STARTED]), 1)
+        # Verify token is returned
+        self.assertIsInstance(token, str)
+        self.assertTrue(len(token) > 0)
 
     def test_multiple_handlers_for_same_event(self):
         """Test that multiple handlers can be registered for the same event."""
@@ -106,10 +111,39 @@ class TestEventSubscription(unittest.TestCase):
         recorder1 = EventRecorder()
         recorder2 = EventRecorder()
 
-        game.on(GameEventType.GAME_STARTED, recorder1.record)
-        game.on(GameEventType.GAME_STARTED, recorder2.record)
+        token1 = game.subscribe(GameEventType.GAME_STARTED, recorder1.record)
+        token2 = game.subscribe(GameEventType.GAME_STARTED, recorder2.record)
 
-        self.assertEqual(len(game._listeners[GameEventType.GAME_STARTED]), 2)
+        # Verify both tokens are different
+        self.assertNotEqual(token1, token2)
+
+    def test_unsubscribe_removes_handler(self):
+        """Test that unsubscribe() removes a handler."""
+        game = Game(small_blind=1, big_blind=2, max_hands=1)
+        recorder = EventRecorder()
+
+        token = game.subscribe(GameEventType.GAME_STARTED, recorder.record)
+        game.unsubscribe(token)
+
+        p1 = MockPlayer(
+            id="p1",
+            name="P1",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
+        )
+        p2 = MockPlayer(
+            id="p2",
+            name="P2",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
+        )
+
+        game.add_player(p1)
+        game.add_player(p2)
+        game.start()
+
+        # Handler should not have been called
+        self.assertEqual(len(recorder.events), 0)
 
 
 class TestEventEmission(unittest.TestCase):
@@ -120,13 +154,19 @@ class TestEventEmission(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2, max_hands=1)
         recorder = EventRecorder()
 
-        game.on(GameEventType.GAME_STARTED, recorder.record)
+        game.subscribe(GameEventType.GAME_STARTED, recorder.record)
 
         p1 = MockPlayer(
-            id="p1", name="P1", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p1",
+            name="P1",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2", name="P2", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p2",
+            name="P2",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
 
         game.add_player(p1)
@@ -141,13 +181,19 @@ class TestEventEmission(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2, max_hands=1)
         recorder = EventRecorder()
 
-        game.on(GameEventType.HAND_STARTED, recorder.record)
+        game.subscribe(GameEventType.HAND_STARTED, recorder.record)
 
         p1 = MockPlayer(
-            id="p1", name="P1", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p1",
+            name="P1",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2", name="P2", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p2",
+            name="P2",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
 
         game.add_player(p1)
@@ -162,13 +208,19 @@ class TestEventEmission(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2, max_hands=1)
         recorder = EventRecorder()
 
-        game.on(GameEventType.PLAYER_ACTION, recorder.record)
+        game.subscribe(GameEventType.PLAYER_ACTION, recorder.record)
 
         p1 = MockPlayer(
-            id="p1", name="P1", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p1",
+            name="P1",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2", name="P2", state=PlayerState(stack=100), actions=[(ActionType.CALL, None)]
+            id="p2",
+            name="P2",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.CALL, None)],
         )
 
         game.add_player(p1)
@@ -187,7 +239,7 @@ class TestEventEmission(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2)
         recorder = EventRecorder()
 
-        game.on(GameEventType.PLAYER_JOINED, recorder.record)
+        game.subscribe(GameEventType.PLAYER_JOINED, recorder.record)
 
         p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=100))
         game.add_player(p1)
@@ -203,7 +255,7 @@ class TestEventEmission(unittest.TestCase):
 
         # Register for all event types
         for event_type in GameEventType:
-            game.on(event_type, recorder.record)
+            game.subscribe(event_type, recorder.record)
 
         # Create players that will play through a hand
         p1 = MockPlayer(
@@ -251,7 +303,9 @@ class TestEventEmission(unittest.TestCase):
 
         for required_event in required_events:
             self.assertIn(
-                required_event, event_types, f"Event {required_event.name} was not emitted"
+                required_event,
+                event_types,
+                f"Event {required_event.name} was not emitted",
             )
 
 
@@ -263,24 +317,30 @@ class TestHandlerExecutionOrder(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2, max_hands=1)
         call_order = []
 
-        def handler1(event: GameEvent):
+        def handler1(event: GameEvent, game: Game):
             call_order.append(1)
 
-        def handler2(event: GameEvent):
+        def handler2(event: GameEvent, game: Game):
             call_order.append(2)
 
-        def handler3(event: GameEvent):
+        def handler3(event: GameEvent, game: Game):
             call_order.append(3)
 
-        game.on(GameEventType.GAME_STARTED, handler1)
-        game.on(GameEventType.GAME_STARTED, handler2)
-        game.on(GameEventType.GAME_STARTED, handler3)
+        game.subscribe(GameEventType.GAME_STARTED, handler1)
+        game.subscribe(GameEventType.GAME_STARTED, handler2)
+        game.subscribe(GameEventType.GAME_STARTED, handler3)
 
         p1 = MockPlayer(
-            id="p1", name="P1", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p1",
+            name="P1",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2", name="P2", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p2",
+            name="P2",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
 
         game.add_player(p1)
@@ -298,16 +358,22 @@ class TestHandlerExceptionSafety(unittest.TestCase):
         """Test that exceptions in handlers are caught and logged."""
         game = Game(small_blind=1, big_blind=2, max_hands=1)
 
-        def failing_handler(event: GameEvent):
+        def failing_handler(event: GameEvent, game: Game):
             raise ValueError("Test exception in handler")
 
-        game.on(GameEventType.GAME_STARTED, failing_handler)
+        game.subscribe(GameEventType.GAME_STARTED, failing_handler)
 
         p1 = MockPlayer(
-            id="p1", name="P1", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p1",
+            name="P1",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2", name="P2", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p2",
+            name="P2",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
 
         game.add_player(p1)
@@ -324,20 +390,26 @@ class TestHandlerExceptionSafety(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2, max_hands=1)
         successful_calls = []
 
-        def failing_handler(event: GameEvent):
+        def failing_handler(event: GameEvent, game: Game):
             raise ValueError("Test exception")
 
-        def successful_handler(event: GameEvent):
+        def successful_handler(event: GameEvent, game: Game):
             successful_calls.append(event)
 
-        game.on(GameEventType.GAME_STARTED, failing_handler)
-        game.on(GameEventType.GAME_STARTED, successful_handler)
+        game.subscribe(GameEventType.GAME_STARTED, failing_handler)
+        game.subscribe(GameEventType.GAME_STARTED, successful_handler)
 
         p1 = MockPlayer(
-            id="p1", name="P1", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p1",
+            name="P1",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2", name="P2", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p2",
+            name="P2",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
 
         game.add_player(p1)
@@ -356,10 +428,16 @@ class TestNoHandlersBehavior(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2, max_hands=1)
 
         p1 = MockPlayer(
-            id="p1", name="P1", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p1",
+            name="P1",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2", name="P2", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p2",
+            name="P2",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
 
         game.add_player(p1)
@@ -378,10 +456,16 @@ class TestPlayerEventHook(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2, max_hands=1)
 
         p1 = MockPlayer(
-            id="p1", name="P1", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p1",
+            name="P1",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2", name="P2", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p2",
+            name="P2",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
 
         game.add_player(p1)
@@ -396,16 +480,22 @@ class TestPlayerEventHook(unittest.TestCase):
         """Test that exceptions in player on_event hook are caught."""
 
         class FailingPlayer(MockPlayer):
-            def on_event(self, event: GameEvent) -> None:
+            def on_event(self, event: GameEvent, game: Game) -> None:
                 raise ValueError("Test exception in player hook")
 
         game = Game(small_blind=1, big_blind=2, max_hands=1)
 
         p1 = FailingPlayer(
-            id="p1", name="P1", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p1",
+            name="P1",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2", name="P2", state=PlayerState(stack=100), actions=[(ActionType.FOLD, None)]
+            id="p2",
+            name="P2",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.FOLD, None)],
         )
 
         game.add_player(p1)
@@ -426,17 +516,23 @@ class TestEventPayloadAccuracy(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2, max_hands=1)
         action_events = []
 
-        def record_action(event: GameEvent):
+        def record_action(event: GameEvent, game: Game):
             if event.type == GameEventType.PLAYER_ACTION:
                 action_events.append(event)
 
-        game.on(GameEventType.PLAYER_ACTION, record_action)
+        game.subscribe(GameEventType.PLAYER_ACTION, record_action)
 
         p1 = MockPlayer(
-            id="p1", name="P1", state=PlayerState(stack=100), actions=[(ActionType.CALL, None)]
+            id="p1",
+            name="P1",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.CALL, None)],
         )
         p2 = MockPlayer(
-            id="p2", name="P2", state=PlayerState(stack=100), actions=[(ActionType.CHECK, None)]
+            id="p2",
+            name="P2",
+            state=PlayerState(stack=100),
+            actions=[(ActionType.CHECK, None)],
         )
 
         game.add_player(p1)
@@ -448,8 +544,6 @@ class TestEventPayloadAccuracy(unittest.TestCase):
         for event in action_events:
             self.assertIsNotNone(event.player_id)
             self.assertIsNotNone(event.action)
-            self.assertGreaterEqual(event.pot, 0)
-            self.assertGreaterEqual(event.current_bet, 0)
 
 
 if __name__ == "__main__":
