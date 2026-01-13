@@ -202,6 +202,13 @@ class Game:
         )
 
     def add_player(self, player: PlayerLike) -> None:
+        """Add a player to the game.
+
+        Parameters
+        ----------
+        player : PlayerLike
+            The player to add to the game.
+        """
         if len(self.state.players) >= self.max_players:
             raise ValueError("Table is full")
 
@@ -230,11 +237,21 @@ class Game:
             f"Player {player.name} joined the game.", logging.INFO, street_prefix=False
         )
 
-    def remove_player(self, player_id: str) -> None:
+    def remove_player(self, player: PlayerLike) -> None:
+        """Remove a player from the game.
+
+        Parameters
+        ----------
+        player : PlayerLike
+            The player to remove from the game.
+        """
+        player_id = player.id
+
         if self.state.state_type not in [
             GameStateType.WAITING_FOR_PLAYERS,
             GameStateType.READY,
             GameStateType.HAND_COMPLETE,
+            GameStateType.GAME_OVER,
         ]:
             raise ValueError("Cannot remove players while hand is in progress")
 
@@ -251,6 +268,7 @@ class Game:
         )
 
     def start(self) -> None:
+        """Start the poker game."""
         self._log("Game started.\n", logging.INFO, street_prefix=False)
         self._initialize_game()
         self._event_queue.append(GameEventType.GAME_STARTED)
@@ -271,8 +289,9 @@ class Game:
                     GameStateType.HAND_COMPLETE,
                 ]
                 self.state.state_type = GameStateType.DEALING
-                self._deal_hole_cards()
                 self._emit(self._create_event(GameEventType.HAND_STARTED))
+                self._deal_hole_cards()
+                self._emit(self._create_event(GameEventType.DEAL_HOLE_CARDS))
                 self._event_queue.append(GameEventType.DEAL_HOLE_CARDS)
 
             case GameEventType.DEAL_HOLE_CARDS:
@@ -381,6 +400,7 @@ class Game:
 
             case GameEventType.GAME_ENDED:
                 self._log("Game ended", logging.INFO, street_prefix=False)
+                self._emit(self._create_event(GameEventType.GAME_ENDED))
 
             case GameEventType.PLAYER_JOINED:
                 if self.state.state_type == GameStateType.WAITING_FOR_PLAYERS:
@@ -399,6 +419,7 @@ class Game:
             pass
 
     def step(self) -> bool:
+        """Process the next event in the queue."""
         if self.has_events():
             event = self._event_queue.popleft()
             self._handle_event(event)
@@ -406,6 +427,7 @@ class Game:
         return False
 
     def has_events(self) -> bool:
+        """Check if there are pending events in the queue."""
         return len(self._event_queue) > 0
 
     def _initialize_game(self) -> None:
