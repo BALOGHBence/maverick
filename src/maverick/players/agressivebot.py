@@ -19,10 +19,10 @@ class AggressiveBot(Player):
         """Bet or raise aggressively."""
         # Try to raise if possible
         if ActionType.RAISE in valid_actions:
-            raise_amount = min_raise
-            if raise_amount <= self.state.stack:
+            # Use minimum raise increment
+            if min_raise <= self.state.stack:
                 return PlayerAction(
-                    player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
+                    player_id=self.id, action_type=ActionType.RAISE, amount=min_raise
                 )
 
         # Otherwise bet if possible
@@ -35,11 +35,9 @@ class AggressiveBot(Player):
 
         # Call if we can't bet/raise
         if ActionType.CALL in valid_actions:
-            call_amount = game.state.current_bet - self.state.current_bet
-            if call_amount <= self.state.stack:
-                return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL, amount=call_amount
-                )
+            return PlayerAction(
+                player_id=self.id, action_type=ActionType.CALL
+            )
 
         # Check if possible
         if ActionType.CHECK in valid_actions:

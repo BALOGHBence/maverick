@@ -36,12 +36,9 @@ class LoosePassiveBot(Player):
 
         # Call almost anything, even with weak equity
         if ActionType.CALL in valid_actions:
-            call_amount = game.state.current_bet - self.state.current_bet
-            # Call as long as we have chips (calling station behavior)
-            if call_amount <= self.state.stack:
-                return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL, amount=call_amount
-                )
+            return PlayerAction(
+                player_id=self.id, action_type=ActionType.CALL
+            )
 
         # Rarely bet, but will if no one else has
         if ActionType.BET in valid_actions:

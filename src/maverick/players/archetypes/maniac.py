@@ -32,12 +32,12 @@ class ManiacBot(Player):
 
         # Always try to raise first
         if ActionType.RAISE in valid_actions:
-            # Maniac raises big - 4-5x or more
-            raise_amount = min(
-                max(min_raise * 2, game.state.big_blind * 5), self.state.stack
-            )
+            # Maniac raises big - typically 2x minimum raise or 5x BB, whichever is larger
+            # min_raise is the minimum raise-by increment
+            raise_by_amount = max(min_raise * 2, game.state.big_blind * 5)
+            raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
+                player_id=self.id, action_type=ActionType.RAISE, amount=raise_by_amount
             )
 
         # Bet aggressively
@@ -60,11 +60,9 @@ class ManiacBot(Player):
 
         # Call if can't raise or bet
         if ActionType.CALL in valid_actions:
-            call_amount = game.state.current_bet - self.state.current_bet
-            if call_amount <= self.state.stack:
-                return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL, amount=call_amount
-                )
+            return PlayerAction(
+                player_id=self.id, action_type=ActionType.CALL
+            )
 
         # Even check is better than fold for a maniac
         if ActionType.CHECK in valid_actions:

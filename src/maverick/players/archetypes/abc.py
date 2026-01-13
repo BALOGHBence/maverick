@@ -79,7 +79,7 @@ class ABCBot(Player):
                 and decent_hand
             ):
                 return PlayerAction(
-                    player_id=self.id, action_type=ActionType.CALL, amount=call_amount
+                    player_id=self.id, action_type=ActionType.CALL
                 )
 
         # Check when it's free
