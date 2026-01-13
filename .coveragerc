@@ -2,7 +2,7 @@
 # Measure coverage for the maverick package
 source = maverick
 
-# Look for source files in the src directory
+# Specify which packages to measure coverage for
 source_pkgs = maverick
 
 # Include branch coverage in addition to statement coverage
@@ -36,7 +36,7 @@ exclude_lines =
     raise NotImplementedError
     
     # Don't complain if non-runnable code isn't run
-    if __name__ == "__main__":
+    if __name__ == [\"']__main__[\"']:
     
     # Don't complain about abstract methods
     @(abc\.)?abstractmethod
