@@ -4,7 +4,7 @@ from ..player import Player
 from ..enums import ActionType
 from ..playeraction import PlayerAction
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from ..game import Game
 
 __all__ = ["AggressiveBot"]

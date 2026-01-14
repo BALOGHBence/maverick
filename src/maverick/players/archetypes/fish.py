@@ -5,7 +5,7 @@ from ...enums import ActionType
 from ...playeraction import PlayerAction
 from ...utils import estimate_holding_strength
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from ...game import Game
 
 __all__ = ["FishBot"]

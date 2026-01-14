@@ -61,6 +61,9 @@ class MockPlayer(Player):
         """Record events for testing."""
         self.observed_events.append(event)
 
+    def on_game_started(self, event: GameEvent, game: Game) -> None:
+        pass
+
 
 class TestGameEventModel(unittest.TestCase):
     """Test the GameEvent model properties."""

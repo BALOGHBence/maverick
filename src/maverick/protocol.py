@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Optional, Protocol, runtime_checkable
 from .enums import ActionType
 from .playeraction import PlayerAction
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .game import Game
     from .playerstate import PlayerState
     from .events import GameEvent
@@ -22,7 +22,9 @@ __all__ = ["PlayerLike", "EventHandler"]
 class EventHandler(Protocol):
     """A protocol defining the signature for event handler callables."""
 
-    def __call__(self, event: "GameEvent", game: "Game") -> None: ...
+    def __call__(
+        self, event: "GameEvent", game: "Game"
+    ) -> None: ...  # pragma: no cover
 
 
 @runtime_checkable
@@ -49,7 +51,7 @@ class PlayerLike(Protocol):
 
     def decide_action(
         self, game: "Game", valid_actions: list[ActionType], min_raise: int
-    ) -> PlayerAction:
+    ) -> PlayerAction:  # pragma: no cover
         """
         Decide what action to take given the current game state.
 

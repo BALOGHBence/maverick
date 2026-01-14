@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Optional
 from functools import partial
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from ..card import Card
 
 from .scoring import find_highest_scoring_hand
