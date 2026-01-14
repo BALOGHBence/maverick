@@ -193,6 +193,22 @@ class TestRemovePlayer(unittest.TestCase):
         self.assertEqual(len(game.state.players), 1)
         self.assertEqual(game.state.players[0].id, "p2")
 
+    def remove_player_while_hand_is_in_progress_raises_error(self):
+        """Test that removing a player while a hand is in progress raises ValueError."""
+        game = Game()
+        player = SimpleTestPlayer(id="p1", name="Player1")
+        game.add_player(player)
+
+        # Simulate hand in progress
+        game._initialize_game()
+        game.state.state_type = GameStateType.STARTED
+
+        with self.assertRaises(ValueError) as context:
+            game.remove_player(player)
+        self.assertIn(
+            "Cannot remove players while a hand is in progress", str(context.exception)
+        )
+
 
 class TestSubscribeUnsubscribe(unittest.TestCase):
     """Test Game.subscribe and unsubscribe methods."""

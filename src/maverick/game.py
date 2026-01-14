@@ -411,7 +411,7 @@ class Game:
                 if len(self.state.players) < self.min_players:
                     self.state.state_type = GameStateType.WAITING_FOR_PLAYERS
 
-            case _:
+            case _:  # pragma: no cover
                 raise ValueError(f"Unknown event: {event}")
 
     def _drain_event_queue(self) -> None:
