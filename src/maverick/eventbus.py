@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict
 from .protocol import EventHandler
 from .enums import GameEventType
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .game import Game
     from .events import GameEvent
 

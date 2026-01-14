@@ -1,7 +1,7 @@
 from typing import Tuple, TYPE_CHECKING
 from itertools import combinations
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from ..card import Card
 
 from ..enums import HandType

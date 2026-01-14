@@ -6,7 +6,7 @@ from .enums import ActionType
 from .playeraction import PlayerAction
 from .playerstate import PlayerState
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .game import Game
     from .events import GameEvent
 
@@ -25,7 +25,7 @@ class Player(BaseModel):
         game: "Game",
         valid_actions: list[ActionType],
         min_raise: int,  # noqa: ARG002
-    ) -> PlayerAction:
+    ) -> PlayerAction:  # pragma: no cover
         """
         Decide on an action to take during the player's turn.
 
@@ -50,7 +50,7 @@ class Player(BaseModel):
             "decide_action method must be implemented by subclasses."
         )
 
-    def on_event(self, event: "GameEvent", game: "Game") -> None:
+    def on_event(self, event: "GameEvent", game: "Game") -> None:  # pragma: no cover
         """
         Optional hook called when a game event occurs.
 
@@ -69,4 +69,4 @@ class Player(BaseModel):
         This is an optional hook. The default implementation does nothing.
         Subclasses can override this method to observe events.
         """
-        pass
+        ...

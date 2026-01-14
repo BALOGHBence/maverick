@@ -4,22 +4,10 @@ import unittest
 from maverick import Card, Suit, Rank, Holding, Deck, Game
 from maverick.enums import ActionType, Street
 from maverick.playerstate import PlayerState
-from maverick.state import GameState
 from maverick.players import (
     TightAggressiveBot,
-    LooseAggressiveBot,
-    TightPassiveBot,
     LoosePassiveBot,
     ManiacBot,
-    TiltedBot,
-    BullyBot,
-    GrinderBot,
-    GTOBot,
-    SharkBot,
-    FishBot,
-    ABCBot,
-    HeroCallerBot,
-    ScaredMoneyBot,
     WhaleBot,
     FoldBot,
     CallBot,
@@ -98,10 +86,12 @@ class TestPlayerStateOperations(unittest.TestCase):
 
     def test_player_state_with_holding(self):
         """Test player state with holding."""
-        holding = Holding(cards=[
-            Card(suit=Suit.HEARTS, rank=Rank.ACE),
-            Card(suit=Suit.SPADES, rank=Rank.KING)
-        ])
+        holding = Holding(
+            cards=[
+                Card(suit=Suit.HEARTS, rank=Rank.ACE),
+                Card(suit=Suit.SPADES, rank=Rank.KING),
+            ]
+        )
         state = PlayerState(stack=500, seat=1, holding=holding)
         self.assertEqual(len(state.holding.cards), 2)
 
@@ -112,30 +102,50 @@ class TestGameIntegration(unittest.TestCase):
     def test_game_with_whale_bot(self):
         """Test game with WhaleBot."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
-        game.add_player(WhaleBot(id="whale", name="Whale", state=PlayerState(stack=1000, seat=0)))
-        game.add_player(FoldBot(id="fold", name="Fold", state=PlayerState(stack=1000, seat=1)))
+        game.add_player(
+            WhaleBot(id="whale", name="Whale", state=PlayerState(stack=1000, seat=0))
+        )
+        game.add_player(
+            FoldBot(id="fold", name="Fold", state=PlayerState(stack=1000, seat=1))
+        )
         self.assertIsNotNone(game)
 
     def test_game_with_multiple_archetypes(self):
         """Test game with multiple archetype bots."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
-        game.add_player(TightAggressiveBot(id="tag", name="TAG", state=PlayerState(stack=1000, seat=0)))
-        game.add_player(LoosePassiveBot(id="lp", name="LP", state=PlayerState(stack=1000, seat=1)))
-        game.add_player(ManiacBot(id="maniac", name="Maniac", state=PlayerState(stack=1000, seat=2)))
+        game.add_player(
+            TightAggressiveBot(
+                id="tag", name="TAG", state=PlayerState(stack=1000, seat=0)
+            )
+        )
+        game.add_player(
+            LoosePassiveBot(id="lp", name="LP", state=PlayerState(stack=1000, seat=1))
+        )
+        game.add_player(
+            ManiacBot(id="maniac", name="Maniac", state=PlayerState(stack=1000, seat=2))
+        )
         self.assertIsNotNone(game)
 
     def test_game_with_callbot(self):
         """Test game with CallBot."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
-        game.add_player(CallBot(id="call", name="Call", state=PlayerState(stack=1000, seat=0)))
-        game.add_player(FoldBot(id="fold", name="Fold", state=PlayerState(stack=1000, seat=1)))
+        game.add_player(
+            CallBot(id="call", name="Call", state=PlayerState(stack=1000, seat=0))
+        )
+        game.add_player(
+            FoldBot(id="fold", name="Fold", state=PlayerState(stack=1000, seat=1))
+        )
         self.assertIsNotNone(game)
 
     def test_game_with_aggressivebot(self):
         """Test game with AggressiveBot."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
-        game.add_player(AggressiveBot(id="agg", name="Agg", state=PlayerState(stack=1000, seat=0)))
-        game.add_player(FoldBot(id="fold", name="Fold", state=PlayerState(stack=1000, seat=1)))
+        game.add_player(
+            AggressiveBot(id="agg", name="Agg", state=PlayerState(stack=1000, seat=0))
+        )
+        game.add_player(
+            FoldBot(id="fold", name="Fold", state=PlayerState(stack=1000, seat=1))
+        )
         self.assertIsNotNone(game)
 
 
@@ -145,7 +155,7 @@ class TestProtocolMethods(unittest.TestCase):
     def test_player_has_decide_action(self):
         """Test that players have decide_action method."""
         bot = WhaleBot(id="test", name="Test", state=PlayerState(stack=100, seat=0))
-        self.assertTrue(hasattr(bot, 'decide_action'))
+        self.assertTrue(hasattr(bot, "decide_action"))
         self.assertTrue(callable(bot.decide_action))
 
 
@@ -219,7 +229,7 @@ class TestCardEdgeCases(unittest.TestCase):
         """Test text for various cards."""
         card1 = Card(suit=Suit.CLUBS, rank=Rank.FIVE)
         self.assertEqual(card1.text(), "Five of Clubs")
-        
+
         card2 = Card(suit=Suit.DIAMONDS, rank=Rank.TEN)
         self.assertEqual(card2.text(), "Ten of Diamonds")
 
@@ -229,12 +239,15 @@ class TestWhaleExtended(unittest.TestCase):
 
     def test_whale_bet_with_small_pot(self):
         """Test WhaleBot betting with small pot."""
-        whale = WhaleBot(id="whale", name="Whale", state=PlayerState(stack=1000, seat=0))
+        whale = WhaleBot(
+            id="whale", name="Whale", state=PlayerState(stack=1000, seat=0)
+        )
         from unittest.mock import Mock
+
         game = Mock()
         game.state.pot = 5
         game.state.big_blind = 10
-        
+
         action = whale.decide_action(game, [ActionType.BET], min_raise=10)
         self.assertEqual(action.action_type, ActionType.BET)
         # Should bet at least 5 * big_blind = 50
@@ -247,6 +260,7 @@ class TestEventBusEdgeCases(unittest.TestCase):
     def test_eventbus_import(self):
         """Test EventBus can be imported."""
         from maverick.eventbus import EventBus
+
         bus = EventBus()
         self.assertIsNotNone(bus)
 
@@ -254,13 +268,15 @@ class TestEventBusEdgeCases(unittest.TestCase):
         """Test subscribing to events."""
         from maverick.eventbus import EventBus
         from maverick.enums import GameEventType
+
         bus = EventBus()
-        
+
         called = []
+
         def handler(event):
             called.append(event)
-        
-        bus.subscribe(GameEventType.GAME_START, handler)
+
+        bus.subscribe(GameEventType.GAME_STARTED, handler)
         self.assertEqual(len(called), 0)
 
 

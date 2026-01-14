@@ -1,9 +1,9 @@
 """Final push to increase coverage."""
 
 import unittest
-from maverick import Game, Card, Suit, Rank, Holding
+from maverick import Game, Card, Suit, Rank
 from maverick.playerstate import PlayerState
-from maverick.players import FoldBot, CallBot
+from maverick.players import CallBot
 from maverick.enums import HandType
 from maverick.utils import score_hand, estimate_holding_strength
 
@@ -151,9 +151,15 @@ class TestGameWithCallBots(unittest.TestCase):
     def test_three_callbots(self):
         """Test game with three CallBots to see showdown."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
-        game.add_player(CallBot(id="c1", name="C1", state=PlayerState(stack=200, seat=0)))
-        game.add_player(CallBot(id="c2", name="C2", state=PlayerState(stack=200, seat=1)))
-        game.add_player(CallBot(id="c3", name="C3", state=PlayerState(stack=200, seat=2)))
+        game.add_player(
+            CallBot(id="c1", name="C1", state=PlayerState(stack=200, seat=0))
+        )
+        game.add_player(
+            CallBot(id="c2", name="C2", state=PlayerState(stack=200, seat=1))
+        )
+        game.add_player(
+            CallBot(id="c3", name="C3", state=PlayerState(stack=200, seat=2))
+        )
         game.start()
         # Game should complete
         self.assertIsNotNone(game)
