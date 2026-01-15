@@ -57,6 +57,54 @@ Or if you installed it in your environment:
 maverick
 ```
 
+### Step-by-Step Game Execution
+
+The Game class supports two execution modes:
+
+#### 1. Standard Execution (run entire game)
+
+```python
+from maverick import Game
+from maverick.players import CallBot
+from maverick.playerstate import PlayerState
+
+game = Game(small_blind=10, big_blind=20, max_hands=1)
+game.add_player(CallBot(id="p1", name="Alice", state=PlayerState(stack=100, seat=0)))
+game.add_player(CallBot(id="p2", name="Bob", state=PlayerState(stack=100, seat=1)))
+
+# Run the entire game at once
+game.start()
+```
+
+#### 2. Step-by-Step Execution (process events one at a time)
+
+```python
+from maverick import Game
+from maverick.players import CallBot
+from maverick.playerstate import PlayerState
+from maverick.enums import GameEventType
+
+game = Game(small_blind=10, big_blind=20, max_hands=1)
+game.add_player(CallBot(id="p1", name="Alice", state=PlayerState(stack=100, seat=0)))
+game.add_player(CallBot(id="p2", name="Bob", state=PlayerState(stack=100, seat=1)))
+
+# Initialize and start manually
+game._initialize_game()
+game._event_queue.append(GameEventType.GAME_STARTED)
+
+# Process events one at a time
+while game.has_events():
+    game.step()
+    # Do something between events (logging, analysis, etc.)
+    print(f"Current state: {game.state.state_type}")
+```
+
+**Available methods:**
+- `step()` - Process a single event from the queue, returns `True` if an event was processed
+- `has_events()` - Check if there are pending events in the queue
+
+See `sandbox/demo_step_execution.py` for a complete working example.
+
 ### Development
 
 #### Installing Development Dependencies
@@ -116,6 +164,52 @@ make html
 
 # View the documentation by opening docs/build/index.html in a browser
 ```
+
+#### Running Tests
+
+This project uses `pytest` as the test runner (tests are written using `unittest`).
+
+```bash
+# Install dev dependencies (includes pytest)
+uv sync --group dev
+
+# Run tests
+uv run pytest
+```
+
+#### Code Coverage
+
+This project uses `pytest-cov` to measure code coverage. Coverage reports help identify which parts of the code are tested and which need more testing.
+
+**Running tests with coverage:**
+
+```bash
+# Generate HTML coverage report
+uv run pytest --cov-report=html --cov-config=.coveragerc --cov=maverick
+
+# View the coverage report by opening htmlcov/index.html in a browser
+```
+
+**Other coverage report formats:**
+
+```bash
+# Terminal output with missing lines
+uv run pytest --cov-report=term-missing --cov-config=.coveragerc --cov=maverick
+
+# Generate XML report (useful for CI/CD)
+uv run pytest --cov-report=xml --cov-config=.coveragerc --cov=maverick
+
+# Combine multiple formats
+uv run pytest --cov-report=html --cov-report=term-missing --cov-config=.coveragerc --cov=maverick
+```
+
+**Coverage configuration:**
+
+The `.coveragerc` file in the project root contains coverage settings including:
+- Source paths and packages to measure
+- Branch coverage (tracks both True/False branches in conditionals)
+- Files and patterns to exclude from coverage
+- HTML report customization
 
 ## Basic Git Commands
 
