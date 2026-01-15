@@ -15,7 +15,7 @@ def estimate_holding_strength(
     community_cards: Optional[list["Card"]] = None,
     n_simulations: int = 1000,
     n_players: int = 8,
-    n_min_private: int = 0,
+    n_private: int = 0,
     n_community_cards_total: int = 5,
 ) -> float:
     """
@@ -39,8 +39,8 @@ def estimate_holding_strength(
         simulations.
     n_community_cards_total : int, optional
         The total number of community cards in the game (default is 5).
-    n_min_private : int, optional
-        The minimum number of private cards that must be included in the hand (default is 0).
+    n_private : int, optional
+        The number of private cards that must be included in the hand (default is 0).
 
     Returns
     -------
@@ -63,7 +63,7 @@ def estimate_holding_strength(
     n_community_cards_req = n_community_cards_total - n_community_cards
     n_wins = 0
 
-    scorer = partial(find_highest_scoring_hand, n_min_private=n_min_private)
+    scorer = partial(find_highest_scoring_hand, n_private=n_private)
 
     # run simulations
     for _ in range(n_simulations):

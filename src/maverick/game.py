@@ -29,7 +29,7 @@ from .playeraction import PlayerAction
 from .playerstate import PlayerState
 from .utils import find_highest_scoring_hand
 from .eventbus import EventBus
-from .rules import PokerRules, DealingRules, StakesRules
+from .rules import PokerRules, DealingRules, StakesRules, ShowdownRules
 
 __all__ = ["Game"]
 
@@ -90,6 +90,7 @@ class Game:
                     small_blind=small_blind,
                     big_blind=big_blind,
                 ),
+                showdown=ShowdownRules(),
             )
 
         if small_blind:
@@ -351,6 +352,12 @@ class Game:
                 self._event_queue.append(GameEventType.POST_BLINDS)
 
             case GameEventType.POST_BLINDS:
+                assert self.state.state_type == GameStateType.PRE_FLOP
+                self._post_antes()
+                self._emit(self._create_event(GameEventType.POST_ANTES))
+                self._event_queue.append(GameEventType.POST_ANTES)
+                
+            case GameEventType.POST_ANTES:
                 assert self.state.state_type == GameStateType.PRE_FLOP
                 self._take_action_from_current_player()
                 self._event_queue.append(GameEventType.PLAYER_ACTION)
@@ -618,6 +625,28 @@ class Game:
             self.state.current_player_index = sb_index
         else:
             self.state.current_player_index = (bb_index + 1) % num_players
+            
+    def _post_antes(self) -> None:
+        """Post antes for all active players."""
+        if not self.state.ante or self.state.ante <= 0:
+            return
+        
+        self._log("Posting antes.", logging.INFO)
+        for player in self.state.players:
+            if player.state.state_type == PlayerStateType.ACTIVE:
+                ante_amount = min(self.state.ante, player.state.stack)
+                player.state.current_bet += ante_amount
+                player.state.total_contributed += ante_amount
+                player.state.stack -= ante_amount
+                self.state.pot += ante_amount
+                if player.state.stack == 0:
+                    player.state.state_type = PlayerStateType.ALL_IN
+
+                self._log(
+                    f"Player {player.name} posts ante of {ante_amount}. "
+                    f"Remaining stack: {player.state.stack}",
+                    logging.INFO,
+                )
 
     def _calculate_raise_components(
         self, player: PlayerLike, chips_to_add: int
@@ -952,7 +981,9 @@ class Game:
                         logging.INFO,
                     )
                     best_hand, best_hand_type, best_score = find_highest_scoring_hand(
-                        player.state.holding.cards, self.state.community_cards
+                        private_cards=player.state.holding.cards, 
+                        community_cards=self.state.community_cards,
+                        n_private=self.rules.showdown.hole_cards_required,
                     )
                     player_scores.append((player, best_score))
                     self._log(

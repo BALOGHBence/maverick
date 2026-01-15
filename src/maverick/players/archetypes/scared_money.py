@@ -37,7 +37,7 @@ class ScaredMoneyBot(Player):
             hand_equity = estimate_holding_strength(
                 private_cards,
                 community_cards=community_cards,
-                n_min_private=0,
+                n_private=0,
                 n_simulations=300,
                 n_players=len(game.state.get_players_in_hand()),
             )

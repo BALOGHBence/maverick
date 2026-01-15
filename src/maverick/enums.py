@@ -329,8 +329,9 @@ class GameEventType(Enum):
     PLAYER_ACTION = auto()
     BETTING_ROUND_COMPLETED = auto()
 
-    # Blind events
+    # Stakes events
     POST_BLINDS = auto()
+    POST_ANTES = auto()
 
     # Showdown events
     SHOWDOWN = auto()

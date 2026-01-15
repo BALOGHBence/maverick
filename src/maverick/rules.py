@@ -7,6 +7,7 @@ from .enums import Street, GameVariant
 __all__ = [
     "DealingRules",
     "StakesRules",
+    "ShowdownRules",
     "PokerRules",
 ]
 
@@ -94,7 +95,22 @@ class StakesRules(BaseModel):
     small_blind: int = Field(..., ge=0)
     big_blind: int = Field(..., gt=0)
     ante: int = Field(default=0, ge=0)
+    
 
+class ShowdownRules(BaseModel):
+    """
+    Rules related to how final hands are constructed and compared.
+    
+    Fields
+    ------
+    hole_cards_required
+        Number of private cards that must be used in the final hand. This is relevant for
+        variants like Omaha where players must use a specific number of their hole cards
+        in combination with community cards to form their best hand.
+        Defaults to 0, which means any number of hole cards can be used.
+    """
+
+    hole_cards_required: int = Field(0, ge=0)
 
 class PokerRules(BaseModel):
     """
@@ -124,5 +140,6 @@ class PokerRules(BaseModel):
     name: str = "NLHE"
     dealing: DealingRules
     stakes: StakesRules
+    showdown: ShowdownRules
 
     rules_version: str = "1.0"
