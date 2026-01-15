@@ -838,7 +838,7 @@ class Game:
             # else: short all-in raise does NOT reopen betting and must NOT reset flags
 
             self._log(
-                f"Player {current_player.name} raises by {player_add} (call: {call_part}, raise: {raise_size}) "
+                f"Player {current_player.name} raises by {player_add} chips "
                 f"to total bet {player_bet_after}. Remaining stack: {current_player.state.stack}.",
                 logging.INFO,
             )
