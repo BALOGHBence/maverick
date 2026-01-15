@@ -29,6 +29,7 @@ from .playeraction import PlayerAction
 from .playerstate import PlayerState
 from .utils import find_highest_scoring_hand
 from .eventbus import EventBus
+from .rules import PokerRules, DealingRules, StakesRules, ShowdownRules
 
 __all__ = ["Game"]
 
@@ -46,6 +47,8 @@ class Game:
         Amount for the small blind.
     big_blind : int
         Amount for the big blind.
+    ante : int
+        Amount for the ante.
     min_players : int
         Minimum number of players to start the game.
     max_players : int
@@ -57,25 +60,61 @@ class Game:
         only effects event handling, not game logic. If an exception occurs in game logic, it will always raise.
     log_events : bool
         If True, game events will be logged to the console. This only affects logging, not event handling.
+        The purpose of this is allow users to have their own event handlers without excessive logging noise.
+    rules : PokerRules | None
+        Custom poker rules to use. If None, default Texas Hold'em rules are applied. When provided, other
+        parameters (small_blind, big_blind, ante, min_players, max_players) will override the corresponding
+        fields in the rules.
     """
 
     def __init__(
         self,
-        small_blind: int = 10,
-        big_blind: int = 20,
-        min_players: int = 2,
-        max_players: int = 9,
+        *,
+        small_blind: Optional[int] = None,
+        big_blind: Optional[int] = None,
+        ante: Optional[int] = None,
+        min_players: Optional[int] = 2,
+        max_players: Optional[int] = None,
         max_hands: int = 1000,
         exc_handling_mode: str = "log",
         log_events: bool = True,
+        rules: Optional[PokerRules] = None,
     ):
         if not exc_handling_mode in ["log", "raise"]:
             raise ValueError("exc_handling_mode must be 'log' or 'raise'")
 
-        self.min_players = min_players
-        self.max_players = max_players
+        if rules is None:
+            rules = PokerRules(
+                dealing=DealingRules(),
+                stakes=StakesRules(
+                    small_blind=small_blind,
+                    big_blind=big_blind,
+                ),
+                showdown=ShowdownRules(),
+            )
+
+        if small_blind:
+            rules.stakes.small_blind = small_blind
+
+        if big_blind:
+            rules.stakes.big_blind = big_blind
+
+        if ante:
+            rules.stakes.ante = ante
+
+        if min_players:
+            rules.dealing.min_players = min_players
+
+        if max_players:
+            rules.dealing.max_players = max_players
+
+        self._rules = rules
         self.max_hands = max_hands
-        self.state = GameState(small_blind=small_blind, big_blind=big_blind)
+        self._state = GameState(
+            small_blind=rules.stakes.small_blind,
+            big_blind=rules.stakes.big_blind,
+            ante=rules.stakes.ante,
+        )
         self._event_queue: Deque[GameEventType] = deque()
         self._logger = logging.getLogger("maverick")
         self._log_events = log_events
@@ -85,6 +124,31 @@ class Game:
         self.game_history: list[GameEvent] = []
         self.hand_history: list[GameEvent] = []
         self.street_history: list[GameEvent] = []
+
+    @property
+    def rules(self) -> PokerRules:
+        """Returns the poker rules used in this game."""
+        return self._rules
+
+    @property
+    def state(self) -> GameState:
+        """Returns the current game state."""
+        return self._state
+
+    @property
+    def history(self) -> dict[str, list[GameEvent]]:
+        """Returns the history.
+
+        Returns
+        -------
+        dict[str, list[GameEvent]]
+            A dictionary containing game, hand, and street histories.
+        """
+        return {
+            "game": self.game_history,
+            "hand": self.hand_history,
+            "street": self.street_history,
+        }
 
     def _log(
         self,
@@ -220,7 +284,7 @@ class Game:
         player : PlayerLike
             The player to add to the game.
         """
-        if len(self.state.players) >= self.max_players:
+        if len(self.state.players) >= self.rules.dealing.max_players:
             raise ValueError("Table is full")
 
         if self.state.state_type not in [
@@ -314,6 +378,12 @@ class Game:
 
             case GameEventType.POST_BLINDS:
                 assert self.state.state_type == GameStateType.PRE_FLOP
+                self._post_antes()
+                self._emit(self._create_event(GameEventType.POST_ANTES))
+                self._event_queue.append(GameEventType.POST_ANTES)
+
+            case GameEventType.POST_ANTES:
+                assert self.state.state_type == GameStateType.PRE_FLOP
                 self._take_action_from_current_player()
                 self._event_queue.append(GameEventType.PLAYER_ACTION)
 
@@ -385,7 +455,7 @@ class Game:
                     p for p in self.state.players if p.state.stack > 0
                 ]
 
-                if len(self.state.players) < self.min_players:
+                if len(self.state.players) < self.rules.dealing.min_players:
                     self._log(
                         "Not enough players to continue, ending game.", logging.INFO
                     )
@@ -415,11 +485,11 @@ class Game:
 
             case GameEventType.PLAYER_JOINED:
                 if self.state.state_type == GameStateType.WAITING_FOR_PLAYERS:
-                    if len(self.state.players) >= self.min_players:
+                    if len(self.state.players) >= self.rules.dealing.min_players:
                         self.state.state_type = GameStateType.READY
 
             case GameEventType.PLAYER_LEFT:
-                if len(self.state.players) < self.min_players:
+                if len(self.state.players) < self.rules.dealing.min_players:
                     self.state.state_type = GameStateType.WAITING_FOR_PLAYERS
 
             case _:  # pragma: no cover
@@ -453,7 +523,7 @@ class Game:
             street_prefix=False,
         )
 
-        if len(self.state.players) < self.min_players:
+        if len(self.state.players) < self.rules.dealing.min_players:
             raise ValueError("Not enough players to start hand")
 
         self.state.deck = Deck.standard_deck(shuffle=True)
@@ -472,6 +542,20 @@ class Game:
 
         self.state.street = Street.PRE_FLOP
 
+    def _calculate_min_raise_by(self) -> int:
+        """Calculates the minimum extra chips this player must add right now to
+        complete a minimum raise"""
+        player = self.state.get_current_player()
+
+        player_bet_before = player.state.current_bet
+        old_table_bet = self.state.current_bet
+        last_raise_size = self.state.last_raise_size
+
+        min_raise_to = old_table_bet + last_raise_size
+        min_raise_by = min_raise_to - player_bet_before
+
+        return min_raise_by
+
     def _take_action_from_current_player(self) -> None:
         current_player = self.state.get_current_player()
 
@@ -482,10 +566,10 @@ class Game:
             return
 
         valid_actions = self._get_valid_actions(current_player)
-        min_raise_increment = self.state.last_raise_size
+        min_raise_by = self._calculate_min_raise_by()
 
         action: PlayerAction = current_player.decide_action(
-            self, valid_actions, min_raise_increment
+            self, valid_actions, min_raise_by
         )
 
         try:
@@ -511,14 +595,15 @@ class Game:
         self._log(f"Dealing hole cards. Button: {button.name}", logging.INFO)
         for player in self.state.players:
             if player.state.state_type == PlayerStateType.ACTIVE:
-                cards = self.state.deck.deal(2)
+                cards = self.state.deck.deal(self.rules.dealing.hole_cards)
                 player.state.holding = Holding(cards=cards)
 
     def _post_blinds(self) -> None:
         """Post blinds with correct heads-up semantics (button posts SB in HU)."""
         num_players = len(self.state.players)
-        if num_players < 2:
-            raise ValueError("Need at least 2 players to post blinds")
+        min_num_players = self.rules.dealing.min_players
+        if num_players < min_num_players:
+            raise ValueError(f"Need at least {min_num_players} players to post blinds")
 
         # Heads-up special case:
         # - Button is SMALL blind
@@ -580,6 +665,28 @@ class Game:
             self.state.current_player_index = sb_index
         else:
             self.state.current_player_index = (bb_index + 1) % num_players
+
+    def _post_antes(self) -> None:
+        """Post antes for all active players."""
+        if not self.state.ante or self.state.ante <= 0:
+            return
+
+        self._log("Posting antes.", logging.INFO)
+        for player in self.state.players:
+            if player.state.state_type == PlayerStateType.ACTIVE:
+                ante_amount = min(self.state.ante, player.state.stack)
+                player.state.current_bet += ante_amount
+                player.state.total_contributed += ante_amount
+                player.state.stack -= ante_amount
+                self.state.pot += ante_amount
+                if player.state.stack == 0:
+                    player.state.state_type = PlayerStateType.ALL_IN
+
+                self._log(
+                    f"Player {player.name} posts ante of {ante_amount}. "
+                    f"Remaining stack: {player.state.stack}",
+                    logging.INFO,
+                )
 
     def _calculate_raise_components(
         self, player: PlayerLike, chips_to_add: int
@@ -731,7 +838,7 @@ class Game:
             # else: short all-in raise does NOT reopen betting and must NOT reset flags
 
             self._log(
-                f"Player {current_player.name} raises by {player_add} (call: {call_part}, raise: {raise_size}) "
+                f"Player {current_player.name} raises by {player_add} chips "
                 f"to total bet {player_bet_after}. Remaining stack: {current_player.state.stack}.",
                 logging.INFO,
             )
@@ -914,14 +1021,16 @@ class Game:
                         logging.INFO,
                     )
                     best_hand, best_hand_type, best_score = find_highest_scoring_hand(
-                        player.state.holding.cards, self.state.community_cards
+                        private_cards=player.state.holding.cards,
+                        community_cards=self.state.community_cards,
+                        n_private=self.rules.showdown.hole_cards_required,
                     )
                     player_scores.append((player, best_score))
                     self._log(
                         (
                             f"Player {player.name} has hand {best_hand_type.name} with "
                             f"cards {[card.utf8() for card in best_hand]}"
-                            f" (score: {best_score:.6g})"
+                            f" (score: {best_score:.8g})"
                         ),
                         logging.INFO,
                     )

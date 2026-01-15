@@ -39,7 +39,7 @@ class FishBot(Player):
             hand_equity = estimate_holding_strength(
                 private_cards,
                 community_cards=community_cards,
-                n_min_private=0,
+                n_private=game.rules.showdown.hole_cards_required,
                 n_simulations=100,  # Fish doesn't spend much time thinking
                 n_players=len(game.state.get_players_in_hand()),
             )
@@ -47,6 +47,7 @@ class FishBot(Player):
             # Pre-flop estimation
             hand_equity = estimate_holding_strength(
                 private_cards,
+                n_private=game.rules.showdown.hole_cards_required,
                 n_simulations=50,
                 n_players=len(game.state.get_players_in_hand()),
             )

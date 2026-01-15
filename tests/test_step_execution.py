@@ -5,23 +5,36 @@ from maverick.playerstate import PlayerState
 from maverick.enums import GameStateType, GameEventType
 
 
+DEFAULT_SMALL_BLIND = 10
+DEFAULT_BIG_BLIND = 20
+
+
+def create_game(**kwargs) -> Game:
+    base_kwargs = {
+        "small_blind": DEFAULT_SMALL_BLIND,
+        "big_blind": DEFAULT_BIG_BLIND,
+    }
+    base_kwargs.update(kwargs)
+    return Game(**base_kwargs)
+
+
 class TestStepExecution(unittest.TestCase):
     """Test step-by-step game execution."""
 
     def test_has_events_initially_false(self) -> None:
         """Test that has_events returns False when no events are queued."""
-        game = Game()
+        game = create_game()
         self.assertFalse(game.has_events())
 
     def test_has_events_after_adding_event(self) -> None:
         """Test that has_events returns True when events are queued."""
-        game = Game()
+        game = create_game()
         game._event_queue.append(GameEventType.GAME_STARTED)
         self.assertTrue(game.has_events())
 
     def test_step_returns_false_when_no_events(self) -> None:
         """Test that step returns False when queue is empty."""
-        game = Game()
+        game = create_game()
         result = game.step()
         self.assertFalse(result)
 

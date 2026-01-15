@@ -62,7 +62,7 @@ class PlayerLike(Protocol):
         valid_actions : list[ActionType]
             List of valid actions the player can take.
         min_raise : int
-            Minimum amount for a raise action.
+            Minimum extra chips this player must add right now to complete a minimum raise.
 
         Returns
         -------

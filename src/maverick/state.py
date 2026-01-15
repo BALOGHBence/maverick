@@ -39,6 +39,7 @@ class GameState(BaseModel):
     last_raise_size: int = 0  # Tracks the minimum raise increment (last bet/raise size)
     small_blind: int = Field(default=10, ge=1)
     big_blind: int = Field(default=20, ge=1)
+    ante: int = Field(default=0, ge=0)
 
     # Hand tracking
     hand_number: int = 0

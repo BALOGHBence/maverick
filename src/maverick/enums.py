@@ -329,8 +329,9 @@ class GameEventType(Enum):
     PLAYER_ACTION = auto()
     BETTING_ROUND_COMPLETED = auto()
 
-    # Blind events
+    # Stakes events
     POST_BLINDS = auto()
+    POST_ANTES = auto()
 
     # Showdown events
     SHOWDOWN = auto()
@@ -338,3 +339,25 @@ class GameEventType(Enum):
     # Table events
     PLAYER_JOINED = auto()
     PLAYER_LEFT = auto()
+
+
+class GameVariant(str, Enum):
+    """
+    Identifies which poker variant is being played.
+
+    This is primarily used to select:
+    - how many private ("hole") cards each player receives
+    - how community ("board") cards are dealt and used
+    - which hand-evaluation rules apply (e.g., Hold'em vs Omaha rules)
+
+    Values
+    ------
+    TEXAS_HOLDEM
+        Texas Hold'em: typically 2 hole cards per player and 5 community cards.
+    OMAHA
+        Omaha: typically 4 hole cards per player and 5 community cards, with
+        specific "use exactly 2 hole cards" showdown rules.
+    """
+
+    TEXAS_HOLDEM = "texas_holdem"
+    OMAHA = "omaha"
