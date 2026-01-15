@@ -991,7 +991,7 @@ class Game:
                         (
                             f"Player {player.name} has hand {best_hand_type.name} with "
                             f"cards {[card.utf8() for card in best_hand]}"
-                            f" (score: {best_score:.6g})"
+                            f" (score: {best_score:.8g})"
                         ),
                         logging.INFO,
                     )
