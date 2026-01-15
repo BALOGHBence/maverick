@@ -108,9 +108,9 @@ class Game:
         if max_players:
             rules.dealing.max_players = max_players
 
-        self.rules = rules
+        self._rules = rules
         self.max_hands = max_hands
-        self.state = GameState(
+        self._state = GameState(
             small_blind=rules.stakes.small_blind,
             big_blind=rules.stakes.big_blind,
             ante=rules.stakes.ante,
@@ -125,6 +125,31 @@ class Game:
         self.hand_history: list[GameEvent] = []
         self.street_history: list[GameEvent] = []
 
+    @property
+    def rules(self) -> PokerRules:
+        """Returns the poker rules used in this game."""
+        return self._rules
+    
+    @property
+    def state(self) -> GameState:
+        """Returns the current game state."""
+        return self._state
+    
+    @property
+    def history(self) -> dict[str, list[GameEvent]]:
+        """Returns the history.
+        
+        Returns
+        -------
+        dict[str, list[GameEvent]]
+            A dictionary containing game, hand, and street histories.
+        """
+        return {
+            "game": self.game_history,
+            "hand": self.hand_history,
+            "street": self.street_history,
+        }
+    
     def _log(
         self,
         message: str,
@@ -516,6 +541,20 @@ class Game:
                 player.state.state_type = PlayerStateType.ACTIVE
 
         self.state.street = Street.PRE_FLOP
+        
+    def _calculate_min_raise_by(self) -> int:
+        """Calculates the minimum extra chips this player must add right now to 
+        complete a minimum raise"""
+        player = self.state.get_current_player()
+        
+        player_bet_before = player.state.current_bet
+        old_table_bet = self.state.current_bet
+        last_raise_size = self.state.last_raise_size
+        
+        min_raise_to = old_table_bet + last_raise_size
+        min_raise_by = min_raise_to - player_bet_before
+
+        return min_raise_by
 
     def _take_action_from_current_player(self) -> None:
         current_player = self.state.get_current_player()
@@ -527,10 +566,10 @@ class Game:
             return
 
         valid_actions = self._get_valid_actions(current_player)
-        min_raise_increment = self.state.last_raise_size
+        min_raise_by = self._calculate_min_raise_by()
 
         action: PlayerAction = current_player.decide_action(
-            self, valid_actions, min_raise_increment
+            self, valid_actions, min_raise_by
         )
 
         try:

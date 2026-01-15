@@ -404,7 +404,7 @@ class TestRaiseBySemantics(unittest.TestCase):
         game._take_action_from_current_player()
 
         self.assertEqual(len(received_min_raise), 1)
-        self.assertEqual(received_min_raise[0], 20)
+        self.assertEqual(received_min_raise[0], 30)
 
     def test_raise_amount_is_added_to_current_bet(self):
         """
