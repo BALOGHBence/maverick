@@ -1,0 +1,6 @@
+cff-version: 1.2.0
+title: Maverick Poker Engine
+authors:
+  - family-names: Balogh
+    given-names: Bence
+license: MIT
