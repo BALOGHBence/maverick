@@ -95,12 +95,12 @@ class StakesRules(BaseModel):
     small_blind: int = Field(..., ge=0)
     big_blind: int = Field(..., gt=0)
     ante: int = Field(default=0, ge=0)
-    
+
 
 class ShowdownRules(BaseModel):
     """
     Rules related to how final hands are constructed and compared.
-    
+
     Fields
     ------
     hole_cards_required
@@ -111,6 +111,7 @@ class ShowdownRules(BaseModel):
     """
 
     hole_cards_required: int = Field(0, ge=0)
+
 
 class PokerRules(BaseModel):
     """

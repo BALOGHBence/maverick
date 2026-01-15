@@ -129,16 +129,16 @@ class Game:
     def rules(self) -> PokerRules:
         """Returns the poker rules used in this game."""
         return self._rules
-    
+
     @property
     def state(self) -> GameState:
         """Returns the current game state."""
         return self._state
-    
+
     @property
     def history(self) -> dict[str, list[GameEvent]]:
         """Returns the history.
-        
+
         Returns
         -------
         dict[str, list[GameEvent]]
@@ -149,7 +149,7 @@ class Game:
             "hand": self.hand_history,
             "street": self.street_history,
         }
-    
+
     def _log(
         self,
         message: str,
@@ -381,7 +381,7 @@ class Game:
                 self._post_antes()
                 self._emit(self._create_event(GameEventType.POST_ANTES))
                 self._event_queue.append(GameEventType.POST_ANTES)
-                
+
             case GameEventType.POST_ANTES:
                 assert self.state.state_type == GameStateType.PRE_FLOP
                 self._take_action_from_current_player()
@@ -541,16 +541,16 @@ class Game:
                 player.state.state_type = PlayerStateType.ACTIVE
 
         self.state.street = Street.PRE_FLOP
-        
+
     def _calculate_min_raise_by(self) -> int:
-        """Calculates the minimum extra chips this player must add right now to 
+        """Calculates the minimum extra chips this player must add right now to
         complete a minimum raise"""
         player = self.state.get_current_player()
-        
+
         player_bet_before = player.state.current_bet
         old_table_bet = self.state.current_bet
         last_raise_size = self.state.last_raise_size
-        
+
         min_raise_to = old_table_bet + last_raise_size
         min_raise_by = min_raise_to - player_bet_before
 
@@ -665,12 +665,12 @@ class Game:
             self.state.current_player_index = sb_index
         else:
             self.state.current_player_index = (bb_index + 1) % num_players
-            
+
     def _post_antes(self) -> None:
         """Post antes for all active players."""
         if not self.state.ante or self.state.ante <= 0:
             return
-        
+
         self._log("Posting antes.", logging.INFO)
         for player in self.state.players:
             if player.state.state_type == PlayerStateType.ACTIVE:
@@ -1021,7 +1021,7 @@ class Game:
                         logging.INFO,
                     )
                     best_hand, best_hand_type, best_score = find_highest_scoring_hand(
-                        private_cards=player.state.holding.cards, 
+                        private_cards=player.state.holding.cards,
                         community_cards=self.state.community_cards,
                         n_private=self.rules.showdown.hole_cards_required,
                     )
