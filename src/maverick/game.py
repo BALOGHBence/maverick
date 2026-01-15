@@ -52,8 +52,11 @@ class Game:
         Maximum number of players allowed at the table.
     max_hands : int
         Maximum number of hands to play before ending the game.
-    strict : bool
-        If True, exceptions in event handlers will propagate. Otherwise, they will be logged.
+    exc_handling_mode : {"log", "raise"}
+        If "raise", exceptions in event handlers will propagate. If "log", they will be logged. This setting
+        only effects event handling, not game logic. If an exception occurs in game logic, it will always raise.
+    log_events : bool
+        If True, game events will be logged to the console. This only affects logging, not event handling.
     """
 
     def __init__(
@@ -63,17 +66,22 @@ class Game:
         min_players: int = 2,
         max_players: int = 9,
         max_hands: int = 1000,
-        strict: bool = False,
+        exc_handling_mode: str = "log",
+        log_events: bool = True,
     ):
+        if not exc_handling_mode in ["log", "raise"]:
+            raise ValueError("exc_handling_mode must be 'log' or 'raise'")
+
         self.min_players = min_players
         self.max_players = max_players
         self.max_hands = max_hands
         self.state = GameState(small_blind=small_blind, big_blind=big_blind)
         self._event_queue: Deque[GameEventType] = deque()
         self._logger = logging.getLogger("maverick")
-        self._strict = strict
+        self._log_events = log_events
 
-        self._events = EventBus(strict=strict)
+        # Event handling
+        self._events = EventBus(strict=exc_handling_mode == "raise")
         self.game_history: list[GameEvent] = []
         self.hand_history: list[GameEvent] = []
         self.street_history: list[GameEvent] = []
@@ -85,6 +93,9 @@ class Game:
         street_prefix: bool = True,
         **kwargs,
     ) -> None:
+        if not self._log_events:
+            return
+
         # ANSI colors (set NO_COLOR=1 to disable)
         color_map = {
             Street.PRE_FLOP: "\033[38;5;39m",  # blue

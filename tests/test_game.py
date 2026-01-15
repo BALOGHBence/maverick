@@ -32,7 +32,6 @@ class TestGameInitialization(unittest.TestCase):
         self.assertEqual(game.min_players, 2)
         self.assertEqual(game.max_players, 9)
         self.assertEqual(game.max_hands, 1000)
-        self.assertFalse(game._strict)
 
     def test_game_init_with_custom_parameters(self):
         """Test game initialization with custom parameters."""
@@ -42,14 +41,14 @@ class TestGameInitialization(unittest.TestCase):
             min_players=3,
             max_players=6,
             max_hands=50,
-            strict=True,
+            exc_handling_mode="raise",
         )
         self.assertEqual(game.state.small_blind, 5)
         self.assertEqual(game.state.big_blind, 10)
         self.assertEqual(game.min_players, 3)
         self.assertEqual(game.max_players, 6)
         self.assertEqual(game.max_hands, 50)
-        self.assertTrue(game._strict)
+        self.assertTrue(game._events._strict)
 
     def test_game_init_creates_empty_histories(self):
         """Test that game initialization creates empty history lists."""
@@ -533,9 +532,21 @@ class TestGameEdgeCases(unittest.TestCase):
 
     def test_game_with_strict_mode(self):
         """Test game initialization with strict mode enabled."""
-        game = Game(strict=True)
-        self.assertTrue(game._strict)
+        game = Game(exc_handling_mode="raise")
         self.assertTrue(game._events._strict)
+
+
+class TestGameLoggingEvents(unittest.TestCase):
+    """Test Game logging events functionality."""
+
+    def test_game_logging_events_disabled(self):
+        """Test that game does not log events when logging is disabled."""
+        game = Game(log_events=False)
+        self.assertFalse(game._log_events)
+
+        # Create an event and emit it
+        event = game._create_event(GameEventType.GAME_STARTED)
+        game._emit(event)
 
 
 if __name__ == "__main__":
