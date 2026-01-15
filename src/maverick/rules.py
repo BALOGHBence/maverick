@@ -108,7 +108,7 @@ class PokerRules(BaseModel):
     Fields
     ------
     name
-        Human-readable label for the ruleset (e.g., "NLHE Cash 1/2", "PLO").
+        Human-readable label for the ruleset (e.g., "NLHE", "OMAHA").
         Useful for logs, exports, and UI.
     dealing
         Card dealing and seating-related rules (variant, hole cards, board pattern, etc.).

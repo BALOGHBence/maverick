@@ -21,21 +21,34 @@ class SimpleTestPlayer(Player):
         return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
 
 
+DEFAULT_SMALL_BLIND = 10
+DEFAULT_BIG_BLIND = 20
+
+
+def create_game(**kwargs) -> Game:
+    base_kwargs = {
+        "small_blind": DEFAULT_SMALL_BLIND,
+        "big_blind": DEFAULT_BIG_BLIND,
+    }
+    base_kwargs.update(kwargs)
+    return Game(**base_kwargs)
+
+
 class TestGameInitialization(unittest.TestCase):
     """Test Game initialization."""
 
     def test_game_init_with_defaults(self):
         """Test game initialization with default parameters."""
-        game = Game()
+        game = create_game()
         self.assertEqual(game.state.small_blind, 10)
         self.assertEqual(game.state.big_blind, 20)
-        self.assertEqual(game.min_players, 2)
-        self.assertEqual(game.max_players, 9)
+        self.assertEqual(game.rules.dealing.min_players, 2)
+        self.assertEqual(game.rules.dealing.max_players, 9)
         self.assertEqual(game.max_hands, 1000)
 
     def test_game_init_with_custom_parameters(self):
         """Test game initialization with custom parameters."""
-        game = Game(
+        game = create_game(
             small_blind=5,
             big_blind=10,
             min_players=3,
@@ -45,21 +58,21 @@ class TestGameInitialization(unittest.TestCase):
         )
         self.assertEqual(game.state.small_blind, 5)
         self.assertEqual(game.state.big_blind, 10)
-        self.assertEqual(game.min_players, 3)
-        self.assertEqual(game.max_players, 6)
+        self.assertEqual(game.rules.dealing.min_players, 3)
+        self.assertEqual(game.rules.dealing.max_players, 6)
         self.assertEqual(game.max_hands, 50)
         self.assertTrue(game._events._strict)
 
     def test_game_init_creates_empty_histories(self):
         """Test that game initialization creates empty history lists."""
-        game = Game()
+        game = create_game()
         self.assertEqual(game.game_history, [])
         self.assertEqual(game.hand_history, [])
         self.assertEqual(game.street_history, [])
 
     def test_game_init_creates_event_queue(self):
         """Test that game initialization creates an empty event queue."""
-        game = Game()
+        game = create_game()
         self.assertEqual(len(game._event_queue), 0)
 
 
@@ -68,7 +81,7 @@ class TestAddPlayer(unittest.TestCase):
 
     def test_add_player_to_empty_game(self):
         """Test adding a player to an empty game."""
-        game = Game()
+        game = create_game()
         player = SimpleTestPlayer(id="p1", name="Player1")
         game.add_player(player)
         self.assertEqual(len(game.state.players), 1)
@@ -76,7 +89,7 @@ class TestAddPlayer(unittest.TestCase):
 
     def test_add_player_assigns_seat(self):
         """Test that add_player assigns a seat to the player."""
-        game = Game()
+        game = create_game()
         player = SimpleTestPlayer(id="p1", name="Player1")
         game.add_player(player)
         self.assertIsNotNone(player.state)
@@ -85,7 +98,7 @@ class TestAddPlayer(unittest.TestCase):
 
     def test_add_multiple_players(self):
         """Test adding multiple players."""
-        game = Game()
+        game = create_game()
         p1 = SimpleTestPlayer(id="p1", name="Player1")
         p2 = SimpleTestPlayer(id="p2", name="Player2")
         game.add_player(p1)
@@ -96,7 +109,7 @@ class TestAddPlayer(unittest.TestCase):
 
     def test_add_player_to_full_table_raises_error(self):
         """Test that adding a player to a full table raises ValueError."""
-        game = Game(max_players=2)
+        game = create_game(max_players=2)
         p1 = SimpleTestPlayer(id="p1", name="Player1")
         p2 = SimpleTestPlayer(id="p2", name="Player2")
         p3 = SimpleTestPlayer(id="p3", name="Player3")
@@ -110,7 +123,7 @@ class TestAddPlayer(unittest.TestCase):
 
     def test_add_player_with_existing_state(self):
         """Test adding a player with an existing PlayerState."""
-        game = Game()
+        game = create_game()
         player = SimpleTestPlayer(
             id="p1",
             name="Player1",
@@ -123,7 +136,7 @@ class TestAddPlayer(unittest.TestCase):
 
     def test_add_player_emits_event(self):
         """Test that adding a player emits PLAYER_JOINED event."""
-        game = Game()
+        game = create_game()
         events = []
 
         def record_event(event: GameEvent, game: Game):
@@ -144,7 +157,7 @@ class TestRemovePlayer(unittest.TestCase):
 
     def test_remove_player_from_waiting_game(self):
         """Test removing a player from a game in WAITING_FOR_PLAYERS state."""
-        game = Game()
+        game = create_game()
         player = SimpleTestPlayer(id="p1", name="Player1")
         game.add_player(player)
 
@@ -153,7 +166,7 @@ class TestRemovePlayer(unittest.TestCase):
 
     def test_remove_nonexistent_player_raises_error(self):
         """Test removing a player that doesn't exist raises ValueError."""
-        game = Game()
+        game = create_game()
         player = SimpleTestPlayer(id="p1", name="Player1")
 
         with self.assertRaises(ValueError) as context:
@@ -162,7 +175,7 @@ class TestRemovePlayer(unittest.TestCase):
 
     def test_remove_player_emits_event(self):
         """Test that removing a player emits PLAYER_LEFT event."""
-        game = Game()
+        game = create_game()
         events = []
 
         def record_event(event: GameEvent, game: Game):
@@ -181,7 +194,7 @@ class TestRemovePlayer(unittest.TestCase):
 
     def test_remove_player_updates_player_list(self):
         """Test that removing a player updates the player list correctly."""
-        game = Game()
+        game = create_game()
         p1 = SimpleTestPlayer(id="p1", name="Player1")
         p2 = SimpleTestPlayer(id="p2", name="Player2")
         game.add_player(p1)
@@ -194,7 +207,7 @@ class TestRemovePlayer(unittest.TestCase):
 
     def remove_player_while_hand_is_in_progress_raises_error(self):
         """Test that removing a player while a hand is in progress raises ValueError."""
-        game = Game()
+        game = create_game()
         player = SimpleTestPlayer(id="p1", name="Player1")
         game.add_player(player)
 
@@ -214,7 +227,7 @@ class TestSubscribeUnsubscribe(unittest.TestCase):
 
     def test_subscribe_returns_token(self):
         """Test that subscribe returns a token string."""
-        game = Game()
+        game = create_game()
 
         def handler(event: GameEvent, game: Game):
             pass
@@ -225,7 +238,7 @@ class TestSubscribeUnsubscribe(unittest.TestCase):
 
     def test_subscribe_handler_called_on_event(self):
         """Test that subscribed handler is called when event occurs."""
-        game = Game(max_hands=1)
+        game = create_game(max_hands=1)
         call_count = [0]
 
         def handler(event: GameEvent, game: Game):
@@ -243,7 +256,7 @@ class TestSubscribeUnsubscribe(unittest.TestCase):
 
     def test_unsubscribe_removes_handler(self):
         """Test that unsubscribe removes a handler."""
-        game = Game(max_hands=1)
+        game = create_game(max_hands=1)
         call_count = [0]
 
         def handler(event: GameEvent, game: Game):
@@ -262,7 +275,7 @@ class TestSubscribeUnsubscribe(unittest.TestCase):
 
     def test_multiple_handlers_for_same_event(self):
         """Test subscribing multiple handlers for the same event."""
-        game = Game(max_hands=1)
+        game = create_game(max_hands=1)
         calls = []
 
         def handler1(event: GameEvent, game: Game):
@@ -289,18 +302,18 @@ class TestStepAndHasEvents(unittest.TestCase):
 
     def test_has_events_returns_false_for_empty_queue(self):
         """Test has_events returns False when queue is empty."""
-        game = Game()
+        game = create_game()
         self.assertFalse(game.has_events())
 
     def test_has_events_returns_true_when_events_queued(self):
         """Test has_events returns True when events are in queue."""
-        game = Game()
+        game = create_game()
         game._event_queue.append(GameEventType.GAME_STARTED)
         self.assertTrue(game.has_events())
 
     def test_step_processes_event(self):
         """Test step processes an event from the queue."""
-        game = Game()
+        game = create_game()
         game._initialize_game()
         game.state.state_type = GameStateType.READY
 
@@ -318,7 +331,7 @@ class TestStepAndHasEvents(unittest.TestCase):
 
     def test_step_returns_false_when_no_events(self):
         """Test step returns False when no events to process."""
-        game = Game()
+        game = create_game()
         result = game.step()
         self.assertFalse(result)
 
@@ -328,7 +341,7 @@ class TestGameStart(unittest.TestCase):
 
     def test_start_with_enough_players(self):
         """Test starting a game with enough players."""
-        game = Game(max_hands=1)
+        game = create_game(max_hands=1)
         p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
         p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
@@ -340,7 +353,7 @@ class TestGameStart(unittest.TestCase):
 
     def test_start_emits_game_started_event(self):
         """Test that start emits GAME_STARTED event."""
-        game = Game(max_hands=1)
+        game = create_game(max_hands=1)
         events = []
 
         def record_event(event: GameEvent, game: Game):
@@ -363,7 +376,7 @@ class TestEventHistory(unittest.TestCase):
 
     def test_game_history_records_events(self):
         """Test that game_history records all events."""
-        game = Game(max_hands=1)
+        game = create_game(max_hands=1)
         p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
         p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
@@ -378,7 +391,7 @@ class TestEventHistory(unittest.TestCase):
 
     def test_hand_history_records_events(self):
         """Test that hand_history records events."""
-        game = Game(max_hands=1)
+        game = create_game(max_hands=1)
         p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
         p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
@@ -389,7 +402,7 @@ class TestEventHistory(unittest.TestCase):
 
     def test_street_history_records_events(self):
         """Test that street_history records events."""
-        game = Game(max_hands=1)
+        game = create_game(max_hands=1)
         p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
         p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
@@ -404,7 +417,7 @@ class TestCreateEvent(unittest.TestCase):
 
     def test_create_event_basic(self):
         """Test creating a basic event."""
-        game = Game()
+        game = create_game()
         game.state.hand_number = 5
 
         event = game._create_event(GameEventType.GAME_STARTED)
@@ -415,7 +428,7 @@ class TestCreateEvent(unittest.TestCase):
 
     def test_create_event_with_player_id(self):
         """Test creating an event with player_id."""
-        game = Game()
+        game = create_game()
 
         event = game._create_event(
             GameEventType.PLAYER_ACTION,
@@ -427,7 +440,7 @@ class TestCreateEvent(unittest.TestCase):
 
     def test_create_event_with_action(self):
         """Test creating an event with action."""
-        game = Game()
+        game = create_game()
         action = PlayerAction(player_id="p1", action_type=ActionType.FOLD)
 
         event = game._create_event(
@@ -445,7 +458,7 @@ class TestEmitMethod(unittest.TestCase):
 
     def test_emit_adds_to_histories(self):
         """Test that _emit adds event to all history lists."""
-        game = Game()
+        game = create_game()
         event = game._create_event(GameEventType.GAME_STARTED)
 
         initial_game_len = len(game.game_history)
@@ -460,7 +473,7 @@ class TestEmitMethod(unittest.TestCase):
 
     def test_emit_calls_handlers(self):
         """Test that _emit calls subscribed handlers."""
-        game = Game()
+        game = create_game()
         calls = []
 
         def handler(event: GameEvent, game: Game):
@@ -485,7 +498,7 @@ class TestEmitMethod(unittest.TestCase):
             def on_event(self, event: GameEvent, game: Game):
                 self.events_seen.append(event.type)
 
-        game = Game()
+        game = create_game()
         player = ObservantPlayer(id="p1", name="P1")
         game.add_player(player)
 
@@ -500,7 +513,7 @@ class TestInitializeGame(unittest.TestCase):
 
     def test_initialize_game_resets_hand_number(self):
         """Test that _initialize_game sets hand_number to 0."""
-        game = Game()
+        game = create_game()
         game.state.hand_number = 5
 
         game._initialize_game()
@@ -513,7 +526,7 @@ class TestGameEdgeCases(unittest.TestCase):
 
     def test_add_player_during_game_raises_error(self):
         """Test that adding a player during a game raises ValueError."""
-        game = Game(max_hands=1)
+        game = create_game(max_hands=1)
         p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
         p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
@@ -532,7 +545,7 @@ class TestGameEdgeCases(unittest.TestCase):
 
     def test_game_with_strict_mode(self):
         """Test game initialization with strict mode enabled."""
-        game = Game(exc_handling_mode="raise")
+        game = create_game(exc_handling_mode="raise")
         self.assertTrue(game._events._strict)
 
 
@@ -541,7 +554,7 @@ class TestGameLoggingEvents(unittest.TestCase):
 
     def test_game_logging_events_disabled(self):
         """Test that game does not log events when logging is disabled."""
-        game = Game(log_events=False)
+        game = create_game(log_events=False)
         self.assertFalse(game._log_events)
 
         # Create an event and emit it
