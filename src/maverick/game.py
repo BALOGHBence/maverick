@@ -29,6 +29,7 @@ from .playeraction import PlayerAction
 from .playerstate import PlayerState
 from .utils import find_highest_scoring_hand
 from .eventbus import EventBus
+from .rules import PokerRules, DealingRules, StakesRules
 
 __all__ = ["Game"]
 
@@ -46,6 +47,8 @@ class Game:
         Amount for the small blind.
     big_blind : int
         Amount for the big blind.
+    ante : int
+        Amount for the ante.
     min_players : int
         Minimum number of players to start the game.
     max_players : int
@@ -57,25 +60,60 @@ class Game:
         only effects event handling, not game logic. If an exception occurs in game logic, it will always raise.
     log_events : bool
         If True, game events will be logged to the console. This only affects logging, not event handling.
+        The purpose of this is allow users to have their own event handlers without excessive logging noise.
+    rules : PokerRules | None
+        Custom poker rules to use. If None, default Texas Hold'em rules are applied. When provided, other
+        parameters (small_blind, big_blind, ante, min_players, max_players) will override the corresponding
+        fields in the rules.
     """
 
     def __init__(
         self,
-        small_blind: int = 10,
-        big_blind: int = 20,
-        min_players: int = 2,
-        max_players: int = 9,
+        *,
+        small_blind: Optional[int] = None,
+        big_blind: Optional[int] = None,
+        ante: Optional[int] = None,
+        min_players: Optional[int] = 2,
+        max_players: Optional[int] = None,
         max_hands: int = 1000,
         exc_handling_mode: str = "log",
         log_events: bool = True,
+        rules: Optional[PokerRules] = None,
     ):
         if not exc_handling_mode in ["log", "raise"]:
             raise ValueError("exc_handling_mode must be 'log' or 'raise'")
 
-        self.min_players = min_players
-        self.max_players = max_players
+        if rules is None:
+            rules = PokerRules(
+                dealing=DealingRules(),
+                stakes=StakesRules(
+                    small_blind=small_blind,
+                    big_blind=big_blind,
+                ),
+            )
+
+        if small_blind:
+            rules.stakes.small_blind = small_blind
+
+        if big_blind:
+            rules.stakes.big_blind = big_blind
+
+        if ante:
+            rules.stakes.ante = ante
+
+        if min_players:
+            rules.dealing.min_players = min_players
+
+        if max_players:
+            rules.dealing.max_players = max_players
+
+        self.rules = rules
         self.max_hands = max_hands
-        self.state = GameState(small_blind=small_blind, big_blind=big_blind)
+        self.state = GameState(
+            small_blind=rules.stakes.small_blind,
+            big_blind=rules.stakes.big_blind,
+            ante=rules.stakes.ante,
+        )
         self._event_queue: Deque[GameEventType] = deque()
         self._logger = logging.getLogger("maverick")
         self._log_events = log_events
@@ -220,7 +258,7 @@ class Game:
         player : PlayerLike
             The player to add to the game.
         """
-        if len(self.state.players) >= self.max_players:
+        if len(self.state.players) >= self.rules.dealing.max_players:
             raise ValueError("Table is full")
 
         if self.state.state_type not in [
@@ -385,7 +423,7 @@ class Game:
                     p for p in self.state.players if p.state.stack > 0
                 ]
 
-                if len(self.state.players) < self.min_players:
+                if len(self.state.players) < self.rules.dealing.min_players:
                     self._log(
                         "Not enough players to continue, ending game.", logging.INFO
                     )
@@ -415,11 +453,11 @@ class Game:
 
             case GameEventType.PLAYER_JOINED:
                 if self.state.state_type == GameStateType.WAITING_FOR_PLAYERS:
-                    if len(self.state.players) >= self.min_players:
+                    if len(self.state.players) >= self.rules.dealing.min_players:
                         self.state.state_type = GameStateType.READY
 
             case GameEventType.PLAYER_LEFT:
-                if len(self.state.players) < self.min_players:
+                if len(self.state.players) < self.rules.dealing.min_players:
                     self.state.state_type = GameStateType.WAITING_FOR_PLAYERS
 
             case _:  # pragma: no cover
@@ -453,7 +491,7 @@ class Game:
             street_prefix=False,
         )
 
-        if len(self.state.players) < self.min_players:
+        if len(self.state.players) < self.rules.dealing.min_players:
             raise ValueError("Not enough players to start hand")
 
         self.state.deck = Deck.standard_deck(shuffle=True)
