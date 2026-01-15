@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Optional
+import uuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .enums import ActionType
 from .playeraction import PlayerAction
@@ -16,7 +17,7 @@ __all__ = ["Player"]
 class Player(BaseModel):
     """A player's state during a poker game."""
 
-    id: Optional[str] = None
+    id: str = Field(default_factory=lambda: uuid.uuid4().hex)
     name: Optional[str] = None
     state: Optional[PlayerState] = None
 
