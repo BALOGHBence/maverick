@@ -556,14 +556,15 @@ class Game:
         self._log(f"Dealing hole cards. Button: {button.name}", logging.INFO)
         for player in self.state.players:
             if player.state.state_type == PlayerStateType.ACTIVE:
-                cards = self.state.deck.deal(2)
+                cards = self.state.deck.deal(self.rules.dealing.hole_cards)
                 player.state.holding = Holding(cards=cards)
 
     def _post_blinds(self) -> None:
         """Post blinds with correct heads-up semantics (button posts SB in HU)."""
         num_players = len(self.state.players)
-        if num_players < 2:
-            raise ValueError("Need at least 2 players to post blinds")
+        min_num_players = self.rules.dealing.min_players
+        if num_players < min_num_players:
+            raise ValueError(f"Need at least {min_num_players} players to post blinds")
 
         # Heads-up special case:
         # - Button is SMALL blind
