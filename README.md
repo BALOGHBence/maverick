@@ -7,6 +7,13 @@ A Python library for simulating poker games with custom player strategies.
 
 [![BuyMeACoffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/benceeokf)
 
+> **Note**
+>
+> Maverick is under active development. Features and URLs may change.
+> An official announcement will be shared on
+> [my LinkedIn profile](https://www.linkedin.com/in/bence-balogh-082073181/)
+> once the project is ready for publication.
+
 ## Highlights
 
 * **Configurable Poker Games**: Full rules and mechanics supporting a variety of flavours
