@@ -1,6 +1,36 @@
 Maverick - A Poker Library in Python
 ====================================
 
+**Version**: |version|
+
+**Useful links**:
+:ref:`Installation <installation>` |
+:doc:`Getting Started <getting_started>` |
+`Issue Tracker <https://github.com/BALOGHBence/maverick/issues>`_ | 
+`Source Repository <https://github.com/BALOGHBence/maverick>`_
+
+.. margin:: Supporting Maverick
+
+    .. raw:: html
+
+      <div class="supporting-maverick-sidebar">
+
+        <p>
+          Maverick is developed and maintained in the open.
+          If it saves you time, helps your research, or supports your work,
+          you can help sustain its development.
+        </p>
+
+        <div style="margin-top: 2rem; text-align: center;">
+          <a href="https://www.buymeacoffee.com/benceeokf" target="_blank">
+            <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+                  alt="Buy Me A Coffee"
+                  style="height: 50px;" />
+          </a>
+        </div>
+
+      </div>
+
 Maverick is a comprehensive Python library for simulating poker games. It provides
 a complete game engine with a state machine architecture, making it easy to
 create poker games, develop AI players, and analyze poker scenarios.
@@ -16,7 +46,7 @@ Features
 * **Well Documented**: Comprehensive documentation of rules and APIs
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Getting Started
    
    overview
