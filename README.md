@@ -4,6 +4,7 @@ A Python library for simulating poker games with custom player strategies.
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![codecov](https://codecov.io/gh/BALOGHBence/maverick/graph/badge.svg?token=VDRFOUJYUG)](https://codecov.io/gh/BALOGHBence/maverick)
 
 [![BuyMeACoffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/benceeokf)
 
