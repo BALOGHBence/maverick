@@ -1,3 +1,5 @@
+![ ](https://github.com/BALOGHBence/maverick/blob/main/cover_image.png?raw=true)
+
 # Maverick
 
 A Python library for simulating poker games with custom player strategies.
