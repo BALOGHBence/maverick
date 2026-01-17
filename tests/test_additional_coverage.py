@@ -33,7 +33,7 @@ class TestDeckMethods(unittest.TestCase):
     def test_deck_shuffle(self):
         """Test shuffling deck."""
         deck = Deck.build()
-        first_card_before = deck.cards[0]
+        deck.cards[0]
         deck.shuffle()
         # After shuffle, deck still has 52 cards
         self.assertEqual(len(deck.cards), 52)
