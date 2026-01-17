@@ -1,3 +1,5 @@
+from importlib.metadata import metadata
+
 from .card import Card
 from .deck import Deck
 from .enums import (
@@ -43,3 +45,9 @@ __all__ = [
     "PlayerState",
     "GameEvent",
 ]
+
+__pkg_name__ = "maverick"
+__pkg_metadata__ = metadata(__pkg_name__)
+__version__ = __pkg_metadata__["version"]
+__description__ = __pkg_metadata__["summary"]
+del __pkg_metadata__

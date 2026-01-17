@@ -5,18 +5,29 @@
 
 import os
 import sys
+from datetime import date
+
+import maverick as library
+from sphinx.config import Config
 
 sys.path.insert(0, os.path.abspath("../../src"))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "maverick"
-copyright = "2026, BALOGHBence"
-author = "BALOGHBence"
+project = library.__pkg_name__
+copyright = "2026-%s, Bence Balogh" % date.today().year
+author = "Bence Balogh"
 
-version = "0.1.0"
-release = "0.1.0"
+
+def setup(app: Config):
+    app.add_config_value("project_name", project, "html")
+
+
+# The short X.Y version.
+version = library.__version__
+# The full version, including alpha/beta/rc tags.
+release = "v" + library.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -92,12 +103,14 @@ nb_execution_in_temp = True
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_static_path = ["_static"]
+html_css_files = ["css/custom.css"]
 
 html_theme = "sphinx_book_theme"
 
 html_theme_options = {
     "show_navbar_depth": 2,
     "toc_title": "On this page",
+    "show_toc_level": 2,
     "repository_url": "https://github.com/BALOGHBence/maverick",
     "use_repository_button": True,
     "use_issues_button": True,
@@ -106,7 +119,8 @@ html_theme_options = {
     "logo": {
       "image_light": "_static/img/logo-maverick-light.svg",
       "image_dark": "_static/img/logo-maverick-dark.svg",
-   }
+    },
+    "extra_footer": "<div>hi there!</div>"
 }
 
 # Intersphinx configuration
