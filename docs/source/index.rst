@@ -1,146 +1,83 @@
-.. maverick documentation master file, created by
-   sphinx-quickstart on Tue Jan  6 19:43:00 2026.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Maverick - A Poker Library in Python
+====================================
 
-Maverick - Texas Hold'em Poker Library
-=======================================
+**Version**: |version|
 
-Maverick is a comprehensive Python library for Texas Hold'em poker. It provides
+**Useful links**:
+:ref:`Installation <installation>` |
+:doc:`Getting Started <getting_started>` |
+`Issue Tracker <https://github.com/BALOGHBence/maverick/issues>`_ | 
+`Source Repository <https://github.com/BALOGHBence/maverick>`_
+
+.. note::
+
+   Maverick is under development and subject to change.
+   Release updates will be announced on
+   `my LinkedIn profile <https://www.linkedin.com/in/bence-balogh-082073181/>`_.
+
+.. margin:: Supporting Maverick
+
+    .. raw:: html
+
+      <div class="supporting-maverick-sidebar">
+
+        <p>
+          Maverick is developed and maintained in the open.
+          If it saves you time, helps your research, or supports your work,
+          you can help sustain its development.
+        </p>
+
+        <div style="margin-top: 2rem; text-align: center;">
+          <a href="https://www.buymeacoffee.com/benceeokf" target="_blank">
+            <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+                  alt="Buy Me A Coffee"
+                  style="height: 50px;" />
+          </a>
+        </div>
+
+      </div>
+
+Maverick is a comprehensive Python library for simulating poker games. It provides
 a complete game engine with a state machine architecture, making it easy to
 create poker games, develop AI players, and analyze poker scenarios.
 
 Features
 --------
 
-* **Complete Texas Hold'em Implementation**: Full game rules and mechanics
+* **Confgurable Poker Games**: Full game rules and mechanics that supports a variaty of game variants
 * **State Machine Architecture**: Clean separation of game states and transitions
 * **Flexible Player System**: Protocol-based player interface for custom implementations
 * **Hand Evaluation**: Built-in poker hand scoring and comparison
 * **Event System**: Track all game events for analysis and replay
 * **Well Documented**: Comprehensive documentation of rules and APIs
 
-Quick Start
------------
+Contents
+--------
 
-Install the library:
-
-.. code-block:: bash
-
-   uv sync
-
-Create a simple game:
-
-.. code-block:: python
-
-   from maverick import Game, Player
+.. toctree::
+   :maxdepth: 3
+   :caption: Getting Started
    
-   # Create a game
-   game = Game(small_blind=10, big_blind=20)
-   
-   # Add players
-   game.add_player(Player(id="p1", name="Alice", stack=1000))
-   game.add_player(Player(id="p2", name="Bob", stack=1000))
-   
-   # Start playing
-   game.start()
-
-Table of Contents
------------------
+   overview
+   getting_started
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: User Guide
    
-   texas_holdem_rules
-   custom_players
-   player_archetypes
-   complete_example
+   user_guide/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer Guide
+   
+   dev_guide/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API Reference
+   
    api_reference
-
-State Machine Architecture
---------------------------
-
-The game engine is built as a state machine with the following states:
-
-**WAITING_FOR_PLAYERS**
-  Game is waiting for enough players to join.
-
-**READY**
-  Enough players have joined; game is ready to start.
-
-**DEALING**
-  Dealing hole cards to players and posting blinds.
-
-**PRE_FLOP**
-  First betting round after hole cards are dealt.
-
-**FLOP**
-  Second betting round after three community cards are dealt.
-
-**TURN**
-  Third betting round after the fourth community card is dealt.
-
-**RIVER**
-  Final betting round after the fifth community card is dealt.
-
-**SHOWDOWN**
-  Players reveal hands and the winner is determined.
-
-**HAND_COMPLETE**
-  Hand has ended; preparing for the next hand.
-
-**GAME_OVER**
-  Game has ended (not enough players with chips).
-
-Creating Custom Players
------------------------
-
-Maverick uses a protocol-based system for player implementations. This allows you
-to create custom players with any strategy you want:
-
-.. code-block:: python
-
-   from maverick import Player, ActionType, GameState
-   
-   class MyBot(Player):
-       """A custom poker bot."""
-       
-       def decide_action(
-           self, 
-           game_state: GameState, 
-           valid_actions: list[ActionType], 
-           min_raise: int
-       ) -> tuple[ActionType, int]:
-           """Decide what action to take."""
-           # Your strategy here
-           if ActionType.CHECK in valid_actions:
-               return (ActionType.CHECK, 0)
-           return (ActionType.FOLD, 0)
-
-See the :doc:`custom_players` guide for detailed instructions.
-
-Game Events
------------
-
-The game engine emits events for all significant occurrences:
-
-* ``GAME_STARTED``: Game begins
-* ``PLAYER_JOINED``: Player joins the game
-* ``HAND_STARTED``: New hand starts
-* ``POST_BLINDS``: Blinds posted
-* ``DEAL_HOLE_CARDS``: Hole cards dealt
-* ``DEAL_FLOP``: Flop dealt
-* ``DEAL_TURN``: Turn dealt
-* ``DEAL_RIVER``: River dealt
-* ``PLAYER_ACTION``: Player takes action
-* ``BETTING_ROUND_COMPLETED``: Betting round ends
-* ``SHOWDOWN``: Showdown occurs
-* ``HAND_ENDED``: Hand ends
-* ``PLAYER_LEFT``: Player leaves the game
-* ``GAME_ENDED``: Game ends
-
-These events are defined in the :class:`~maverick.enums.GameEventType` enum.
 
 Indices and tables
 ==================

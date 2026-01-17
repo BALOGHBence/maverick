@@ -5,29 +5,48 @@
 
 import os
 import sys
+from datetime import date
+
+import maverick as library
+from sphinx.config import Config
 
 sys.path.insert(0, os.path.abspath("../../src"))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "maverick"
-copyright = "2026, BALOGHBence"
-author = "BALOGHBence"
+project = library.__pkg_name__
+copyright = "2026-%s, Bence Balogh" % date.today().year
+author = "Bence Balogh"
 
-version = "0.1.0"
-release = "0.1.0"
+
+def setup(app: Config):
+    app.add_config_value("project_name", project, "html")
+
+
+# The short X.Y version.
+version = library.__version__
+# The full version, including alpha/beta/rc tags.
+release = "v" + library.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
+    "myst_nb",
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
+    "sphinx_copybutton",
 ]
+
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "myst-nb",
+    ".ipynb": "myst-nb",
+}
 
 templates_path = ["_templates"]
 exclude_patterns = []
@@ -59,18 +78,49 @@ autodoc_default_options = {
     "inherited-members": False,
 }
 
+# MyST settings
+myst_enable_extensions = [
+    "colon_fence",
+    "deflist",
+    "linkify",
+]
+
+# -- Options for Notebooks
+
+# Notebook execution behavior:
+# - "off" = never execute during build (fastest, most reproducible)
+# - "auto" = execute if no outputs are stored
+# - "force" = always execute
+nb_execution_mode = "off"
+
+# Optional: fail the build if a notebook would error when executed
+nb_execution_raise_on_error = True
+
+# Optional: where execution happens (keeps build folder clean)
+nb_execution_in_temp = True
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
+html_css_files = ["css/custom.css"]
+
+html_theme = "sphinx_book_theme"
 
 html_theme_options = {
-    "show_nav_level": 2,
-    "navigation_depth": 3,
+    "show_navbar_depth": 2,
+    "toc_title": "On this page",
     "show_toc_level": 2,
-    "navbar_end": ["theme-switcher", "navbar-icon-links"],
-    "secondary_sidebar_items": ["page-toc", "edit-this-page"],
+    "repository_url": "https://github.com/BALOGHBence/maverick",
+    "use_repository_button": True,
+    "use_issues_button": True,
+    "use_download_button": True,
+    "use_fullscreen_button": True,
+    "logo": {
+      "image_light": "_static/img/logo-maverick-light.svg",
+      "image_dark": "_static/img/logo-maverick-dark.svg",
+    },
+    "extra_footer": "<div>hi there!</div>"
 }
 
 # Intersphinx configuration

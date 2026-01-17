@@ -1,0 +1,16 @@
+/* Sticky only the margin sidebar that contains your support box */
+@media (min-width: 992px) {
+  aside.margin.sidebar:has(.supporting-maverick-sidebar) {
+    position: sticky;
+    top: 15rem;          /* tweak: 4rem–6rem depending on header height */
+    align-self: start;  /* helps when inside CSS grid */
+  }
+}
+
+/* If sticky still fails, it’s almost always an overflow ancestor */
+@media (min-width: 992px) {
+  aside.margin.sidebar:has(.supporting-maverick-sidebar),
+  aside.margin.sidebar:has(.supporting-maverick-sidebar) * {
+    overflow: visible !important;
+  }
+}
