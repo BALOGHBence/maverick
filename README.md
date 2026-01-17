@@ -2,9 +2,11 @@
 
 A Python library for simulating poker games with custom player strategies.
 
+[![Documentation Status](https://readthedocs.org/projects/pymaverick/badge/?version=latest)](https://pymaverick.readthedocs.io/en/latest/?badge=latest)
+[![codecov](https://codecov.io/gh/BALOGHBence/maverick/graph/badge.svg?token=VDRFOUJYUG)](https://codecov.io/gh/BALOGHBence/maverick)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/c960167518b646eea31cf1ff02a13823)](https://app.codacy.com/gh/BALOGHBence/maverick/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![codecov](https://codecov.io/gh/BALOGHBence/maverick/graph/badge.svg?token=VDRFOUJYUG)](https://codecov.io/gh/BALOGHBence/maverick)
 
 [![BuyMeACoffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/benceeokf)
 
@@ -27,7 +29,7 @@ A Python library for simulating poker games with custom player strategies.
 
 ## Documentation
 
-The project has extensive documentation hosted on ReadTheDocs. Most library information is documented there, with only the essentials kept here.
+The project has extensive [documentation](https://pymaverick.readthedocs.io/en/latest/index.html) hosted on ReadTheDocs. Most library information is documented there, with only the essentials kept here.
 
 ## Versioning
 
