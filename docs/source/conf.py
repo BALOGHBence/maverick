@@ -7,10 +7,11 @@ import os
 import sys
 from datetime import date
 
-import maverick as library
 from sphinx.config import Config
 
 sys.path.insert(0, os.path.abspath("../../src"))
+
+import maverick as library
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
