@@ -38,7 +38,7 @@ create poker games, develop AI players, and analyze poker scenarios.
 Features
 --------
 
-* **Complete Texas Hold'em Implementation**: Full game rules and mechanics
+* **Confgurable Poker Games**: Full game rules and mechanics that supports a variaty of game variants
 * **State Machine Architecture**: Clean separation of game states and transitions
 * **Flexible Player System**: Protocol-based player interface for custom implementations
 * **Hand Evaluation**: Built-in poker hand scoring and comparison
