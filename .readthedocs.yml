@@ -15,6 +15,7 @@ build:
       - pip install uv
     post_install:
       # Install dependencies with 'docs' dependency group
+      - uv pip install --python $READTHEDOCS_VIRTUALENV_PATH/bin/python .
       - uv sync --group docs --python $READTHEDOCS_VIRTUALENV_PATH/bin/python
 
 # Build documentation in the "docs/" directory with Sphinx
