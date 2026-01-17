@@ -45,6 +45,9 @@ Features
 * **Event System**: Track all game events for analysis and replay
 * **Well Documented**: Comprehensive documentation of rules and APIs
 
+Contents
+--------
+
 .. toctree::
    :maxdepth: 3
    :caption: Getting Started
@@ -57,6 +60,12 @@ Features
    :caption: User Guide
    
    user_guide/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer Guide
+   
+   dev_guide/index
 
 .. toctree::
    :maxdepth: 2
