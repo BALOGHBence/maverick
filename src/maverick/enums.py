@@ -5,7 +5,6 @@ __all__ = [
     "Rank",
     "Street",
     "HandType",
-    "PlayerPosition",
     "PlayerStateType",
     "GameStateType",
     "ActionType",
