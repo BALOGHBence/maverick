@@ -21,6 +21,10 @@ A Python library for simulating poker games with custom player strategies.
 
 The project has extensive documentation hosted on ReadTheDocs. Most library information is documented there, with only the essentials kept here.
 
+## Versioning
+
+The project adheres to [semantic versioning](https://semver.org/).
+
 ## License
 
 This package is licensed under the [MIT license](LICENSE.txt).

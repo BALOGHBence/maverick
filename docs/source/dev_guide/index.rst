@@ -11,3 +11,4 @@ Developer Guide
    documentation
    git_cookbook
    testing_and_coverage
+   changes_and_versioning
