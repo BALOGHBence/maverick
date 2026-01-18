@@ -205,7 +205,7 @@ def score_hand(hand: list["Card"]) -> Tuple["HandType", float]:
 def find_highest_scoring_hand(
     private_cards: list["Card"],
     community_cards: list["Card"],
-    n_private: Optional[int] = None,
+    n_private: int = 0,
 ) -> tuple[list["Card"], "HandType", float]:
     """
     Find the highest scoring 5-card hand from the given private and community cards
@@ -219,6 +219,7 @@ def find_highest_scoring_hand(
         The community cards on the table.
     n_private : int, optional
         The number of private cards that must be included in the hand (default is 0).
+        A value of 0 means any number of private cards can be used.
 
     Returns
     -------
@@ -234,7 +235,7 @@ def find_highest_scoring_hand(
 
     best_hand = None
     best_score = -1.0
-    
+
     n_card = min(5, len(all_cards))
 
     # Try all 5-card combinations
@@ -243,7 +244,7 @@ def find_highest_scoring_hand(
         private_count = sum(1 for card in hand if card in private_cards)
 
         # Skip if doesn't meet minimum private card requirement
-        if n_private is not None and private_count != n_private:
+        if (n_private > 0) and (private_count != n_private):
             continue
 
         # Score this hand

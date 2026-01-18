@@ -88,10 +88,7 @@ class GTOBot(Player):
         # Call with proper odds and medium+ hands
         if ActionType.CALL in valid_actions and medium_hand:
             # GTO calling requires proper pot odds
-            if (
-                call_amount <= self.state.stack
-                and call_amount <= game.state.pot
-            ):
+            if call_amount <= self.state.stack and call_amount <= game.state.pot:
                 return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
         # Check in balanced way

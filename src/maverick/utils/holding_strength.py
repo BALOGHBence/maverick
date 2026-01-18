@@ -15,7 +15,7 @@ def estimate_holding_strength(
     community_cards: Optional[list["Card"]] = None,
     n_simulations: int = 1000,
     n_players: int = 8,
-    n_private: Optional[int] = None,
+    n_private: int = 0,
     n_community_cards_total: int = 5,
 ) -> float:
     """
@@ -41,6 +41,7 @@ def estimate_holding_strength(
         The total number of community cards in the game (default is 5).
     n_private : int, optional
         The number of private cards that must be included in the hand (default is 0).
+        A value of 0 means any number of private cards can be used.
 
     Returns
     -------

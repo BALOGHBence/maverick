@@ -84,10 +84,7 @@ class TightAggressiveBot(Player):
         # Call selectively with good odds and playable hands
         if ActionType.CALL in valid_actions and playable_hand:
             # TAG calls with proper odds (better than 3:1)
-            if (
-                call_amount <= self.state.stack
-                and call_amount * 3 <= game.state.pot
-            ):
+            if call_amount <= self.state.stack and call_amount * 3 <= game.state.pot:
                 return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
         # Check when free

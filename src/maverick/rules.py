@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from .enums import Street, GameVariant
+from .enums import Street
 
 __all__ = [
     "DealingRules",
@@ -18,9 +18,6 @@ class DealingRules(BaseModel):
 
     Fields
     ------
-    variant
-        Which game is played (Hold'em, Omaha, ...). This can influence hole-card
-        count, evaluation logic, and potentially board layout.
     max_players
         Maximum number of seats allowed at the table. Typical values:
         - 6 for "6-max"
@@ -57,7 +54,6 @@ class DealingRules(BaseModel):
         align each entry with one "street".
     """
 
-    variant: GameVariant = GameVariant.TEXAS_HOLDEM
     max_players: int = Field(default=9, ge=2, le=10)
     min_players: int = Field(default=2, ge=2, le=10)
 
