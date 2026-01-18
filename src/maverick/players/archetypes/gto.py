@@ -30,7 +30,7 @@ class GTOBot(Player):
         game: "Game",
         valid_actions: list[ActionType],
         min_raise_amount: int,
-        min_call_amount: int,
+        call_amount: int,
         min_bet_amount: int,
     ) -> PlayerAction:
         """Play balanced, theoretically sound poker using hand strength evaluation."""
@@ -89,8 +89,8 @@ class GTOBot(Player):
         if ActionType.CALL in valid_actions and medium_hand:
             # GTO calling requires proper pot odds
             if (
-                min_call_amount <= self.state.stack
-                and min_call_amount <= game.state.pot
+                call_amount <= self.state.stack
+                and call_amount <= game.state.pot
             ):
                 return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 

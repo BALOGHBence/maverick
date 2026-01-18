@@ -27,7 +27,7 @@ class MockPlayer(Player):
         game: "GameType",
         valid_actions: list[ActionType],
         min_raise_amount: int,
-        min_call_amount: int,
+        call_amount: int,
         min_bet_amount: int,
     ) -> PlayerAction:
         if self._action_index < len(self._actions):
@@ -391,7 +391,7 @@ class TestRaiseBySemantics(unittest.TestCase):
                 game: "GameType",
                 valid_actions: list[ActionType],
                 min_raise_amount: int,
-                min_call_amount: int,
+                call_amount: int,
                 min_bet_amount: int,
             ) -> PlayerAction:
                 received_min_raise.append(min_raise_amount)
@@ -500,10 +500,10 @@ class TestBettingRoundCompletion(unittest.TestCase):
 
 
 class TestShowdownStateMachine(unittest.TestCase):
-    """Test that state machine doesn't advance player after showdown."""
+    """Test that state machine doesn't advance player after SHOWDOWN."""
 
     def test_no_player_advance_after_showdown(self):
-        """Test that current_player_index is not advanced when entering showdown."""
+        """Test that current_player_index is not advanced when entering SHOWDOWN."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
 
         p1 = MockPlayer(

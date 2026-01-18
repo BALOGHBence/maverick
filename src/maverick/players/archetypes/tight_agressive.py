@@ -30,7 +30,7 @@ class TightAggressiveBot(Player):
         game: "Game",
         valid_actions: list[ActionType],
         min_raise_amount: int,
-        min_call_amount: int,
+        call_amount: int,
         min_bet_amount: int,
     ) -> PlayerAction:
         """Play selectively but aggressively when involved using hand strength."""
@@ -85,8 +85,8 @@ class TightAggressiveBot(Player):
         if ActionType.CALL in valid_actions and playable_hand:
             # TAG calls with proper odds (better than 3:1)
             if (
-                min_call_amount <= self.state.stack
-                and min_call_amount * 3 <= game.state.pot
+                call_amount <= self.state.stack
+                and call_amount * 3 <= game.state.pot
             ):
                 return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 

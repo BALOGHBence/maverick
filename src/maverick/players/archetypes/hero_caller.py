@@ -31,7 +31,7 @@ class HeroCallerBot(Player):
         game: "Game",
         valid_actions: list[ActionType],
         min_raise_amount: int,
-        min_call_amount: int,
+        call_amount: int,
         min_bet_amount: int,
     ) -> PlayerAction:
         """Call large bets to catch bluffs, even with marginal holdings and weak equity."""
@@ -63,7 +63,7 @@ class HeroCallerBot(Player):
         # Will call even large bets with marginal equity (signature move)
         if ActionType.CALL in valid_actions and marginal_hand:
             # Hero caller calls even big bets (often incorrectly)
-            if min_call_amount <= self.state.stack * 0.6:
+            if call_amount <= self.state.stack * 0.6:
                 return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
         # Check when possible

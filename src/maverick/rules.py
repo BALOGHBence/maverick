@@ -131,6 +131,8 @@ class PokerRules(BaseModel):
         Blind/ante/straddle rules.
     betting
         Bet sizing and raising structure rules.
+    showdown
+        Rules governing showdown.
 
     rules_version
         Version tag for the rules schema.

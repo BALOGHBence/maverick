@@ -30,7 +30,7 @@ class BullyBot(Player):
         game: "Game",
         valid_actions: list[ActionType],
         min_raise_amount: int,
-        min_call_amount: int,
+        call_amount: int,
         min_bet_amount: int,
     ) -> PlayerAction:
         """Use stack size and hand strength to pressure opponents with big bets."""
@@ -80,9 +80,9 @@ class BullyBot(Player):
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )
 
-        # Will call to see showdown and apply pressure
+        # Will call to apply pressure
         if ActionType.CALL in valid_actions:
-            call_amount = min_call_amount
+            call_amount = call_amount
             if (
                 call_amount <= self.state.stack * 0.3
             ):  # Willing to call reasonable amounts

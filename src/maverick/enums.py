@@ -104,7 +104,7 @@ class Street(Enum):
         Third betting round, after the fourth community card is dealt (value 2).
     RIVER : int
         Fourth betting round, after the fifth community card is dealt (value 3).
-    SHOWDOWN : int
+    SHOWDOWN_COMPLETED : int
         Final stage where remaining players reveal their hands (value 4).
     """
 
@@ -224,7 +224,7 @@ class GameStateType(Enum):
         Third betting round after the fourth community card is dealt.
     RIVER : str
         Final betting round after the fifth community card is dealt.
-    SHOWDOWN : str
+    SHOWDOWN_COMPLETED : str
         Players reveal hands and the winner is determined.
     HAND_COMPLETE : str
         Hand has ended; preparing for the next hand.
@@ -284,32 +284,36 @@ class GameEventType(Enum):
 
     Attributes
     ----------
-    GAME_START : str
-        Game begins.
-    HAND_START : str
-        New hand starts.
-    HAND_END : str
-        Hand ends.
-    GAME_END : str
-        Game ends.
-    DEAL_HOLE_CARDS : str
+    GAME_STARTED : str
+        Game has started.
+    HAND_STARTED : str
+        New hand has started.
+    HAND_ENDED : str
+        Hand has ended.
+    GAME_ENDED : str
+        Game has ended.
+    HOLE_CARDS_DEALT : str
         Hole cards dealt to players.
-    DEAL_FLOP : str
+    FLOP_DEALT : str
         First three community cards dealt.
-    DEAL_TURN : str
+    TURN_DEALT : str
         Fourth community card dealt.
-    DEAL_RIVER : str
+    RIVER_DEALT : str
         Fifth community card dealt.
-    PLAYER_ACTION : str
+    PLAYER_ACTION_TAKEN : str
         Player takes an action.
-    BETTING_ROUND_COMPLETE : str
-        Betting round completes.
-    POST_BLINDS : str
+    BETTING_ROUND_COMPLETED : str
+        Betting round completed.
+    BLINDS_POSTED : str
         Blind bets posted.
-    SHOWDOWN : str
-        Showdown occurs.
-    AWARD_POT : str
-        Pot awarded to winner(s).
+    ANTES_POSTED : str
+        Ante bets posted.
+    SHOWDOWN_COMPLETED : str
+        SHOWDOWN_COMPLETED occurs.
+    PLAYER_JOINED : str
+        Player joined the game.
+    PLAYER_LEFT : str
+        Player left the game.
     """
 
     # Game lifecycle events
@@ -317,23 +321,21 @@ class GameEventType(Enum):
     HAND_STARTED = auto()
     HAND_ENDED = auto()
     GAME_ENDED = auto()
+    SHOWDOWN_COMPLETED = auto()
 
     # Dealing events
-    DEAL_HOLE_CARDS = auto()
-    DEAL_FLOP = auto()
-    DEAL_TURN = auto()
-    DEAL_RIVER = auto()
+    HOLE_CARDS_DEALT = auto()
+    FLOP_DEALT = auto()
+    TURN_DEALT = auto()
+    RIVER_DEALT = auto()
 
     # Player action events
-    PLAYER_ACTION = auto()
+    PLAYER_ACTION_TAKEN = auto()
     BETTING_ROUND_COMPLETED = auto()
 
     # Stakes events
-    POST_BLINDS = auto()
-    POST_ANTES = auto()
-
-    # Showdown events
-    SHOWDOWN = auto()
+    BLINDS_POSTED = auto()
+    ANTES_POSTED = auto()
 
     # Table events
     PLAYER_JOINED = auto()
@@ -355,7 +357,7 @@ class GameVariant(str, Enum):
         Texas Hold'em: typically 2 hole cards per player and 5 community cards.
     OMAHA
         Omaha: typically 4 hole cards per player and 5 community cards, with
-        specific "use exactly 2 hole cards" showdown rules.
+        specific "use exactly 2 hole cards" SHOWDOWN_COMPLETED rules.
     """
 
     TEXAS_HOLDEM = "texas_holdem"

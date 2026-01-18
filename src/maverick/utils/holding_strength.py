@@ -15,7 +15,7 @@ def estimate_holding_strength(
     community_cards: Optional[list["Card"]] = None,
     n_simulations: int = 1000,
     n_players: int = 8,
-    n_private: int = 0,
+    n_private: Optional[int] = None,
     n_community_cards_total: int = 5,
 ) -> float:
     """

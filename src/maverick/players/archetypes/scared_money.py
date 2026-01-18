@@ -29,7 +29,7 @@ class ScaredMoneyBot(Player):
         *,
         game: "Game",
         valid_actions: list[ActionType],
-        min_call_amount: int,
+        call_amount: int,
         min_bet_amount: int,
         **_,
     ) -> PlayerAction:
@@ -66,8 +66,8 @@ class ScaredMoneyBot(Player):
         if ActionType.CALL in valid_actions and premium_hand:
             # Scared money only calls tiny amounts
             if (
-                min_call_amount <= game.state.big_blind
-                and min_call_amount <= self.state.stack * 0.05
+                call_amount <= game.state.big_blind
+                and call_amount <= self.state.stack * 0.05
             ):
                 return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 

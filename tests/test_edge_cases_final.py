@@ -24,7 +24,7 @@ class TestAggressiveBotEdgeCases(unittest.TestCase):
             game=game,
             valid_actions=[ActionType.BET],
             min_raise_amount=10,
-            min_call_amount=10,
+            call_amount=10,
             min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.BET)
@@ -34,7 +34,7 @@ class TestAggressiveBotEdgeCases(unittest.TestCase):
             game=game,
             valid_actions=[ActionType.CALL],
             min_raise_amount=10,
-            min_call_amount=10,
+            call_amount=10,
             min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.CALL)
@@ -52,7 +52,7 @@ class TestCallBotEdgeCases(unittest.TestCase):
             game=game,
             valid_actions=[ActionType.ALL_IN],
             min_raise_amount=10,
-            min_call_amount=10,
+            call_amount=10,
             min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.FOLD)
@@ -66,7 +66,7 @@ class TestCallBotEdgeCases(unittest.TestCase):
             game=game,
             valid_actions=[ActionType.FOLD],
             min_raise_amount=10,
-            min_call_amount=10,
+            call_amount=10,
             min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.FOLD)
@@ -96,7 +96,7 @@ class TestLoosePassiveBotPaths(unittest.TestCase):
             game=game,
             valid_actions=[ActionType.CHECK, ActionType.BET],
             min_raise_amount=10,
-            min_call_amount=10,
+            call_amount=10,
             min_bet_amount=10,
         )
         self.assertIn(action.action_type, [ActionType.CHECK, ActionType.BET])
@@ -127,7 +127,7 @@ class TestManiacBotPaths(unittest.TestCase):
             game=game,
             valid_actions=[ActionType.BET, ActionType.CHECK],
             min_raise_amount=20,
-            min_call_amount=10,
+            call_amount=10,
             min_bet_amount=10,
         )
         self.assertIn(action.action_type, [ActionType.BET, ActionType.CHECK])
@@ -154,7 +154,7 @@ class TestManiacBotPaths(unittest.TestCase):
             game=game,
             valid_actions=[ActionType.CALL, ActionType.FOLD],
             min_raise_amount=20,
-            min_call_amount=10,
+            call_amount=10,
             min_bet_amount=10,
         )
         self.assertIn(action.action_type, [ActionType.CALL, ActionType.FOLD])

@@ -113,7 +113,7 @@ Notes:
 
 ## What This Engine Does NOT Cover
 
-- **Side pot construction** and distributing multiple side pots at showdown.
+- **Side pot construction** and distributing multiple side pots at SHOWDOWN.
 - **Bet sizing rules** beyond minimums (e.g., post-flop min bet conventions).
 - **Re-raise rights** nuances for multi-way short all-ins and “cap” behavior.
 - **Straddle** and other forced bets.

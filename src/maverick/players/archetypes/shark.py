@@ -30,7 +30,7 @@ class SharkBot(Player):
         game: "Game",
         valid_actions: list[ActionType],
         min_raise_amount: int,
-        min_call_amount: int,
+        call_amount: int,
         min_bet_amount: int,
     ) -> PlayerAction:
         """Exploit opponent weaknesses with adaptive play based on hand strength."""
@@ -91,8 +91,8 @@ class SharkBot(Player):
         if ActionType.CALL in valid_actions and strong_hand:
             # Sharks will call lighter in position or against weaker opponents
             if (
-                min_call_amount <= self.state.stack
-                and min_call_amount <= game.state.pot * 0.66
+                call_amount <= self.state.stack
+                and call_amount <= game.state.pot * 0.66
             ):
                 return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 

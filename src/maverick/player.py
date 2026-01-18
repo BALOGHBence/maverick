@@ -34,7 +34,7 @@ class Player(ABC):
         game: "Game",
         valid_actions: list[ActionType],
         min_raise_amount: int,
-        min_call_amount: int,
+        call_amount: int,
         min_bet_amount: int,
     ) -> PlayerAction:
         """
@@ -50,8 +50,8 @@ class Player(ABC):
             List of valid actions the player can take.
         min_raise_amount : int
             Minimum extra chips this player must add right now to complete a minimum raise.
-        min_call_amount : int
-            Minimum chips this player must add right now to call the current bet.
+        call_amount : int
+            Amount of chips this player must add right now to call the current bet.
         min_bet_amount : int
             Minimum chips this player must add right now to make a bet.
 

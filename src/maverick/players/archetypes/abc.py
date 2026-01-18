@@ -30,7 +30,7 @@ class ABCBot(Player):
         game: "Game",
         valid_actions: list[ActionType],
         min_raise_amount: int,
-        min_call_amount: int,
+        call_amount: int,
         min_bet_amount: int,
     ) -> PlayerAction:
         """Play straightforward, textbook poker using hand strength evaluation."""
@@ -78,7 +78,7 @@ class ABCBot(Player):
 
         # Call with proper pot odds and decent hands
         if ActionType.CALL in valid_actions:
-            call_amount = min_call_amount
+            call_amount = call_amount
             # ABC calls with 3:1 pot odds or better and decent hand
             if (
                 call_amount <= self.state.stack

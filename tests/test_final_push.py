@@ -149,7 +149,7 @@ class TestGameWithCallBots(unittest.TestCase):
     """Test games where bots actually call."""
 
     def test_three_callbots(self):
-        """Test game with three CallBots to see showdown."""
+        """Test game with three CallBots."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
             CallBot(id="c1", name="C1", state=PlayerState(stack=200, seat=0))

@@ -252,7 +252,7 @@ class TestWhaleExtended(unittest.TestCase):
             game=game,
             valid_actions=[ActionType.BET],
             min_raise_amount=10,
-            min_call_amount=10,
+            call_amount=10,
             min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.BET)

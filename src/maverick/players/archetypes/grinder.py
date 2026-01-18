@@ -30,7 +30,7 @@ class GrinderBot(Player):
         game: "Game",
         valid_actions: list[ActionType],
         min_raise_amount: int,
-        min_call_amount: int,
+        call_amount: int,
         min_bet_amount: int,
     ) -> PlayerAction:
         """Play solid, consistent poker focused on long-term EV using hand strength."""
@@ -78,8 +78,8 @@ class GrinderBot(Player):
         if ActionType.CALL in valid_actions and profitable_hand:
             # Basic pot odds calculation - call if getting 2:1 or better
             if (
-                min_call_amount <= self.state.stack
-                and min_call_amount <= game.state.pot * 0.5
+                call_amount <= self.state.stack
+                and call_amount <= game.state.pot * 0.5
             ):
                 return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
