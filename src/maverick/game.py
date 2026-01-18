@@ -542,9 +542,13 @@ class Game:
 
         self.state.street = Street.PRE_FLOP
 
-    def _calculate_min_raise_by(self) -> int:
-        """Calculates the minimum extra chips this player must add right now to
-        complete a minimum raise"""
+    def _calculate_min_raise_amount(self) -> int:
+        """Calculates the minimum extra chips the current player must add
+        right now to complete a minimum raise.
+
+        Important: What this function returns is NOT the amount the pot needs to raise by
+        or raise to, but the amount the player must add on top of their current bet.
+        """
         player = self.state.get_current_player()
 
         player_bet_before = player.state.current_bet
@@ -566,10 +570,14 @@ class Game:
             return
 
         valid_actions = self._get_valid_actions(current_player)
-        min_raise_by = self._calculate_min_raise_by()
+        min_raise_amount = self._calculate_min_raise_amount()
 
         action: PlayerAction = current_player.decide_action(
-            self, valid_actions, min_raise_by
+            game=self,
+            valid_actions=valid_actions,
+            min_raise_amount=min_raise_amount,
+            min_call_amount=self.state.current_bet - current_player.state.current_bet,
+            min_bet_amount=self.state.min_bet,
         )
 
         try:

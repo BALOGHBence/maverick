@@ -24,10 +24,13 @@ class Player(ABC):
     @abstractmethod
     def decide_action(
         self,
+        *,
         game: "Game",
         valid_actions: list[ActionType],
-        min_raise: int,  # noqa: ARG002
-    ) -> PlayerAction:  # pragma: no cover
+        min_raise_amount: int,
+        min_call_amount: int,
+        min_bet_amount: int,
+    ) -> PlayerAction:
         """
         Decide on an action to take during the player's turn.
 
