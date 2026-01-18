@@ -44,7 +44,13 @@ class MockPlayer(Player):
         object.__setattr__(self, "observed_events", [])
 
     def decide_action(
-        self, game: "GameType", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "GameType",
+        valid_actions: list[ActionType],
+        min_raise_amount: int,
+        min_call_amount: int,
+        min_bet_amount: int,
     ) -> PlayerAction:
         if self._action_index < len(self._actions):
             action_type, amount = self._actions[self._action_index]

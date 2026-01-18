@@ -814,7 +814,7 @@ class Game:
                 player_add,
                 player_bet_after,
                 new_table_bet,
-                call_part,
+                _,
                 raise_size,
                 is_all_in,
             ) = self._calculate_raise_components(current_player, amount)

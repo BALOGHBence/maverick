@@ -25,7 +25,13 @@ class LooseAggressiveBot(Player):
     """
 
     def decide_action(
-        self, game: "Game", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "Game",
+        valid_actions: list[ActionType],
+        min_raise_amount: int,
+        min_bet_amount: int,
+        **_,
     ) -> PlayerAction:
         """Play aggressively with a wide range of hands using hand strength."""
         # Evaluate hand strength
@@ -56,8 +62,8 @@ class LooseAggressiveBot(Player):
         # LAG player tends to raise or bet frequently, even with marginal hands
         if ActionType.RAISE in valid_actions and any_equity:
             # Aggressive raises - typically 3x BB or minimum raise, whichever is larger
-            # min_raise is the minimum raise-by increment
-            raise_by_amount = max(min_raise, game.state.big_blind * 3)
+            # min_raise_amount is the minimum raise-by increment
+            raise_by_amount = max(min_raise_amount, game.state.big_blind * 3)
             raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.RAISE, amount=raise_by_amount
@@ -65,7 +71,7 @@ class LooseAggressiveBot(Player):
 
         if ActionType.BET in valid_actions and any_equity:
             # Aggressive bets
-            bet_amount = min(game.state.big_blind * 3, self.state.stack)
+            bet_amount = min(min_bet_amount * 3, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )

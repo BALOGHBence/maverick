@@ -25,7 +25,13 @@ class ABCBot(Player):
     """
 
     def decide_action(
-        self, game: "Game", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "Game",
+        valid_actions: list[ActionType],
+        min_raise_amount: int,
+        min_call_amount: int,
+        min_bet_amount: int,
     ) -> PlayerAction:
         """Play straightforward, textbook poker using hand strength evaluation."""
         # Evaluate hand strength
@@ -57,7 +63,7 @@ class ABCBot(Player):
         # Standard value bet with strong hands
         if ActionType.BET in valid_actions and strong_hand:
             # Textbook bet: 2-3x BB
-            bet_amount = min(game.state.big_blind * 2, self.state.stack)
+            bet_amount = min(min_bet_amount, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )
@@ -65,14 +71,14 @@ class ABCBot(Player):
         # Standard raise with strong hands
         if ActionType.RAISE in valid_actions and strong_hand:
             # Textbook raise: minimum raise
-            raise_amount = min(min_raise, self.state.stack)
+            raise_amount = min(min_raise_amount, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
             )
 
         # Call with proper pot odds and decent hands
         if ActionType.CALL in valid_actions:
-            call_amount = game.state.current_bet - self.state.current_bet
+            call_amount = min_call_amount
             # ABC calls with 3:1 pot odds or better and decent hand
             if (
                 call_amount <= self.state.stack

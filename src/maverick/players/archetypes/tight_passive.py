@@ -25,7 +25,12 @@ class TightPassiveBot(Player):
     """
 
     def decide_action(
-        self, game: "Game", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "Game",
+        valid_actions: list[ActionType],
+        min_call_amount: int,
+        **_,
     ) -> PlayerAction:
         """Play passively, avoiding raises and large bets even with good equity."""
         # Evaluate hand strength but still play too passively
@@ -59,9 +64,8 @@ class TightPassiveBot(Player):
 
         # Call only if the amount is small relative to the pot and hand is strong
         if ActionType.CALL in valid_actions and strong_hand:
-            call_amount = game.state.current_bet - self.state.current_bet
             # Only call if it's less than 10% of stack and pot is worth it
-            if call_amount <= self.state.stack * 0.1:
+            if min_call_amount <= self.state.stack * 0.1:
                 return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
         # Fold in most other situations (never raises or bets, even with premium)

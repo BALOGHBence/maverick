@@ -25,7 +25,13 @@ class TightAggressiveBot(Player):
     """
 
     def decide_action(
-        self, game: "Game", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "Game",
+        valid_actions: list[ActionType],
+        min_raise_amount: int,
+        min_call_amount: int,
+        min_bet_amount: int,
     ) -> PlayerAction:
         """Play selectively but aggressively when involved using hand strength."""
         # Evaluate hand strength
@@ -57,8 +63,8 @@ class TightAggressiveBot(Player):
         # Raise aggressively with strong hands
         if ActionType.RAISE in valid_actions and strong_hand:
             # Standard 3x BB or 3x minimum raise, whichever is larger
-            # min_raise is the minimum raise-by increment
-            raise_by_amount = max(min_raise, game.state.big_blind * 3)
+            # min_raise_amount is the minimum raise-by increment
+            raise_by_amount = max(min_raise_amount, game.state.big_blind * 3)
             raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.RAISE, amount=raise_by_amount
@@ -68,7 +74,7 @@ class TightAggressiveBot(Player):
         if ActionType.BET in valid_actions and strong_hand:
             # Value bet: 2/3 pot or 2-3x BB
             bet_amount = min(
-                max(int(game.state.pot * 0.66), game.state.big_blind * 2),
+                max(int(game.state.pot * 0.66), min_bet_amount * 2),
                 self.state.stack,
             )
             return PlayerAction(
@@ -77,9 +83,11 @@ class TightAggressiveBot(Player):
 
         # Call selectively with good odds and playable hands
         if ActionType.CALL in valid_actions and playable_hand:
-            call_amount = game.state.current_bet - self.state.current_bet
             # TAG calls with proper odds (better than 3:1)
-            if call_amount <= self.state.stack and call_amount * 3 <= game.state.pot:
+            if (
+                min_call_amount <= self.state.stack
+                and min_call_amount * 3 <= game.state.pot
+            ):
                 return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
 
         # Check when free

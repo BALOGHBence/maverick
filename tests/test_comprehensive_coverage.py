@@ -155,7 +155,11 @@ class TestWhaleBot(unittest.TestCase):
         game.state.big_blind = 10
 
         action = whale.decide_action(
-            game, [ActionType.RAISE, ActionType.CALL], min_raise=20
+            game=game,
+            valid_actions=[ActionType.RAISE, ActionType.CALL],
+            min_raise_amount=20,
+            min_call_amount=10,
+            min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.RAISE)
         # WhaleBot raises with min(max(min_raise * 3, pot), stack)
@@ -172,7 +176,13 @@ class TestWhaleBot(unittest.TestCase):
         game.state.pot = 50
         game.state.big_blind = 10
 
-        action = whale.decide_action(game, [ActionType.BET], min_raise=10)
+        action = whale.decide_action(
+            game=game,
+            valid_actions=[ActionType.BET],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
+        )
         self.assertEqual(action.action_type, ActionType.BET)
         self.assertGreater(action.amount, 0)
 
@@ -185,7 +195,13 @@ class TestWhaleBot(unittest.TestCase):
         game = Mock()
         game.state.pot = 50
 
-        action = whale.decide_action(game, [ActionType.CALL], min_raise=10)
+        action = whale.decide_action(
+            game=game,
+            valid_actions=[ActionType.CALL],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
+        )
         self.assertEqual(action.action_type, ActionType.CALL)
 
     def test_whale_all_in(self):
@@ -196,7 +212,13 @@ class TestWhaleBot(unittest.TestCase):
 
         game = Mock()
 
-        action = whale.decide_action(game, [ActionType.ALL_IN], min_raise=10)
+        action = whale.decide_action(
+            game=game,
+            valid_actions=[ActionType.ALL_IN],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
+        )
         self.assertEqual(action.action_type, ActionType.ALL_IN)
         self.assertEqual(action.amount, 100)
 
@@ -208,7 +230,13 @@ class TestWhaleBot(unittest.TestCase):
 
         game = Mock()
 
-        action = whale.decide_action(game, [ActionType.CHECK], min_raise=10)
+        action = whale.decide_action(
+            game=game,
+            valid_actions=[ActionType.CHECK],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
+        )
         self.assertEqual(action.action_type, ActionType.CHECK)
 
     def test_whale_folds_rarely(self):
@@ -219,7 +247,13 @@ class TestWhaleBot(unittest.TestCase):
 
         game = Mock()
 
-        action = whale.decide_action(game, [ActionType.FOLD], min_raise=10)
+        action = whale.decide_action(
+            game=game,
+            valid_actions=[ActionType.FOLD],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
+        )
         self.assertEqual(action.action_type, ActionType.FOLD)
 
 
@@ -298,7 +332,11 @@ class TestManiacBot(unittest.TestCase):
         game.state.get_players_in_hand.return_value = [Mock(), Mock(), Mock()]
 
         action = maniac.decide_action(
-            game, [ActionType.RAISE, ActionType.BET, ActionType.CALL], min_raise=20
+            game=game,
+            valid_actions=[ActionType.RAISE, ActionType.BET, ActionType.CALL],
+            min_raise_amount=20,
+            min_call_amount=10,
+            min_bet_amount=10,
         )
         self.assertIsNotNone(action)
 
@@ -366,7 +404,11 @@ class TestLoosePassiveBot(unittest.TestCase):
         game.state.get_players_in_hand.return_value = [Mock(), Mock(), Mock()]
 
         action = lp.decide_action(
-            game, [ActionType.CALL, ActionType.FOLD], min_raise=10
+            game=game,
+            valid_actions=[ActionType.CALL, ActionType.FOLD],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
         )
         self.assertIsNotNone(action)
 
@@ -397,7 +439,11 @@ class TestFoldBot(unittest.TestCase):
         game = Mock()
 
         action = fold.decide_action(
-            game, [ActionType.FOLD, ActionType.CALL], min_raise=10
+            game=game,
+            valid_actions=[ActionType.FOLD, ActionType.CALL],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.FOLD)
 
@@ -408,7 +454,11 @@ class TestFoldBot(unittest.TestCase):
         game = Mock()
 
         action = fold.decide_action(
-            game, [ActionType.CHECK, ActionType.BET], min_raise=10
+            game=game,
+            valid_actions=[ActionType.CHECK, ActionType.BET],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.CHECK)
 
@@ -423,7 +473,11 @@ class TestCallBot(unittest.TestCase):
         game = Mock()
 
         action = call.decide_action(
-            game, [ActionType.CALL, ActionType.FOLD], min_raise=10
+            game=game,
+            valid_actions=[ActionType.CALL, ActionType.FOLD],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.CALL)
 
@@ -434,7 +488,11 @@ class TestCallBot(unittest.TestCase):
         game = Mock()
 
         action = call.decide_action(
-            game, [ActionType.CHECK, ActionType.BET], min_raise=10
+            game=game,
+            valid_actions=[ActionType.CHECK, ActionType.BET],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.CHECK)
 
@@ -453,7 +511,11 @@ class TestAggressiveBot(unittest.TestCase):
         game.state.big_blind = 10
 
         action = aggressive.decide_action(
-            game, [ActionType.RAISE, ActionType.CALL], min_raise=20
+            game=game,
+            valid_actions=[ActionType.RAISE, ActionType.CALL],
+            min_raise_amount=20,
+            min_call_amount=10,
+            min_bet_amount=10,
         )
         # AggressiveBot should prefer raise
         self.assertIn(action.action_type, [ActionType.RAISE, ActionType.CALL])
@@ -469,7 +531,11 @@ class TestAggressiveBot(unittest.TestCase):
         game.state.big_blind = 10
 
         action = aggressive.decide_action(
-            game, [ActionType.BET, ActionType.CHECK], min_raise=10
+            game=game,
+            valid_actions=[ActionType.BET, ActionType.CHECK],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
         )
         self.assertIn(action.action_type, [ActionType.BET, ActionType.CHECK])
 

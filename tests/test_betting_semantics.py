@@ -22,7 +22,13 @@ class MockPlayer(Player):
         self._action_index = 0
 
     def decide_action(
-        self, game: "GameType", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "GameType",
+        valid_actions: list[ActionType],
+        min_raise_amount: int,
+        min_call_amount: int,
+        min_bet_amount: int,
     ) -> PlayerAction:
         if self._action_index < len(self._actions):
             action_type, amount = self._actions[self._action_index]
@@ -380,9 +386,15 @@ class TestRaiseBySemantics(unittest.TestCase):
 
         class MinRaiseBot(Player):
             def decide_action(
-                self, game: "GameType", valid_actions: list[ActionType], min_raise: int
+                self,
+                *,
+                game: "GameType",
+                valid_actions: list[ActionType],
+                min_raise_amount: int,
+                min_call_amount: int,
+                min_bet_amount: int,
             ) -> PlayerAction:
-                received_min_raise.append(min_raise)
+                received_min_raise.append(min_raise_amount)
                 return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
 
         p1 = MinRaiseBot(id="p1", name="P1", state=PlayerState(stack=1000))

@@ -20,11 +20,23 @@ class TestAggressiveBotEdgeCases(unittest.TestCase):
         game.state.big_blind = 10
 
         # Test with just BET available
-        action = bot.decide_action(game, [ActionType.BET], min_raise=10)
+        action = bot.decide_action(
+            game=game,
+            valid_actions=[ActionType.BET],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
+        )
         self.assertEqual(action.action_type, ActionType.BET)
 
         # Test with CALL/CHECK only
-        action = bot.decide_action(game, [ActionType.CALL], min_raise=10)
+        action = bot.decide_action(
+            game=game,
+            valid_actions=[ActionType.CALL],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
+        )
         self.assertEqual(action.action_type, ActionType.CALL)
 
 
@@ -36,7 +48,13 @@ class TestCallBotEdgeCases(unittest.TestCase):
         bot = CallBot(id="call", name="Call", state=PlayerState(stack=50, seat=0))
         game = Mock()
 
-        action = bot.decide_action(game, [ActionType.ALL_IN], min_raise=10)
+        action = bot.decide_action(
+            game=game,
+            valid_actions=[ActionType.ALL_IN],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
+        )
         self.assertEqual(action.action_type, ActionType.FOLD)
 
     def test_callbot_with_fold_only(self):
@@ -44,7 +62,13 @@ class TestCallBotEdgeCases(unittest.TestCase):
         bot = CallBot(id="call", name="Call", state=PlayerState(stack=50, seat=0))
         game = Mock()
 
-        action = bot.decide_action(game, [ActionType.FOLD], min_raise=10)
+        action = bot.decide_action(
+            game=game,
+            valid_actions=[ActionType.FOLD],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
+        )
         self.assertEqual(action.action_type, ActionType.FOLD)
 
 
@@ -69,7 +93,11 @@ class TestLoosePassiveBotPaths(unittest.TestCase):
 
         # Should prefer CHECK over BET
         action = bot.decide_action(
-            game, [ActionType.CHECK, ActionType.BET], min_raise=10
+            game=game,
+            valid_actions=[ActionType.CHECK, ActionType.BET],
+            min_raise_amount=10,
+            min_call_amount=10,
+            min_bet_amount=10,
         )
         self.assertIn(action.action_type, [ActionType.CHECK, ActionType.BET])
 
@@ -96,7 +124,11 @@ class TestManiacBotPaths(unittest.TestCase):
         game.state.get_players_in_hand.return_value = [Mock(), Mock()]
 
         action = bot.decide_action(
-            game, [ActionType.BET, ActionType.CHECK], min_raise=20
+            game=game,
+            valid_actions=[ActionType.BET, ActionType.CHECK],
+            min_raise_amount=20,
+            min_call_amount=10,
+            min_bet_amount=10,
         )
         self.assertIn(action.action_type, [ActionType.BET, ActionType.CHECK])
 
@@ -119,7 +151,11 @@ class TestManiacBotPaths(unittest.TestCase):
         game.state.get_players_in_hand.return_value = [Mock(), Mock()]
 
         action = bot.decide_action(
-            game, [ActionType.CALL, ActionType.FOLD], min_raise=20
+            game=game,
+            valid_actions=[ActionType.CALL, ActionType.FOLD],
+            min_raise_amount=20,
+            min_call_amount=10,
+            min_bet_amount=10,
         )
         self.assertIn(action.action_type, [ActionType.CALL, ActionType.FOLD])
 

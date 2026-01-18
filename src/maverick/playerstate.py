@@ -10,7 +10,7 @@ __all__ = ["PlayerState"]
 
 class PlayerState(BaseModel):
     """A player's state during a poker game.
-    
+
     Fields
     ------
     seat : Optional[int]

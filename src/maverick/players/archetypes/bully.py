@@ -25,7 +25,13 @@ class BullyBot(Player):
     """
 
     def decide_action(
-        self, game: "Game", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "Game",
+        valid_actions: list[ActionType],
+        min_raise_amount: int,
+        min_call_amount: int,
+        min_bet_amount: int,
     ) -> PlayerAction:
         """Use stack size and hand strength to pressure opponents with big bets."""
         # Evaluate hand strength
@@ -57,8 +63,8 @@ class BullyBot(Player):
         # Big raises to pressure opponents when strong or decent
         if ActionType.RAISE in valid_actions and pressure_hand:
             # Overbet to intimidate - 2x minimum raise or 6x BB, whichever is larger
-            # min_raise is the minimum raise-by increment
-            raise_by_amount = max(min_raise * 2, game.state.big_blind * 6)
+            # min_raise_amount is the minimum raise-by increment
+            raise_by_amount = max(min_raise_amount * 2, game.state.big_blind * 6)
             raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.RAISE, amount=raise_by_amount
@@ -68,15 +74,15 @@ class BullyBot(Player):
         if ActionType.BET in valid_actions and strong_hand:
             # Bully bets big - often pot-sized or more
             bet_amount = min(game.state.pot, self.state.stack)
-            if bet_amount < game.state.big_blind * 2:
-                bet_amount = min(game.state.big_blind * 4, self.state.stack)
+            if bet_amount < min_bet_amount:
+                bet_amount = min(min_bet_amount * 2, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Will call to see showdown and apply pressure
         if ActionType.CALL in valid_actions:
-            call_amount = game.state.current_bet - self.state.current_bet
+            call_amount = min_call_amount
             if (
                 call_amount <= self.state.stack * 0.3
             ):  # Willing to call reasonable amounts

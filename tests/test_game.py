@@ -17,7 +17,15 @@ from maverick.enums import GameStateType
 class SimpleTestPlayer(Player):
     """A simple test player that always folds."""
 
-    def decide_action(self, game, valid_actions, min_raise):
+    def decide_action(
+        self,
+        *,
+        game,
+        valid_actions,
+        min_raise_amount,
+        min_call_amount,
+        min_bet_amount,
+    ):
         return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
 
 

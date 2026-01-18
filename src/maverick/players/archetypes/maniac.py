@@ -24,7 +24,13 @@ class ManiacBot(Player):
     """
 
     def decide_action(
-        self, game: "Game", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "Game",
+        valid_actions: list[ActionType],
+        min_raise_amount: int,
+        min_bet_amount: int,
+        **_,
     ) -> PlayerAction:
         """Bet or raise aggressively at every opportunity, largely ignoring hand strength."""
         # NOTE: ManiacBot doesn't rely on hand strength estimation. In fact it doesn't
@@ -33,8 +39,8 @@ class ManiacBot(Player):
         # Always try to raise first
         if ActionType.RAISE in valid_actions:
             # Maniac raises big - typically 2x minimum raise or 5x BB, whichever is larger
-            # min_raise is the minimum raise-by increment
-            raise_by_amount = max(min_raise * 2, game.state.big_blind * 5)
+            # min_raise_amount is the minimum raise-by increment
+            raise_by_amount = max(min_raise_amount * 2, game.state.big_blind * 5)
             raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.RAISE, amount=raise_by_amount
@@ -42,7 +48,7 @@ class ManiacBot(Player):
 
         # Bet aggressively
         if ActionType.BET in valid_actions:
-            bet_amount = min(game.state.big_blind * 5, self.state.stack)
+            bet_amount = min(min_bet_amount * 5, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )
