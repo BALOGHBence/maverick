@@ -15,8 +15,14 @@ __all__ = ["Player"]
 
 class Player(ABC):
     """Abstract base class for a poker player."""
-    
-    def __init__(self, *, id: Optional[str] = None, name: Optional[str] = None, state: Optional[PlayerState] = None):
+
+    def __init__(
+        self,
+        *,
+        id: Optional[str] = None,
+        name: str,
+        state: Optional[PlayerState] = None,
+    ):
         self.id = id or uuid.uuid4().hex
         self.name = name
         self.state = state
@@ -42,9 +48,12 @@ class Player(ABC):
             The game instance containing the current state.
         valid_actions : list[ActionType]
             List of valid actions the player can take.
-        min_raise : int
-            Minimum raise-by increment (chips to add on top of call amount).
-            For RAISE actions, the amount should be at least this value.
+        min_raise_amount : int
+            Minimum extra chips this player must add right now to complete a minimum raise.
+        min_call_amount : int
+            Minimum chips this player must add right now to call the current bet.
+        min_bet_amount : int
+            Minimum chips this player must add right now to make a bet.
 
         Returns
         -------
