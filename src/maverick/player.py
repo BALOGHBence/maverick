@@ -1,7 +1,6 @@
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional
 import uuid
-
-from pydantic import BaseModel, Field
 
 from .enums import ActionType
 from .playeraction import PlayerAction
@@ -14,13 +13,15 @@ if TYPE_CHECKING:  # pragma: no cover
 __all__ = ["Player"]
 
 
-class Player(BaseModel):
-    """A player's state during a poker game."""
+class Player(ABC):
+    """Abstract base class for a poker player."""
+    
+    def __init__(self, *, id: Optional[str] = None, name: Optional[str] = None, state: Optional[PlayerState] = None):
+        self.id = id or uuid.uuid4().hex
+        self.name = name
+        self.state = state
 
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex)
-    name: Optional[str] = None
-    state: Optional[PlayerState] = None
-
+    @abstractmethod
     def decide_action(
         self,
         game: "Game",
@@ -47,9 +48,7 @@ class Player(BaseModel):
         PlayerAction
             An instance of PlayerAction representing the chosen action.
         """
-        raise NotImplementedError(
-            "decide_action method must be implemented by subclasses."
-        )
+        ...
 
     def on_event(self, event: "GameEvent", game: "Game") -> None:  # pragma: no cover
         """
