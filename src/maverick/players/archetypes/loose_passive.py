@@ -1,11 +1,6 @@
-from typing import TYPE_CHECKING
-
 from ...player import Player
 from ...enums import ActionType
 from ...playeraction import PlayerAction
-
-if TYPE_CHECKING:  # pragma: no cover
-    from ...game import Game
 
 __all__ = ["LoosePassiveBot"]
 
@@ -24,7 +19,7 @@ class LoosePassiveBot(Player):
     """
 
     def decide_action(
-        self, game: "Game", valid_actions: list[ActionType], min_raise: int
+        self, *, valid_actions: list[ActionType], min_bet_amount: int, **_
     ) -> PlayerAction:
         """Call frequently with many hands using hand strength poorly, rarely raise."""
         # NOTE: Loose passive doesn't rely on hand strength estimation. In fact it doesn't
@@ -40,7 +35,7 @@ class LoosePassiveBot(Player):
 
         # Rarely bet, but will if no one else has
         if ActionType.BET in valid_actions:
-            bet_amount = min(game.state.big_blind, self.state.stack)
+            bet_amount = min(min_bet_amount, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )

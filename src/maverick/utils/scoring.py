@@ -1,4 +1,4 @@
-from typing import Tuple, TYPE_CHECKING
+from typing import Tuple, Optional, TYPE_CHECKING
 from itertools import combinations
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -219,6 +219,7 @@ def find_highest_scoring_hand(
         The community cards on the table.
     n_private : int, optional
         The number of private cards that must be included in the hand (default is 0).
+        A value of 0 means any number of private cards can be used.
 
     Returns
     -------
@@ -235,13 +236,15 @@ def find_highest_scoring_hand(
     best_hand = None
     best_score = -1.0
 
+    n_card = min(5, len(all_cards))
+
     # Try all 5-card combinations
-    for hand in combinations(all_cards, 5):
+    for hand in combinations(all_cards, n_card):
         # Count how many private cards are in this hand
         private_count = sum(1 for card in hand if card in private_cards)
 
         # Skip if doesn't meet minimum private card requirement
-        if private_count != n_private:
+        if (n_private > 0) and (private_count != n_private):
             continue
 
         # Score this hand

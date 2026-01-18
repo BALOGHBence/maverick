@@ -25,7 +25,13 @@ class WhaleBot(Player):
     """
 
     def decide_action(
-        self, game: "Game", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "Game",
+        valid_actions: list[ActionType],
+        min_raise_amount: int,
+        min_bet_amount: int,
+        **_,
     ) -> PlayerAction:
         """Play extremely loose and gamble with large sums, using hand strength minimally."""
         # NOTE: WhaleBot doesn't rely on hand strength estimation. In fact it doesn't
@@ -34,7 +40,9 @@ class WhaleBot(Player):
         # Raise big - whale loves to gamble
         if ActionType.RAISE in valid_actions:
             # Huge raises
-            raise_amount = min(max(min_raise * 3, game.state.pot), self.state.stack)
+            raise_amount = min(
+                max(min_raise_amount * 3, game.state.pot), self.state.stack
+            )
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
             )
@@ -43,8 +51,8 @@ class WhaleBot(Player):
         if ActionType.BET in valid_actions:
             # Whale bets big
             bet_amount = min(game.state.pot, self.state.stack)
-            if bet_amount < game.state.big_blind * 3:
-                bet_amount = min(game.state.big_blind * 5, self.state.stack)
+            if bet_amount < min_bet_amount * 3:
+                bet_amount = min(min_bet_amount * 5, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )

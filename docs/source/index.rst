@@ -12,7 +12,7 @@ Maverick - A Poker Library in Python
 .. note::
 
    Maverick is under development and subject to change.
-   Release updates will be announced on
+   First deployment to PyPI is going to be announced on
    `my LinkedIn profile <https://www.linkedin.com/in/bence-balogh-082073181/>`_.
 
 .. margin:: Supporting Maverick
@@ -56,26 +56,27 @@ Contents
 
 .. toctree::
    :maxdepth: 3
-   :caption: Getting Started
    
    overview
    getting_started
 
 .. toctree::
    :maxdepth: 2
-   :caption: User Guide
    
    user_guide/index
 
 .. toctree::
    :maxdepth: 2
-   :caption: Developer Guide
+   
+   examples/index
+
+.. toctree::
+   :maxdepth: 2
    
    dev_guide/index
 
 .. toctree::
    :maxdepth: 2
-   :caption: API Reference
    
    api_reference
 

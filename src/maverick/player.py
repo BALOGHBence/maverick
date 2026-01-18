@@ -1,7 +1,6 @@
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional
 import uuid
-
-from pydantic import BaseModel, Field
 
 from .enums import ActionType
 from .playeraction import PlayerAction
@@ -14,19 +13,30 @@ if TYPE_CHECKING:  # pragma: no cover
 __all__ = ["Player"]
 
 
-class Player(BaseModel):
-    """A player's state during a poker game."""
+class Player(ABC):
+    """Abstract base class for a poker player."""
 
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex)
-    name: Optional[str] = None
-    state: Optional[PlayerState] = None
+    def __init__(
+        self,
+        *,
+        id: Optional[str] = None,
+        name: str,
+        state: Optional[PlayerState] = None,
+    ):
+        self.id = id or uuid.uuid4().hex
+        self.name = name
+        self.state = state
 
+    @abstractmethod
     def decide_action(
         self,
+        *,
         game: "Game",
         valid_actions: list[ActionType],
-        min_raise: int,  # noqa: ARG002
-    ) -> PlayerAction:  # pragma: no cover
+        min_raise_amount: int,
+        call_amount: int,
+        min_bet_amount: int,
+    ) -> PlayerAction:
         """
         Decide on an action to take during the player's turn.
 
@@ -38,18 +48,19 @@ class Player(BaseModel):
             The game instance containing the current state.
         valid_actions : list[ActionType]
             List of valid actions the player can take.
-        min_raise : int
-            Minimum raise-by increment (chips to add on top of call amount).
-            For RAISE actions, the amount should be at least this value.
+        min_raise_amount : int
+            Minimum extra chips this player must add right now to complete a minimum raise.
+        call_amount : int
+            Amount of chips this player must add right now to call the current bet.
+        min_bet_amount : int
+            Minimum chips this player must add right now to make a bet.
 
         Returns
         -------
         PlayerAction
             An instance of PlayerAction representing the chosen action.
         """
-        raise NotImplementedError(
-            "decide_action method must be implemented by subclasses."
-        )
+        ...
 
     def on_event(self, event: "GameEvent", game: "Game") -> None:  # pragma: no cover
         """

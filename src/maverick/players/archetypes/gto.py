@@ -25,7 +25,13 @@ class GTOBot(Player):
     """
 
     def decide_action(
-        self, game: "Game", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "Game",
+        valid_actions: list[ActionType],
+        min_raise_amount: int,
+        call_amount: int,
+        min_bet_amount: int,
     ) -> PlayerAction:
         """Play balanced, theoretically sound poker using hand strength evaluation."""
         # Evaluate hand strength
@@ -59,7 +65,7 @@ class GTOBot(Player):
 
         # Bet with balanced sizing when strong
         if ActionType.BET in valid_actions and strong_hand:
-            bet_amount = min(max(pot_bet, game.state.big_blind), self.state.stack)
+            bet_amount = min(max(pot_bet, min_bet_amount), self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )
@@ -67,13 +73,12 @@ class GTOBot(Player):
         # Raise with proper sizing when strong
         if ActionType.RAISE in valid_actions and strong_hand:
             # GTO raises are typically 2.5-3x the current bet
-            # min_raise is the minimum raise-by increment
-            call_amount = game.state.current_bet - self.state.current_bet
+            # min_raise_amount is the minimum raise-by increment
             # Calculate raise-to target (2x current bet), then convert to raise-by increment
             raise_to_target = game.state.current_bet * 2
             raise_by_amount = raise_to_target - self.state.current_bet
             # Ensure we meet minimum raise requirement
-            raise_by_amount = max(raise_by_amount, min_raise)
+            raise_by_amount = max(raise_by_amount, min_raise_amount)
             # Cap at stack
             raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
@@ -82,7 +87,6 @@ class GTOBot(Player):
 
         # Call with proper odds and medium+ hands
         if ActionType.CALL in valid_actions and medium_hand:
-            call_amount = game.state.current_bet - self.state.current_bet
             # GTO calling requires proper pot odds
             if call_amount <= self.state.stack and call_amount <= game.state.pot:
                 return PlayerAction(player_id=self.id, action_type=ActionType.CALL)

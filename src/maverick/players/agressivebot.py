@@ -14,20 +14,28 @@ class AggressiveBot(Player):
     """An aggressive bot that frequently bets and raises."""
 
     def decide_action(
-        self, game: "Game", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "Game",
+        valid_actions: list[ActionType],
+        min_raise_amount: int,
+        min_bet_amount: int,
+        **_,
     ) -> PlayerAction:
         """Bet or raise aggressively."""
         # Try to raise if possible
         if ActionType.RAISE in valid_actions:
             # Use minimum raise increment
-            if min_raise <= self.state.stack:
+            if min_raise_amount <= self.state.stack:
                 return PlayerAction(
-                    player_id=self.id, action_type=ActionType.RAISE, amount=min_raise
+                    player_id=self.id,
+                    action_type=ActionType.RAISE,
+                    amount=min_raise_amount,
                 )
 
         # Otherwise bet if possible
         if ActionType.BET in valid_actions:
-            bet_amount = game.state.big_blind * 2
+            bet_amount = max(min_bet_amount, game.state.big_blind * 2)
             if bet_amount <= self.state.stack:
                 return PlayerAction(
                     player_id=self.id, action_type=ActionType.BET, amount=bet_amount

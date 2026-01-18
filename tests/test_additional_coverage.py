@@ -248,7 +248,13 @@ class TestWhaleExtended(unittest.TestCase):
         game.state.pot = 5
         game.state.big_blind = 10
 
-        action = whale.decide_action(game, [ActionType.BET], min_raise=10)
+        action = whale.decide_action(
+            game=game,
+            valid_actions=[ActionType.BET],
+            min_raise_amount=10,
+            call_amount=10,
+            min_bet_amount=10,
+        )
         self.assertEqual(action.action_type, ActionType.BET)
         # Should bet at least 5 * big_blind = 50
         self.assertGreaterEqual(action.amount, 50)

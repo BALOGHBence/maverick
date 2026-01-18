@@ -50,7 +50,13 @@ class PlayerLike(Protocol):
     state: Optional["PlayerState"]
 
     def decide_action(
-        self, game: "Game", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "Game",
+        valid_actions: list[ActionType],
+        min_raise_amount: int,
+        call_amount: int,
+        min_bet_amount: int,
     ) -> PlayerAction:  # pragma: no cover
         """
         Decide what action to take given the current game state.
@@ -61,8 +67,12 @@ class PlayerLike(Protocol):
             The game instance containing the current state.
         valid_actions : list[ActionType]
             List of valid actions the player can take.
-        min_raise : int
+        min_raise_amount : int
             Minimum extra chips this player must add right now to complete a minimum raise.
+        call_amount : int
+            Amount of chips this player must add right now to call the current bet.
+        min_bet_amount : int
+            Minimum chips this player must add right now to make a bet.
 
         Returns
         -------

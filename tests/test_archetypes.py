@@ -22,55 +22,6 @@ from maverick.players import (
 )
 
 
-class TestArchetypeImports(unittest.TestCase):
-    """Test that all archetype classes can be imported."""
-
-    def test_import_tight_aggressive(self) -> None:
-        from maverick.players import TightAggressiveBot  # noqa: F401
-
-    def test_import_loose_aggressive(self) -> None:
-        from maverick.players import LooseAggressiveBot  # noqa: F401
-
-    def test_import_tight_passive(self) -> None:
-        from maverick.players import TightPassiveBot  # noqa: F401
-
-    def test_import_loose_passive(self) -> None:
-        from maverick.players import LoosePassiveBot  # noqa: F401
-
-    def test_import_maniac(self) -> None:
-        from maverick.players import ManiacBot  # noqa: F401
-
-    def test_import_tilted(self) -> None:
-        from maverick.players import TiltedBot  # noqa: F401
-
-    def test_import_bully(self) -> None:
-        from maverick.players import BullyBot  # noqa: F401
-
-    def test_import_grinder(self) -> None:
-        from maverick.players import GrinderBot  # noqa: F401
-
-    def test_import_gto(self) -> None:
-        from maverick.players import GTOBot  # noqa: F401
-
-    def test_import_shark(self) -> None:
-        from maverick.players import SharkBot  # noqa: F401
-
-    def test_import_fish(self) -> None:
-        from maverick.players import FishBot  # noqa: F401
-
-    def test_import_abc(self) -> None:
-        from maverick.players import ABCBot  # noqa: F401
-
-    def test_import_hero_caller(self) -> None:
-        from maverick.players import HeroCallerBot  # noqa: F401
-
-    def test_import_scared_money(self) -> None:
-        from maverick.players import ScaredMoneyBot  # noqa: F401
-
-    def test_import_whale(self) -> None:
-        from maverick.players import WhaleBot  # noqa: F401
-
-
 class TestArchetypeInstantiation(unittest.TestCase):
     """Test that all archetype classes can be instantiated."""
 

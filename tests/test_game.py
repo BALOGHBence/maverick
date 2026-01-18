@@ -17,7 +17,15 @@ from maverick.enums import GameStateType
 class SimpleTestPlayer(Player):
     """A simple test player that always folds."""
 
-    def decide_action(self, game, valid_actions, min_raise):
+    def decide_action(
+        self,
+        *,
+        game,
+        valid_actions,
+        min_raise_amount,
+        call_amount,
+        min_bet_amount,
+    ):
         return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
 
 
@@ -431,11 +439,11 @@ class TestCreateEvent(unittest.TestCase):
         game = create_game()
 
         event = game._create_event(
-            GameEventType.PLAYER_ACTION,
+            GameEventType.PLAYER_ACTION_TAKEN,
             player_id="p1",
         )
 
-        self.assertEqual(event.type, GameEventType.PLAYER_ACTION)
+        self.assertEqual(event.type, GameEventType.PLAYER_ACTION_TAKEN)
         self.assertEqual(event.player_id, "p1")
 
     def test_create_event_with_action(self):
@@ -444,12 +452,12 @@ class TestCreateEvent(unittest.TestCase):
         action = PlayerAction(player_id="p1", action_type=ActionType.FOLD)
 
         event = game._create_event(
-            GameEventType.PLAYER_ACTION,
+            GameEventType.PLAYER_ACTION_TAKEN,
             player_id="p1",
             action=action,
         )
 
-        self.assertEqual(event.type, GameEventType.PLAYER_ACTION)
+        self.assertEqual(event.type, GameEventType.PLAYER_ACTION_TAKEN)
         self.assertEqual(event.action, action)
 
 

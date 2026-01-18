@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from .enums import Street, GameVariant
+from .enums import Street
 
 __all__ = [
     "DealingRules",
@@ -18,9 +18,6 @@ class DealingRules(BaseModel):
 
     Fields
     ------
-    variant
-        Which game is played (Hold'em, Omaha, ...). This can influence hole-card
-        count, evaluation logic, and potentially board layout.
     max_players
         Maximum number of seats allowed at the table. Typical values:
         - 6 for "6-max"
@@ -28,7 +25,6 @@ class DealingRules(BaseModel):
     min_players
         Minimum number of active players required to start a new hand. In most
         poker games, 2 is the minimum (heads-up).
-
     hole_cards
         Number of private cards dealt to each player at the start of a hand.
         - Hold'em: 2
@@ -37,14 +33,13 @@ class DealingRules(BaseModel):
         Total number of community cards dealt by the end of the hand.
         - Hold'em / Omaha: 5
         - Some games have 0 community cards.
-
     board_deal_pattern
         How board cards are revealed over the streets, expressed as a dictionary mapping
         Street to int.
 
         For standard Hold'em:
         {
-            Street.PREFLOP: 0,
+            Street.PRE_FLOP: 0,
             Street.FLOP: 3,
             Street.TURN: 1,
             Street.RIVER: 1,
@@ -59,7 +54,6 @@ class DealingRules(BaseModel):
         align each entry with one "street".
     """
 
-    variant: GameVariant = GameVariant.TEXAS_HOLDEM
     max_players: int = Field(default=9, ge=2, le=10)
     min_players: int = Field(default=2, ge=2, le=10)
 
@@ -133,6 +127,8 @@ class PokerRules(BaseModel):
         Blind/ante/straddle rules.
     betting
         Bet sizing and raising structure rules.
+    showdown
+        Rules governing showdown.
 
     rules_version
         Version tag for the rules schema.

@@ -54,7 +54,7 @@ class Game:
     max_players : int
         Maximum number of players allowed at the table.
     max_hands : int
-        Maximum number of hands to play before ending the game.
+        Maximum number of hands to play before ending the game. Default is 1000.
     exc_handling_mode : {"log", "raise"}
         If "raise", exceptions in event handlers will propagate. If "log", they will be logged. This setting
         only effects event handling, not game logic. If an exception occurs in game logic, it will always raise.
@@ -142,7 +142,7 @@ class Game:
         Returns
         -------
         dict[str, list[GameEvent]]
-            A dictionary containing game, hand, and street histories.
+            A dictionary containing 'game', 'hand', and 'street' histories.
         """
         return {
             "game": self.game_history,
@@ -366,28 +366,28 @@ class Game:
                 self.state.state_type = GameStateType.DEALING
                 self._emit(self._create_event(GameEventType.HAND_STARTED))
                 self._deal_hole_cards()
-                self._emit(self._create_event(GameEventType.DEAL_HOLE_CARDS))
-                self._event_queue.append(GameEventType.DEAL_HOLE_CARDS)
+                self._emit(self._create_event(GameEventType.HOLE_CARDS_DEALT))
+                self._event_queue.append(GameEventType.HOLE_CARDS_DEALT)
 
-            case GameEventType.DEAL_HOLE_CARDS:
+            case GameEventType.HOLE_CARDS_DEALT:
                 assert self.state.state_type == GameStateType.DEALING
                 self.state.state_type = GameStateType.PRE_FLOP
                 self._post_blinds()
-                self._emit(self._create_event(GameEventType.POST_BLINDS))
-                self._event_queue.append(GameEventType.POST_BLINDS)
+                self._emit(self._create_event(GameEventType.BLINDS_POSTED))
+                self._event_queue.append(GameEventType.BLINDS_POSTED)
 
-            case GameEventType.POST_BLINDS:
+            case GameEventType.BLINDS_POSTED:
                 assert self.state.state_type == GameStateType.PRE_FLOP
                 self._post_antes()
-                self._emit(self._create_event(GameEventType.POST_ANTES))
-                self._event_queue.append(GameEventType.POST_ANTES)
+                self._emit(self._create_event(GameEventType.ANTES_POSTED))
+                self._event_queue.append(GameEventType.ANTES_POSTED)
 
-            case GameEventType.POST_ANTES:
+            case GameEventType.ANTES_POSTED:
                 assert self.state.state_type == GameStateType.PRE_FLOP
                 self._take_action_from_current_player()
-                self._event_queue.append(GameEventType.PLAYER_ACTION)
+                self._event_queue.append(GameEventType.PLAYER_ACTION_TAKEN)
 
-            case GameEventType.PLAYER_ACTION:
+            case GameEventType.PLAYER_ACTION_TAKEN:
                 if self.state.is_betting_round_complete():
                     self._complete_betting_round()
                     self._emit(
@@ -397,53 +397,53 @@ class Game:
                 else:
                     self._advance_to_next_player()
                     self._take_action_from_current_player()
-                    self._event_queue.append(GameEventType.PLAYER_ACTION)
+                    self._event_queue.append(GameEventType.PLAYER_ACTION_TAKEN)
 
             case GameEventType.BETTING_ROUND_COMPLETED:
                 if len(self.state.get_players_in_hand()) == 1:
                     self.state.state_type = GameStateType.SHOWDOWN
                     self.state.street = Street.SHOWDOWN
                     self._handle_showdown()
-                    self._emit(self._create_event(GameEventType.SHOWDOWN))
-                    self._event_queue.append(GameEventType.SHOWDOWN)
+                    self._emit(self._create_event(GameEventType.SHOWDOWN_COMPLETED))
+                    self._event_queue.append(GameEventType.SHOWDOWN_COMPLETED)
                 else:
                     if self.state.state_type == GameStateType.PRE_FLOP:
                         self.state.state_type = GameStateType.FLOP
                         self.state.street = Street.FLOP
                         self._deal_flop()
-                        self._emit(self._create_event(GameEventType.DEAL_FLOP))
-                        self._event_queue.append(GameEventType.DEAL_FLOP)
+                        self._emit(self._create_event(GameEventType.FLOP_DEALT))
+                        self._event_queue.append(GameEventType.FLOP_DEALT)
                         self._advance_to_first_active_player()
                     elif self.state.state_type == GameStateType.FLOP:
                         self.state.state_type = GameStateType.TURN
                         self.state.street = Street.TURN
                         self._deal_turn()
-                        self._emit(self._create_event(GameEventType.DEAL_TURN))
-                        self._event_queue.append(GameEventType.DEAL_TURN)
+                        self._emit(self._create_event(GameEventType.TURN_DEALT))
+                        self._event_queue.append(GameEventType.TURN_DEALT)
                         self._advance_to_first_active_player()
                     elif self.state.state_type == GameStateType.TURN:
                         self.state.state_type = GameStateType.RIVER
                         self.state.street = Street.RIVER
                         self._deal_river()
-                        self._emit(self._create_event(GameEventType.DEAL_RIVER))
-                        self._event_queue.append(GameEventType.DEAL_RIVER)
+                        self._emit(self._create_event(GameEventType.RIVER_DEALT))
+                        self._event_queue.append(GameEventType.RIVER_DEALT)
                         self._advance_to_first_active_player()
                     elif self.state.state_type == GameStateType.RIVER:
                         self.state.state_type = GameStateType.SHOWDOWN
                         self.state.street = Street.SHOWDOWN
                         self._handle_showdown()
-                        self._emit(self._create_event(GameEventType.SHOWDOWN))
-                        self._event_queue.append(GameEventType.SHOWDOWN)
+                        self._emit(self._create_event(GameEventType.SHOWDOWN_COMPLETED))
+                        self._event_queue.append(GameEventType.SHOWDOWN_COMPLETED)
 
             case (
-                GameEventType.DEAL_FLOP
-                | GameEventType.DEAL_TURN
-                | GameEventType.DEAL_RIVER
+                GameEventType.FLOP_DEALT
+                | GameEventType.TURN_DEALT
+                | GameEventType.RIVER_DEALT
             ):
                 self._take_action_from_current_player()
-                self._event_queue.append(GameEventType.PLAYER_ACTION)
+                self._event_queue.append(GameEventType.PLAYER_ACTION_TAKEN)
 
-            case GameEventType.SHOWDOWN:
+            case GameEventType.SHOWDOWN_COMPLETED:
                 self.state.state_type = GameStateType.HAND_COMPLETE
                 self._emit(self._create_event(GameEventType.HAND_ENDED))
                 self._event_queue.append(GameEventType.HAND_ENDED)
@@ -542,9 +542,13 @@ class Game:
 
         self.state.street = Street.PRE_FLOP
 
-    def _calculate_min_raise_by(self) -> int:
-        """Calculates the minimum extra chips this player must add right now to
-        complete a minimum raise"""
+    def _calculate_min_raise_amount(self) -> int:
+        """Calculates the minimum extra chips the current player must add
+        right now to complete a minimum raise.
+
+        Important: What this function returns is NOT the amount the pot needs to raise by
+        or raise to, but the amount the player must add on top of their current bet.
+        """
         player = self.state.get_current_player()
 
         player_bet_before = player.state.current_bet
@@ -566,10 +570,14 @@ class Game:
             return
 
         valid_actions = self._get_valid_actions(current_player)
-        min_raise_by = self._calculate_min_raise_by()
+        min_raise_amount = self._calculate_min_raise_amount()
 
         action: PlayerAction = current_player.decide_action(
-            self, valid_actions, min_raise_by
+            game=self,
+            valid_actions=valid_actions,
+            min_raise_amount=min_raise_amount,
+            call_amount=self.state.current_bet - current_player.state.current_bet,
+            min_bet_amount=self.state.min_bet,
         )
 
         try:
@@ -806,7 +814,7 @@ class Game:
                 player_add,
                 player_bet_after,
                 new_table_bet,
-                call_part,
+                _,
                 raise_size,
                 is_all_in,
             ) = self._calculate_raise_components(current_player, amount)
@@ -889,7 +897,7 @@ class Game:
         # Emit player action event after all state mutations
         self._emit(
             self._create_event(
-                GameEventType.PLAYER_ACTION,
+                GameEventType.PLAYER_ACTION_TAKEN,
                 player_id=current_player.id,
                 action=action,
             )

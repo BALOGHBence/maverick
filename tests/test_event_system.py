@@ -44,7 +44,13 @@ class MockPlayer(Player):
         object.__setattr__(self, "observed_events", [])
 
     def decide_action(
-        self, game: "GameType", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "GameType",
+        valid_actions: list[ActionType],
+        min_raise_amount: int,
+        call_amount: int,
+        min_bet_amount: int,
     ) -> PlayerAction:
         if self._action_index < len(self._actions):
             action_type, amount = self._actions[self._action_index]
@@ -207,11 +213,11 @@ class TestEventEmission(unittest.TestCase):
         self.assertIn(GameEventType.HAND_STARTED, event_types)
 
     def test_player_action_event_emitted(self):
-        """Test that PLAYER_ACTION events are emitted."""
+        """Test that PLAYER_ACTION_TAKEN events are emitted."""
         game = Game(small_blind=1, big_blind=2, max_hands=1)
         recorder = EventRecorder()
 
-        game.subscribe(GameEventType.PLAYER_ACTION, recorder.record)
+        game.subscribe(GameEventType.PLAYER_ACTION_TAKEN, recorder.record)
 
         p1 = MockPlayer(
             id="p1",
@@ -294,13 +300,13 @@ class TestEventEmission(unittest.TestCase):
         required_events = [
             GameEventType.GAME_STARTED,
             GameEventType.HAND_STARTED,
-            GameEventType.POST_BLINDS,
-            GameEventType.PLAYER_ACTION,
+            GameEventType.BLINDS_POSTED,
+            GameEventType.PLAYER_ACTION_TAKEN,
             GameEventType.BETTING_ROUND_COMPLETED,
-            GameEventType.DEAL_FLOP,
-            GameEventType.DEAL_TURN,
-            GameEventType.DEAL_RIVER,
-            GameEventType.SHOWDOWN,
+            GameEventType.FLOP_DEALT,
+            GameEventType.TURN_DEALT,
+            GameEventType.RIVER_DEALT,
+            GameEventType.SHOWDOWN_COMPLETED,
             GameEventType.HAND_ENDED,
         ]
 
@@ -515,15 +521,15 @@ class TestEventPayloadAccuracy(unittest.TestCase):
     """Test that event payloads reflect post-action state."""
 
     def test_player_action_event_reflects_post_action_state(self):
-        """Test that PLAYER_ACTION events contain post-action state."""
+        """Test that PLAYER_ACTION_TAKEN events contain post-action state."""
         game = Game(small_blind=1, big_blind=2, max_hands=1)
         action_events = []
 
         def record_action(event: GameEvent, game: Game):
-            if event.type == GameEventType.PLAYER_ACTION:
+            if event.type == GameEventType.PLAYER_ACTION_TAKEN:
                 action_events.append(event)
 
-        game.subscribe(GameEventType.PLAYER_ACTION, record_action)
+        game.subscribe(GameEventType.PLAYER_ACTION_TAKEN, record_action)
 
         p1 = MockPlayer(
             id="p1",

@@ -25,7 +25,13 @@ class TiltedBot(Player):
     """
 
     def decide_action(
-        self, game: "Game", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "Game",
+        valid_actions: list[ActionType],
+        min_raise_amount: int,
+        min_bet_amount: int,
+        **_,
     ) -> PlayerAction:
         """Make irrational, emotionally-driven decisions using hand strength poorly."""
         # Evaluate hand strength but use it irrationally
@@ -67,14 +73,14 @@ class TiltedBot(Player):
         # Raise aggressively without much thought
         if ActionType.RAISE in valid_actions:
             # Tilt raises are often oversized
-            raise_amount = min(min_raise * 3, self.state.stack)
+            raise_amount = min(min_raise_amount * 3, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
             )
 
         # Bet aggressively
         if ActionType.BET in valid_actions:
-            bet_amount = min(game.state.big_blind * 4, self.state.stack)
+            bet_amount = min(min_bet_amount * 4, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )

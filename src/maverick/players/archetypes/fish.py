@@ -27,7 +27,13 @@ class FishBot(Player):
     """
 
     def decide_action(
-        self, game: "Game", valid_actions: list[ActionType], min_raise: int
+        self,
+        *,
+        game: "Game",
+        valid_actions: list[ActionType],
+        min_raise_amount: int,
+        call_amount: int,
+        min_bet_amount: int,
     ) -> PlayerAction:
         """Make exploitable mistakes characteristic of weak players, misusing hand strength."""
         # Evaluate hand strength but use it poorly
@@ -57,7 +63,6 @@ class FishBot(Player):
 
         # Calls too much (the fish's signature move) - ignores hand strength
         if ActionType.CALL in valid_actions:
-            call_amount = game.state.current_bet - self.state.current_bet
             # Fish calls with bad odds and weak hands
             if call_amount <= self.state.stack * 0.4:
                 return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
@@ -69,7 +74,7 @@ class FishBot(Player):
         # Occasionally bets with weird sizing, regardless of hand strength
         if ActionType.BET in valid_actions:
             # Inconsistent sizing - sometimes min bet
-            bet_amount = min(game.state.big_blind, self.state.stack)
+            bet_amount = min(min_bet_amount, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.BET, amount=bet_amount
             )
@@ -77,7 +82,7 @@ class FishBot(Player):
         # Rarely raises (not aggressive enough), even with good hands
         if ActionType.RAISE in valid_actions and any_hand:
             # Weak raises when does raise
-            raise_amount = min(min_raise, self.state.stack)
+            raise_amount = min(min_raise_amount, self.state.stack)
             return PlayerAction(
                 player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
             )

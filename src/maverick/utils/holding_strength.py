@@ -41,6 +41,7 @@ def estimate_holding_strength(
         The total number of community cards in the game (default is 5).
     n_private : int, optional
         The number of private cards that must be included in the hand (default is 0).
+        A value of 0 means any number of private cards can be used.
 
     Returns
     -------

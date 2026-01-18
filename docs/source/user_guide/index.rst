@@ -6,8 +6,8 @@ User Guide
    :caption: Contents
    
    core_concepts
-   games        
-   betting_rules
-   builtin_players
+   games
+   scoring_and_estimation
    custom_players
+   betting_rules
    events
