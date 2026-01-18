@@ -7,6 +7,7 @@ User Guide
    
    core_concepts
    games
-   betting_rules
+   scoring_and_estimation
    custom_players
+   betting_rules
    events

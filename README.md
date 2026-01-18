@@ -34,10 +34,9 @@
 
 > **Note**
 >
-> Maverick is under active development. Features and URLs may change.
-> An official announcement will be shared on
-> [my LinkedIn profile](https://www.linkedin.com/in/bence-balogh-082073181/)
-> once the project is ready for publication.
+> Maverick is under active development and subject to change. 
+> First deployment to PyPI is going to be announced on
+> [my LinkedIn profile](https://www.linkedin.com/in/bence-balogh-082073181/).
 
 ## Highlights
 
