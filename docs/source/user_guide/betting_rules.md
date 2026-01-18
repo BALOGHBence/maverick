@@ -1,4 +1,4 @@
-# Betting Rules — Implemented Semantics & Edge Cases
+# Betting Rules - Implemented Semantics & Edge Cases
 
 This document summarizes **the exact betting semantics implemented by this engine** where different poker engines sometimes diverge.
 
@@ -22,7 +22,7 @@ The goal is that **users of the library can predict behavior precisely**, especi
 - **BB** is the player **immediately left of the SB**.
 - **First to act pre-flop** is the player **left of the BB** (*UTG*).
 
-### Heads-up (2 players) — special rules (IMPORTANT)
+### Heads-up (2 players) - special rules (IMPORTANT)
 
 In heads-up NLHE, rules differ from multi-way:
 
