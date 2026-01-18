@@ -56,32 +56,27 @@ Contents
 
 .. toctree::
    :maxdepth: 3
-   :caption: Getting Started
    
    overview
    getting_started
 
 .. toctree::
    :maxdepth: 2
-   :caption: User Guide
    
    user_guide/index
 
 .. toctree::
    :maxdepth: 2
-   :caption: Examples
    
    examples/index
 
 .. toctree::
    :maxdepth: 2
-   :caption: Developer Guide
    
    dev_guide/index
 
 .. toctree::
    :maxdepth: 2
-   :caption: API Reference
    
    api_reference
 
