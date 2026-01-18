@@ -54,7 +54,7 @@ class Game:
     max_players : int
         Maximum number of players allowed at the table.
     max_hands : int
-        Maximum number of hands to play before ending the game.
+        Maximum number of hands to play before ending the game. Default is 1000.
     exc_handling_mode : {"log", "raise"}
         If "raise", exceptions in event handlers will propagate. If "log", they will be logged. This setting
         only effects event handling, not game logic. If an exception occurs in game logic, it will always raise.
@@ -142,7 +142,7 @@ class Game:
         Returns
         -------
         dict[str, list[GameEvent]]
-            A dictionary containing game, hand, and street histories.
+            A dictionary containing 'game', 'hand', and 'street' histories.
         """
         return {
             "game": self.game_history,

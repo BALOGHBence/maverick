@@ -28,7 +28,6 @@ class DealingRules(BaseModel):
     min_players
         Minimum number of active players required to start a new hand. In most
         poker games, 2 is the minimum (heads-up).
-
     hole_cards
         Number of private cards dealt to each player at the start of a hand.
         - Hold'em: 2
@@ -37,14 +36,13 @@ class DealingRules(BaseModel):
         Total number of community cards dealt by the end of the hand.
         - Hold'em / Omaha: 5
         - Some games have 0 community cards.
-
     board_deal_pattern
         How board cards are revealed over the streets, expressed as a dictionary mapping
         Street to int.
 
         For standard Hold'em:
         {
-            Street.PREFLOP: 0,
+            Street.PRE_FLOP: 0,
             Street.FLOP: 3,
             Street.TURN: 1,
             Street.RIVER: 1,
