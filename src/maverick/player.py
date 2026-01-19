@@ -1,10 +1,11 @@
-from abc import ABC, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 from typing import TYPE_CHECKING, Optional
 import uuid
 
 from .enums import ActionType
 from .playeraction import PlayerAction
 from .playerstate import PlayerState
+from ._registered_players import registered_players
 
 if TYPE_CHECKING:  # pragma: no cover
     from .game import Game
@@ -13,19 +14,38 @@ if TYPE_CHECKING:  # pragma: no cover
 __all__ = ["Player"]
 
 
-class Player(ABC):
+class PlayerMeta(ABCMeta):
+
+    def __init__(self, name, bases, namespace, *args, **kwargs):
+        super().__init__(name, bases, namespace, *args, **kwargs)
+
+    def __new__(metaclass, name, bases, namespace, *args, **kwargs):
+        cls = super().__new__(metaclass, name, bases, namespace, *args, **kwargs)
+        if not ABC in bases and getattr(cls, "register", True):
+            registered_players[cls.__name__] = cls
+        return cls
+
+
+class Player(metaclass=PlayerMeta):
     """Abstract base class for a poker player."""
+
+    register: bool = True
 
     def __init__(
         self,
         *,
         id: Optional[str] = None,
         name: str,
-        state: Optional[PlayerState] = None,
+        state: Optional[PlayerState | dict] = None,
+        **_,
     ):
         self.id = id or uuid.uuid4().hex
         self.name = name
-        self.state = state
+        self.state = (
+            state
+            if isinstance(state, PlayerState) or state is None
+            else PlayerState.model_validate(state)
+        )
 
     @abstractmethod
     def decide_action(
@@ -82,3 +102,18 @@ class Player(ABC):
         Subclasses can override this method to observe events.
         """
         ...
+
+    def to_dict(self) -> dict:
+        """
+        Serialize the player to a dictionary.
+
+        Returns
+        -------
+        dict
+            A dictionary representation of the player.
+        """
+        return {
+            "id": self.id,
+            "name": self.name,
+            "state": self.state.model_dump() if self.state else None,
+        }

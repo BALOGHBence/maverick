@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import Optional, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 from .card import Card
 from .deck import Deck
@@ -10,6 +10,7 @@ from .enums import (
     Street,
 )
 from .protocol import PlayerLike
+from ._registered_players import registered_players
 
 __all__ = ["GameState"]
 
@@ -48,6 +49,40 @@ class GameState(BaseModel):
     model_config = {
         "arbitrary_types_allowed": True,
     }
+
+    @field_serializer("players")
+    def _ser_players(self, players: list[PlayerLike]) -> list[dict]:
+        result = []
+        for p in players:
+            d = p.to_dict()
+            d["__class__.__name__"] = p.__class__.__name__
+            result.append(d)
+        return result
+
+    @field_validator("players", mode="before")
+    @classmethod
+    def _parse_players(cls, players: list[Any]) -> list[PlayerLike]:
+        result = []
+        for p in players:
+            if isinstance(p, PlayerLike):
+                # accept already-built objects
+                result.append(p)
+            else:
+                # re-instantiate from dict
+                if not "__class__.__name__" in p:
+                    raise KeyError(
+                        "Serialized player data missing '__class__.__name__' key"
+                    )
+
+                cls = registered_players[p["__class__.__name__"]]
+                if not cls:
+                    raise ValueError(
+                        f"Unrecognized player class '{p['__class__.__name__']}'"
+                    )
+
+                result.append(cls(**p))
+
+        return result
 
     def get_active_players(self) -> list[PlayerLike]:
         """Return list of players who haven't folded and have chips."""
