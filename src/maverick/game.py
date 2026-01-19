@@ -66,8 +66,9 @@ class Game:
         Custom poker rules to use. If None, default Texas Hold'em rules are applied. When provided, other
         parameters (small_blind, big_blind, ante, min_players, max_players) will override the corresponding
         fields in the rules.
-    first_button_position : int
-        The seat index of the player who will be the button in the first hand. Default is 0.
+    first_button_position : int | None
+        The seat index of the player who will be the button in the first hand. If None (the default), the
+        button is assigned randomly using a card draw.
     """
 
     def __init__(
