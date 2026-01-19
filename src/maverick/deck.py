@@ -12,8 +12,8 @@ __all__ = ["Deck"]
 class Deck(BaseModel):
     """A standard deck of 52 playing cards.
 
-    Parameters
-    ----------
+    Fields
+    ------
     cards : list[Card]
         The list of cards in the deck.
 

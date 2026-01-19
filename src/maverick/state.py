@@ -21,6 +21,41 @@ class GameState(BaseModel):
 
     This class encapsulates all information about the current state of the game,
     including players, community cards, pot, and betting information.
+    
+    Fields
+    ------
+    state_type : GameStateType
+        The current state of the game (e.g., WAITING_FOR_PLAYERS, IN_PROGRESS).
+    street : Street
+        The current betting round (e.g., PRE_FLOP, FLOP, TURN, RIVER).
+    players : list[PlayerLike]
+        The list of players in the game.
+    active_players : list[int]
+        Indices of players who are still active in the current hand.
+    current_player_index : int
+        The index of the player whose turn it is to act.
+    deck : Optional[Deck]
+        The deck of cards used in the game.
+    community_cards : list[Card]
+        The community cards on the table.
+    pot : int
+        The total amount of chips in the pot.
+    current_bet : int
+        The current highest bet that players need to match.
+    min_bet : int
+        The minimum bet amount for the current betting round.
+    last_raise_size : int
+        The size of the last raise made in the current betting round.
+    small_blind : int
+        The amount of the small blind.
+    big_blind : int
+        The amount of the big blind.
+    ante : int
+        The ante amount for the game.
+    hand_number : int
+        The current hand number in the game.
+    button_position : int
+        The position of the dealer button at the table.
     """
 
     state_type: GameStateType = GameStateType.WAITING_FOR_PLAYERS

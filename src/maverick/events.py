@@ -23,8 +23,8 @@ class GameEvent(BaseModel):
     Represents a snapshot of a game event that occurred, including
     the type of event, current game state, and relevant action details.
 
-    Attributes
-    ----------
+    Fields
+    ------
     type : GameEventType
         The type of event that occurred.
     hand_number : int

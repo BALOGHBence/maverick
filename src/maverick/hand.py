@@ -14,8 +14,8 @@ class Hand(BaseModel):
     """
     Private cards plus as many community cards as needed to complete the hand.
 
-    Parameters
-    ----------
+    Fields
+    ------
     private_cards : list[Card]
         The private cards held by the player.
     community_cards : list[Card]
