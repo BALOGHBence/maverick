@@ -131,7 +131,7 @@ class TestMinimumRaiseTracking(unittest.TestCase):
         So to "raise by 40" from SB=10 facing BB=20, player must add:
             call(10) + raise(40) = 50
         """
-        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         p1 = MockPlayer(
             id="p1",
@@ -167,7 +167,7 @@ class TestNLHERaiseValidation(unittest.TestCase):
 
     def test_illegal_call_plus_tiny_raise_rejected(self):
         """Test that call+tiny raise is rejected when raise size is too small."""
-        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         # 3-player game
         p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
@@ -196,7 +196,7 @@ class TestNLHERaiseValidation(unittest.TestCase):
 
     def test_legal_raise_by_accepted(self):
         """Test that a legal raise meeting minimum is accepted."""
-        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         # 3-player game
         p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
@@ -226,7 +226,7 @@ class TestNonReopeningAllIn(unittest.TestCase):
 
     def test_short_all_in_does_not_reopen_betting(self):
         """Test that an all-in below minimum raise doesn't reset acted_this_street."""
-        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         # 3-player game
         p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
@@ -281,7 +281,7 @@ class TestNonReopeningAllIn(unittest.TestCase):
 
     def test_all_in_meeting_min_raise_reopens_betting(self):
         """Test that an all-in meeting minimum raise does reopen betting."""
-        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         # 3-player game
         p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
@@ -327,7 +327,7 @@ class TestShortStackCall(unittest.TestCase):
 
     def test_short_stack_can_call(self):
         """Test that a player with insufficient stack can still call (all-in)."""
-        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         # 3-player game: P1 has only 25 chips
         p1 = MockPlayer(
@@ -380,7 +380,7 @@ class TestRaiseBySemantics(unittest.TestCase):
 
     def test_min_raise_is_raise_by_increment(self):
         """Test that min_raise passed to bots is a raise-by increment."""
-        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         received_min_raise = []
 
@@ -425,7 +425,7 @@ class TestRaiseBySemantics(unittest.TestCase):
         Heads-up: button posts SB=10 and acts first preflop.
         With action amount=50, player adds 50 to their current bet of 10 => 60 total.
         """
-        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         p1 = MockPlayer(
             id="p1",
@@ -578,7 +578,7 @@ class TestRaiseZeroIncrease(unittest.TestCase):
 
     def test_raise_with_call_only_amount_rejected(self):
         """Test that RAISE with amount that only calls is rejected."""
-        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         # 3-player game
         p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
@@ -603,7 +603,7 @@ class TestRaiseZeroIncrease(unittest.TestCase):
 
     def test_raise_with_partial_call_rejected(self):
         """Test that RAISE with amount less than call is rejected."""
-        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         # 3-player game
         p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
