@@ -259,7 +259,7 @@ class TestEventEmission(unittest.TestCase):
 
     def test_all_required_events_emitted(self):
         """Test that all required events are emitted during a complete hand."""
-        game = Game(small_blind=1, big_blind=2, max_hands=1)
+        game = Game(small_blind=1, big_blind=2, max_hands=1, first_button_position=0)
         recorder = EventRecorder()
 
         # Register for all event types
