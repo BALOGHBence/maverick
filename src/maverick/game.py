@@ -117,6 +117,9 @@ class Game:
             if not isinstance(first_button_position, int):
                 raise ValueError("first_button_position must be an integer")
 
+            if not first_button_position >= 0:
+                raise ValueError("first_button_position must be non-negative")
+
         self._rules = rules
         self.max_hands = max_hands
         self._state = GameState(
