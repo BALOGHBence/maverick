@@ -6,6 +6,8 @@ Developer Guide
    :caption: Contents
    
    dev_installation
+   repo_structure
+   gitflow_and_branching
    contribution_workflow
    coding_conventions        
    documentation

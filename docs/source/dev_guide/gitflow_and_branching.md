@@ -1,0 +1,1 @@
+# GitFlow and Branching Strategy
