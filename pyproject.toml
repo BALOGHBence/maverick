@@ -1,6 +1,6 @@
 [project]
 name = "maverick"
-version = "0.1.0"
+version = "0.1.0rc1"
 description = "Utilities for a poker-playing assistant"
 readme = "README.md"
 authors = [
@@ -12,14 +12,6 @@ dependencies = [
     "numpy>=2.4.0",
     "pydantic>=2.12.5",
 ]
-
-[build-system]
-requires = ["uv_build>=0.9.22,<0.10.0"]
-build-backend = "uv_build"
-
-[tool.uv.build-backend]
-module-name = "maverick"
-module-root = "src"
 
 [dependency-groups]
 docs = [
@@ -44,6 +36,18 @@ dev = [
     "scipy>=1.16.3",
 ]
 
+[project.urls]
+Homepage = "https://github.com/BALOGHBence/maverick"
+Documentation = "https://pymaverick.readthedocs.io/en/latest/index.html"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+[build-system]
+requires = ["uv_build>=0.9.22,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "maverick"
+module-root = "src"
