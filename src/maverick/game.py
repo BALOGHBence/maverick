@@ -113,6 +113,10 @@ class Game:
         if max_players:
             rules.dealing.max_players = max_players
 
+        if first_button_position is not None:
+            if not isinstance(first_button_position, int):
+                raise ValueError("first_button_position must be an integer")
+
         self._rules = rules
         self.max_hands = max_hands
         self._state = GameState(
@@ -357,9 +361,7 @@ class Game:
 
     def _find_first_button_position(self) -> int:
         """Determine the button position for the first hand."""
-        if self._first_button_position is not None:
-            if not isinstance(self._first_button_position, int):
-                raise ValueError("first_button_position must be an integer")
+        if isinstance(self._first_button_position, int):
             n_players = len(self.state.players)
             return self._first_button_position % n_players if n_players > 0 else 0
 
