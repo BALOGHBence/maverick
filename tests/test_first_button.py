@@ -1,7 +1,7 @@
 import unittest
 
 from maverick.players import FoldBot, CallBot, AggressiveBot
-from maverick import Game, PlayerLike, PlayerState, GameState
+from maverick import Game, PlayerLike, PlayerState
 
 
 class TestFirstButtonLogic(unittest.TestCase):
