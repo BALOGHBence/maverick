@@ -7,8 +7,8 @@ from maverick import Game, PlayerLike, PlayerState, GameState
 class TestFirstButtonLogic(unittest.TestCase):
     """Test Game initialization."""
 
-    def test_first_button_position_0(self):
-        """Test game initialization with default parameters."""
+    def test_first_button_position_random(self):
+        """Test random first button position is within range on game initialization."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
 
         players: list[PlayerLike] = [
