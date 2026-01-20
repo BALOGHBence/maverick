@@ -71,13 +71,6 @@ class TestGameInitialization(unittest.TestCase):
         self.assertEqual(game.max_hands, 50)
         self.assertTrue(game._events._strict)
 
-    def test_game_init_creates_empty_histories(self):
-        """Test that game initialization creates empty history lists."""
-        game = create_game()
-        self.assertEqual(game.game_history, [])
-        self.assertEqual(game.hand_history, [])
-        self.assertEqual(game.street_history, [])
-
     def test_game_init_creates_event_queue(self):
         """Test that game initialization creates an empty event queue."""
         game = create_game()
@@ -379,47 +372,6 @@ class TestGameStart(unittest.TestCase):
         self.assertEqual(events[0].type, GameEventType.GAME_STARTED)
 
 
-class TestEventHistory(unittest.TestCase):
-    """Test event history tracking."""
-
-    def test_game_history_records_events(self):
-        """Test that game_history records all events."""
-        game = create_game(max_hands=1)
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
-        p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
-        game.add_player(p1)
-        game.add_player(p2)
-        game.start()
-
-        self.assertTrue(len(game.game_history) > 0)
-        # Should have at least PLAYER_JOINED, GAME_STARTED events
-        event_types = [e.type for e in game.game_history]
-        self.assertIn(GameEventType.PLAYER_JOINED, event_types)
-        self.assertIn(GameEventType.GAME_STARTED, event_types)
-
-    def test_hand_history_records_events(self):
-        """Test that hand_history records events."""
-        game = create_game(max_hands=1)
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
-        p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
-        game.add_player(p1)
-        game.add_player(p2)
-        game.start()
-
-        self.assertTrue(len(game.hand_history) > 0)
-
-    def test_street_history_records_events(self):
-        """Test that street_history records events."""
-        game = create_game(max_hands=1)
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
-        p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
-        game.add_player(p1)
-        game.add_player(p2)
-        game.start()
-
-        self.assertTrue(len(game.street_history) > 0)
-
-
 class TestCreateEvent(unittest.TestCase):
     """Test Game._create_event method."""
 
@@ -463,21 +415,6 @@ class TestCreateEvent(unittest.TestCase):
 
 class TestEmitMethod(unittest.TestCase):
     """Test Game._emit method."""
-
-    def test_emit_adds_to_histories(self):
-        """Test that _emit adds event to all history lists."""
-        game = create_game()
-        event = game._create_event(GameEventType.GAME_STARTED)
-
-        initial_game_len = len(game.game_history)
-        initial_hand_len = len(game.hand_history)
-        initial_street_len = len(game.street_history)
-
-        game._emit(event)
-
-        self.assertEqual(len(game.game_history), initial_game_len + 1)
-        self.assertEqual(len(game.hand_history), initial_hand_len + 1)
-        self.assertEqual(len(game.street_history), initial_street_len + 1)
 
     def test_emit_calls_handlers(self):
         """Test that _emit calls subscribed handlers."""

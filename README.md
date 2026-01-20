@@ -56,6 +56,25 @@ The project has extensive [documentation](https://pymaverick.readthedocs.io/en/l
 
 The project adheres to [semantic versioning](https://semver.org/).
 
+## Contributing
+
+Contributions are currently expected in any the following ways:
+
+- **finding bugs**
+  If you run into trouble when using the library and you think it is a bug, feel free to raise an issue.
+- **feedback**
+  All kinds of ideas are welcome. For instance if you feel like something is still shady (after reading the user guide), we want to know. Be gentle though, the development of the library is financially not supported yet.
+- **feature requests**
+  Tell us what you think is missing (with realistic expectations).
+- **examples**
+  If you've done something with the library and you think that it would make for a good example, get in touch with the developers and we will happily inlude it in the documention.
+- **funding**
+  Use one of the supported funding channels. Any amount you can afford is appreciated.
+- **sharing is caring**
+  If you like the library, share it with your friends or colleagues so they can like it too.
+
+In all cases, read the [contributing guidelines](CONTRIBUTING.md) before you do anything.
+
 ## License
 
 This package is licensed under the [MIT license](LICENSE.txt).

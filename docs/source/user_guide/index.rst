@@ -11,3 +11,4 @@ User Guide
    custom_players
    betting_rules
    events
+   reproducibility

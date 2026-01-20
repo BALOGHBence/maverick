@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, TYPE_CHECKING
+from typing import Tuple, TYPE_CHECKING
 from itertools import combinations
 
 if TYPE_CHECKING:  # pragma: no cover

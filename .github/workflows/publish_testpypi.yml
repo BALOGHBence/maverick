@@ -1,0 +1,51 @@
+# deploy to TestPyPI when PR is merged into main
+
+name: Deploy to TestPyPI
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  deploy:
+    # Only when merged, and only when the PR was dev -> main
+    if: >
+      ${{
+        github.event.pull_request.merged == true &&
+        github.event.pull_request.head.ref == 'dev'
+      }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # needed for trusted publishing
+      contents: read
+
+    # Dedicated environments with protections for publishing are strongly recommended.
+    # For more information, see: https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#deployment-protection-rules
+    # environment:
+      # name: pypi
+      # OPTIONAL: uncomment and update to include your PyPI project URL in the deployment status:
+      # url: https://pypi.org/p/YOURPROJECT
+      #
+      # ALTERNATIVE: if your GitHub Release name is the PyPI project version string
+      # ALTERNATIVE: exactly, uncomment the following line instead:
+      # url: https://pypi.org/project/YOURPROJECT/${{ github.event.release.name }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: pip install build
+
+      - name: Build dist
+        run: python -m build
+
+      # - name: Publish to TestPyPI (Trusted Publishing)
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     repository-url: https://test.pypi.org/legacy/

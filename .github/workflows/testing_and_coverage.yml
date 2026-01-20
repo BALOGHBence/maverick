@@ -1,0 +1,51 @@
+# tests only on PRs (dev + dev->main) and branch-gating
+
+name: Testing and Coverage Report Generation
+
+on:
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  gate-main-only-from-dev:
+    if: ${{ github.base_ref == 'main' }}
+    env:
+      BASE_REF: ${{ github.base_ref }}
+      HEAD_REF: ${{ github.head_ref }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure PR to main comes only from dev
+        run: |
+          printf 'Base: %s\n' "$BASE_REF"
+          printf 'Head: %s\n' "$HEAD_REF"
+
+          if [ "$BASE_REF" = "main" ] && [ "$HEAD_REF" != "dev" ]; then
+            echo "Only 'dev' may open pull requests into 'main'."
+            exit 1
+          fi
+
+  tests:
+    # Run on PRs to dev, and on PRs to main only if head is dev
+    if: ${{ github.base_ref == 'dev' || (github.base_ref == 'main' && github.head_ref == 'dev') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies
+        run: uv sync --group test
+
+      - name: Run tests
+        run: uv run pytest --cov=maverick --cov-branch --cov-report=xml --cov-config=.coveragerc 
+
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de  # v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

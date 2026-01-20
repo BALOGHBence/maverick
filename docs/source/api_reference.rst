@@ -16,6 +16,7 @@ Core Classes
    maverick.protocol.PlayerLike
    maverick.player.Player
    maverick.playerstate.PlayerState
+   maverick.playeraction.PlayerAction
 
 Card and Deck
 -------------

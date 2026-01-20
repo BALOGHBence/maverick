@@ -1,7 +1,7 @@
 """
-Texas Hold'em Poker Game State Machine.
+Poker Game State Machine.
 
-This module implements a complete Texas Hold'em poker game using a state machine
+This module implements a complete poker game using a state machine
 architecture. The game manages player actions, betting rounds, card dealing, and
 pot distribution.
 """
@@ -20,6 +20,7 @@ from .enums import (
     GameStateType,
     PlayerStateType,
     Street,
+    Suit,
 )
 from .events import GameEvent
 from .holding import Holding
@@ -65,6 +66,9 @@ class Game:
         Custom poker rules to use. If None, default Texas Hold'em rules are applied. When provided, other
         parameters (small_blind, big_blind, ante, min_players, max_players) will override the corresponding
         fields in the rules.
+    first_button_position : int | None
+        The seat index of the player who will be the button in the first hand. If None (the default), the
+        button is assigned randomly using a card draw.
     """
 
     def __init__(
@@ -79,6 +83,7 @@ class Game:
         exc_handling_mode: str = "log",
         log_events: bool = True,
         rules: Optional[PokerRules] = None,
+        first_button_position: Optional[int] = None,
     ):
         if not exc_handling_mode in ["log", "raise"]:
             raise ValueError("exc_handling_mode must be 'log' or 'raise'")
@@ -108,6 +113,13 @@ class Game:
         if max_players:
             rules.dealing.max_players = max_players
 
+        if first_button_position is not None:
+            if not isinstance(first_button_position, int):
+                raise ValueError("first_button_position must be an integer")
+
+            if not first_button_position >= 0:
+                raise ValueError("first_button_position must be non-negative")
+
         self._rules = rules
         self.max_hands = max_hands
         self._state = GameState(
@@ -118,12 +130,11 @@ class Game:
         self._event_queue: Deque[GameEventType] = deque()
         self._logger = logging.getLogger("maverick")
         self._log_events = log_events
+        self._first_button_position = first_button_position
 
         # Event handling
         self._events = EventBus(strict=exc_handling_mode == "raise")
-        self.game_history: list[GameEvent] = []
-        self.hand_history: list[GameEvent] = []
-        self.street_history: list[GameEvent] = []
+        self._event_history: list[GameEvent] = []
 
     @property
     def rules(self) -> PokerRules:
@@ -136,19 +147,15 @@ class Game:
         return self._state
 
     @property
-    def history(self) -> dict[str, list[GameEvent]]:
-        """Returns the history.
+    def history(self) -> list[GameEvent]:
+        """Returns the event history.
 
         Returns
         -------
-        dict[str, list[GameEvent]]
-            A dictionary containing 'game', 'hand', and 'street' histories.
+        list[GameEvent]
+            A list of all game events in chronological order.
         """
-        return {
-            "game": self.game_history,
-            "hand": self.hand_history,
-            "street": self.street_history,
-        }
+        return self._event_history
 
     def _log(
         self,
@@ -217,9 +224,7 @@ class Game:
         event : GameEvent
             The event to emit to handlers.
         """
-        self.game_history.append(event)
-        self.hand_history.append(event)
-        self.street_history.append(event)
+        self._event_history.append(event)
 
         # external listeners
         self._events.emit(event, self)
@@ -348,6 +353,37 @@ class Game:
         self._initialize_game()
         self._event_queue.append(GameEventType.GAME_STARTED)
         self._drain_event_queue()
+
+    def _find_first_button_position(self) -> int:
+        """Determine the button position for the first hand."""
+        if isinstance(self._first_button_position, int):
+            n_players = len(self.state.players)
+            return self._first_button_position % n_players if n_players > 0 else 0
+
+        n_players = len(self.state.players)
+        if n_players == 0:
+            return 0
+
+        deck = Deck.standard_deck(shuffle=True)
+        suit_priority = {
+            Suit.SPADES: 3,
+            Suit.HEARTS: 2,
+            Suit.DIAMONDS: 1,
+            Suit.CLUBS: 0,
+        }
+
+        best_index = 0
+        best_score: tuple[int, int] | None = None
+
+        for idx in range(len(self.state.players)):
+            card = deck.deal(1)[0]
+            score = (card.rank.value, suit_priority[card.suit])
+
+            if best_score is None or score > best_score:
+                best_score = score
+                best_index = idx
+
+        return best_index
 
     def _handle_event(self, event: GameEventType) -> None:
         match event:
@@ -513,6 +549,7 @@ class Game:
 
     def _initialize_game(self) -> None:
         self.state.hand_number = 0
+        self.state.button_position = self._find_first_button_position()
 
     def _start_new_hand(self) -> None:
         self.state.hand_number += 1

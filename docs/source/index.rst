@@ -6,6 +6,8 @@ Maverick - A Poker Library in Python
 **Useful links**:
 :ref:`Installation <installation>` |
 :doc:`Getting Started <getting_started>` |
+:doc:`Poker Fundamentals <poker_fundamentals>` |
+:ref:`Hand Rankings <target_hand_rankings>` |
 `Issue Tracker <https://github.com/BALOGHBence/maverick/issues>`_ | 
 `Source Repository <https://github.com/BALOGHBence/maverick>`_
 
@@ -23,7 +25,7 @@ Maverick - A Poker Library in Python
 
         <p>
           Maverick is developed and maintained in the open.
-          If it saves you time, helps your research, or supports your work,
+          If you want to see it thrive and grow,
           you can help sustain its development.
         </p>
 
@@ -44,12 +46,13 @@ create poker games, develop AI players, and analyze poker scenarios.
 Features
 --------
 
-* **Confgurable Poker Games**: Full game rules and mechanics that supports a variaty of game variants
-* **State Machine Architecture**: Clean separation of game states and transitions
-* **Flexible Player System**: Protocol-based player interface for custom implementations
-* **Hand Evaluation**: Built-in poker hand scoring and comparison
-* **Event System**: Track all game events for analysis and replay
-* **Well Documented**: Comprehensive documentation of rules and APIs
+- **Configurable Poker Games**: Full rules and mechanics supporting a variety of flavours
+- **State Machine Architecture**: Clean separation of game states and transitions
+- **Flexible Player System**: Protocol-based player interface for custom implementations
+- **Hand Evaluation**: Built-in poker hand scoring and comparison
+- **Event System**: Track all game events for analysis and replay
+- **Well Documented**: Comprehensive documentation of rules and APIs
+- **Thoroughly Tested**: Features are heavily tested with high code coverage
 
 Contents
 --------
@@ -59,6 +62,7 @@ Contents
    
    overview
    getting_started
+   poker_fundamentals
 
 .. toctree::
    :maxdepth: 2

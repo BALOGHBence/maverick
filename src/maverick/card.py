@@ -13,8 +13,8 @@ __all__ = ["Card"]
 class Card(BaseModel):
     """A playing card with a suit and rank.
 
-    Parameters
-    ----------
+    Fields
+    ------
     suit : Suit
         The suit of the card (Hearts, Diamonds, Clubs, Spades).
     rank : Rank
