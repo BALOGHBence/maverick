@@ -21,7 +21,7 @@ class GameState(BaseModel):
 
     This class encapsulates all information about the current state of the game,
     including players, community cards, pot, and betting information.
-    
+
     Fields
     ------
     state_type : GameStateType

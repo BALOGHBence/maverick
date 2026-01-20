@@ -9,7 +9,7 @@ __all__ = ["PlayerAction"]
 
 class PlayerAction(BaseModel):
     """Represents an action taken by a player during their turn in a game.
-    
+
     Fields
     ------
     player_id : str

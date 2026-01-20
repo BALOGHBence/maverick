@@ -14,7 +14,7 @@ __all__ = ["Holding"]
 
 class Holding(BaseModel):
     """A number of cards held by a player.
-    
+
     Fields
     ------
     cards : list[Card]
