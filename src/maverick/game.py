@@ -1,7 +1,7 @@
 """
-Texas Hold'em Poker Game State Machine.
+Poker Game State Machine.
 
-This module implements a complete Texas Hold'em poker game using a state machine
+This module implements a complete poker game using a state machine
 architecture. The game manages player actions, betting rounds, card dealing, and
 pot distribution.
 """
@@ -134,9 +134,7 @@ class Game:
 
         # Event handling
         self._events = EventBus(strict=exc_handling_mode == "raise")
-        self.game_history: list[GameEvent] = []
-        self.hand_history: list[GameEvent] = []
-        self.street_history: list[GameEvent] = []
+        self._event_history: list[GameEvent] = []
 
     @property
     def rules(self) -> PokerRules:
@@ -149,19 +147,15 @@ class Game:
         return self._state
 
     @property
-    def history(self) -> dict[str, list[GameEvent]]:
-        """Returns the history.
+    def history(self) -> list[GameEvent]:
+        """Returns the event history.
 
         Returns
         -------
-        dict[str, list[GameEvent]]
-            A dictionary containing 'game', 'hand', and 'street' histories.
+        list[GameEvent]
+            A list of all game events in chronological order.
         """
-        return {
-            "game": self.game_history,
-            "hand": self.hand_history,
-            "street": self.street_history,
-        }
+        return self._event_history
 
     def _log(
         self,
@@ -230,9 +224,7 @@ class Game:
         event : GameEvent
             The event to emit to handlers.
         """
-        self.game_history.append(event)
-        self.hand_history.append(event)
-        self.street_history.append(event)
+        self._event_history.append(event)
 
         # external listeners
         self._events.emit(event, self)

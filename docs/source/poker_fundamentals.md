@@ -214,6 +214,7 @@ When some players can bet more than others, the game splits the pot into:
 
 At the end, the game awards pots from smallest to largest, each among eligible players.
 
+(target_hand_rankings)=
 ## Hand Rankings (Standard 5-Card Poker)
 
 Most poker variants use the same ranking system for comparing 5-card hands.

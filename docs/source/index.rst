@@ -6,6 +6,8 @@ Maverick - A Poker Library in Python
 **Useful links**:
 :ref:`Installation <installation>` |
 :doc:`Getting Started <getting_started>` |
+:doc:`Poker Fundamentals <poker_fundamentals>` |
+:ref:`Hand Rankings <target_hand_rankings>` |
 `Issue Tracker <https://github.com/BALOGHBence/maverick/issues>`_ | 
 `Source Repository <https://github.com/BALOGHBence/maverick>`_
 
