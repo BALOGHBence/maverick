@@ -1,6 +1,6 @@
 [project]
 name = "maverick"
-version = "0.1.0rc2"
+version = "0.1.0"
 description = "Utilities for a poker-playing assistant"
 readme = "README.md"
 authors = [

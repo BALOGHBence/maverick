@@ -974,7 +974,7 @@ wheels = [
 
 [[package]]
 name = "maverick"
-version = "0.1.0rc2"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
