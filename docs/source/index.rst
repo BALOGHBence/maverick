@@ -59,6 +59,7 @@ Contents
    
    overview
    getting_started
+   poker_fundamentals
 
 .. toctree::
    :maxdepth: 2
