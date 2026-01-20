@@ -9,14 +9,18 @@ on:
 jobs:
   gate-main-only-from-dev:
     if: ${{ github.base_ref == 'main' }}
+    env:
+      BASE_REF: ${{ github.base_ref }}
+      HEAD_REF: ${{ github.head_ref }}
     runs-on: ubuntu-latest
     steps:
       - name: Ensure PR to main comes only from dev
         run: |
-          echo "Base: ${{ github.base_ref }}"
-          echo "Head: ${{ github.head_ref }}"
-          if [ "${{ github.head_ref }}" != "dev" ]; then
-            echo "ERROR: PRs to main must come from dev only."
+          printf 'Base: %s\n' "$BASE_REF"
+          printf 'Head: %s\n' "$HEAD_REF"
+
+          if [ "$BASE_REF" = "main" ] && [ "$HEAD_REF" != "dev" ]; then
+            echo "Only 'dev' may open pull requests into 'main'."
             exit 1
           fi
 
@@ -42,6 +46,6 @@ jobs:
         run: uv run pytest --cov=maverick --cov-branch --cov-report=xml --cov-config=.coveragerc 
 
       - name: Upload results to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de  # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
