@@ -121,7 +121,6 @@ html_theme_options = {
       "image_light": "_static/img/logo-maverick-light.svg",
       "image_dark": "_static/img/logo-maverick-dark.svg",
     },
-    "extra_footer": "<div>hi there!</div>"
 }
 
 # Intersphinx configuration
