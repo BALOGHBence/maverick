@@ -11,16 +11,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout release tag (full history)
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
 
       - name: Ensure release is from main
         run: |
-          # Best-effort gate: confirm the tag commit is contained in main
-          git fetch --all --tags
+          # Fetch main so we can test ancestry
+          git fetch origin main --prune
+
           TAG="${{ github.event.release.tag_name }}"
-          COMMIT="$(git rev-list -n 1 "$TAG")"
-          if ! git branch -r --contains "$COMMIT" | grep -q "origin/main"; then
+          COMMIT="$(git rev-parse HEAD)"  # we're on the tag
+
+          echo "Tag: $TAG"
+          echo "Commit: $COMMIT"
+
+          if ! git merge-base --is-ancestor "$COMMIT" "origin/main"; then
             echo "ERROR: Release tag must point to a commit reachable from main."
             exit 1
           fi
