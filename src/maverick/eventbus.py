@@ -26,7 +26,7 @@ class Subscription(BaseModel):
     handler: EventHandler
     priority: int = 0
     once: bool = False
-    filter: Optional[Callable[[Any], bool]] = None
+    mask: Optional[Callable[[Any], bool]] = None
 
     model_config = ConfigDict(
         frozen=True,  # Makes the model immutable
@@ -55,7 +55,7 @@ class EventBus:
         *,
         priority: int = 0,
         once: bool = False,
-        filter: Optional[Callable[[Any], bool]] = None,
+        mask: Optional[Callable[[Any], bool]] = None,
     ) -> str:
         """Subscribe to an event type with a handler.
 
@@ -69,7 +69,7 @@ class EventBus:
             Priority of the handler; higher priority handlers are called first.
         once : bool
             If True, the handler will be removed after the first call.
-        filter : Optional[Callable[[Any], bool]]
+        mask : Optional[Callable[[Any], bool]]
             Optional filter function to determine if the handler should be called.
         """
         token = uuid.uuid4().hex
@@ -80,7 +80,7 @@ class EventBus:
                 handler=handler,
                 priority=priority,
                 once=once,
-                filter=filter,
+                mask=mask,
             )
         )
         # higher priority first
@@ -100,7 +100,7 @@ class EventBus:
         for s in subs:
             if getattr(event, "type", None) != s.event_type:
                 continue
-            if s.filter is not None and not s.filter(event):
+            if s.mask is not None and not s.mask(event):
                 continue
 
             try:
