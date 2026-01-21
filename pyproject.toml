@@ -1,7 +1,7 @@
 [project]
 name = "maverick"
 version = "0.1.0"
-description = "Utilities for a poker-playing assistant"
+description = "A Python library for simulating poker games with custom player strategies"
 readme = "README.md"
 authors = [
     { name = "Bence Balogh", email = "benceeok@gmail.com" }

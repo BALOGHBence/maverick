@@ -32,12 +32,6 @@
 
 </div>
 
-> **Note**
->
-> Maverick is under active development and subject to change. 
-> First deployment to PyPI is going to be announced on
-> [my LinkedIn profile](https://www.linkedin.com/in/bence-balogh-082073181/).
-
 ## Highlights
 
 - **Configurable Poker Games**: Full rules and mechanics supporting a variety of flavours

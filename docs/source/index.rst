@@ -11,12 +11,6 @@ Maverick - A Poker Library in Python
 `Issue Tracker <https://github.com/BALOGHBence/maverick/issues>`_ | 
 `Source Repository <https://github.com/BALOGHBence/maverick>`_
 
-.. note::
-
-   Maverick is under development and subject to change.
-   First deployment to PyPI is going to be announced on
-   `my LinkedIn profile <https://www.linkedin.com/in/bence-balogh-082073181/>`_.
-
 .. margin:: Supporting Maverick
 
     .. raw:: html
@@ -90,4 +84,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
