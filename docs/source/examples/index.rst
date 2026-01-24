@@ -15,3 +15,4 @@ the library. At this point, it is assumed that
    most_successful_strategy
    advanced_custom_player
    llm_as_player
+   game_history_for_llm
