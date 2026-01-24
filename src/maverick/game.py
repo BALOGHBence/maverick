@@ -255,6 +255,7 @@ class Game:
         event_type: GameEventType,
         player_id: Optional[str] = None,
         action: Optional[ActionType] = None,
+        payload: Optional[dict] = None,
     ) -> GameEvent:
         """
         Create a GameEvent with current game state.
@@ -279,6 +280,7 @@ class Game:
             street=self.state.street,
             player_id=player_id,
             action=action,
+            payload=payload or {},
         )
 
     def add_player(self, player: PlayerLike) -> None:
@@ -407,28 +409,27 @@ class Game:
 
             case GameEventType.HOLE_CARDS_DEALT:
                 assert self.state.state_type == GameStateType.DEALING
-                self.state.state_type = GameStateType.PRE_FLOP
                 self._post_blinds()
                 self._emit(self._create_event(GameEventType.BLINDS_POSTED))
                 self._event_queue.append(GameEventType.BLINDS_POSTED)
 
             case GameEventType.BLINDS_POSTED:
-                assert self.state.state_type == GameStateType.PRE_FLOP
+                assert self.state.state_type == GameStateType.DEALING
                 self._post_antes()
                 self._emit(self._create_event(GameEventType.ANTES_POSTED))
                 self._event_queue.append(GameEventType.ANTES_POSTED)
 
             case GameEventType.ANTES_POSTED:
-                assert self.state.state_type == GameStateType.PRE_FLOP
+                assert self.state.state_type == GameStateType.DEALING
+                self.state.state_type = GameStateType.PRE_FLOP
+                self._emit(self._create_event(GameEventType.BETTING_ROUND_STARTED))
                 self._take_action_from_current_player()
                 self._event_queue.append(GameEventType.PLAYER_ACTION_TAKEN)
 
             case GameEventType.PLAYER_ACTION_TAKEN:
                 if self.state.is_betting_round_complete():
                     self._complete_betting_round()
-                    self._emit(
-                        self._create_event(GameEventType.BETTING_ROUND_COMPLETED)
-                    )
+                    self._emit(self._create_event(GameEventType.BETTING_ROUND_COMPLETED))
                     self._event_queue.append(GameEventType.BETTING_ROUND_COMPLETED)
                 else:
                     self._advance_to_next_player()
@@ -439,6 +440,7 @@ class Game:
                 if len(self.state.get_players_in_hand()) == 1:
                     self.state.state_type = GameStateType.SHOWDOWN
                     self.state.street = Street.SHOWDOWN
+                    self._emit(self._create_event(GameEventType.SHOWDOWN_STARTED))
                     self._handle_showdown()
                     self._emit(self._create_event(GameEventType.SHOWDOWN_COMPLETED))
                     self._event_queue.append(GameEventType.SHOWDOWN_COMPLETED)
@@ -467,6 +469,7 @@ class Game:
                     elif self.state.state_type == GameStateType.RIVER:
                         self.state.state_type = GameStateType.SHOWDOWN
                         self.state.street = Street.SHOWDOWN
+                        self._emit(self._create_event(GameEventType.SHOWDOWN_STARTED))
                         self._handle_showdown()
                         self._emit(self._create_event(GameEventType.SHOWDOWN_COMPLETED))
                         self._event_queue.append(GameEventType.SHOWDOWN_COMPLETED)
@@ -476,6 +479,7 @@ class Game:
                 | GameEventType.TURN_DEALT
                 | GameEventType.RIVER_DEALT
             ):
+                self._emit(self._create_event(GameEventType.BETTING_ROUND_STARTED))
                 self._take_action_from_current_player()
                 self._event_queue.append(GameEventType.PLAYER_ACTION_TAKEN)
 
@@ -897,9 +901,9 @@ class Game:
                 player_add,
                 player_bet_after,
                 new_table_bet,
-                call_part,
+                _,
                 raise_size,
-                _is_all_in,
+                _,
             ) = self._calculate_raise_components(current_player, chips_to_add)
 
             current_player.state.current_bet = player_bet_after
@@ -970,7 +974,7 @@ class Game:
         """
         Move to the next player who needs to act.
 
-        IMPORTANT FIX:
+        IMPORTANT:
         A player may have already 'acted_this_street' but still needs to act again
         if they are facing a bet (player.current_bet < table.current_bet). This is
         what makes short all-ins work correctly without resetting acted flags.
@@ -982,8 +986,11 @@ class Game:
             self.state.current_player_index = (
                 self.state.current_player_index + 1
             ) % num_players
+            
+            # get current player
             p = self.state.players[self.state.current_player_index]
 
+            # skip if not active
             if p.state.state_type != PlayerStateType.ACTIVE:
                 continue
 
@@ -991,8 +998,10 @@ class Game:
             needs_action = (not p.state.acted_this_street) or facing_call
 
             if needs_action:
+                # we've found the next player who needs to act
                 return
 
+        # no players need to act, reset to start index
         self.state.current_player_index = start_index
 
     def _complete_betting_round(self) -> None:
@@ -1053,6 +1062,13 @@ class Game:
                 f"Player {winner.name} wins {self.state.pot} from the pot.",
                 logging.INFO,
             )
+            self._emit(
+                self._create_event(
+                    GameEventType.POT_WON,
+                    player_id=winner.id,
+                    payload={"amount": self.state.pot},
+                )
+            )
         else:
             assert len(self.state.community_cards) == 5
             player_scores: list[tuple[PlayerLike, float]] = []
@@ -1064,6 +1080,12 @@ class Game:
                     self._log(
                         f"Player {player.name} has holding {player_holding} at showdown,",
                         logging.INFO,
+                    )
+                    self._emit(
+                        self._create_event(
+                            GameEventType.PLAYER_CARDS_REVEALED,
+                            player_id=player.id,
+                        )
                     )
                     best_hand, best_hand_type, best_score = find_highest_scoring_hand(
                         private_cards=player.state.holding.cards,
@@ -1095,6 +1117,13 @@ class Game:
                 winner.state.stack += amount
                 self._log(
                     f"Player {winner.name} wins {amount} from the pot.", logging.INFO
+                )
+                self._emit(
+                    self._create_event(
+                        GameEventType.POT_WON,
+                        player_id=winner.id,
+                        payload={"amount": amount},
+                    )
                 )
 
         self._log("Showdown complete\n", logging.INFO)
