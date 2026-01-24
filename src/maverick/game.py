@@ -491,9 +491,41 @@ class Game:
             case GameEventType.HAND_ENDED:
                 self._log("Hand ended\n", logging.INFO, street_prefix=False)
 
+                # eliminate players with zero stack
+                eliminated_players = [
+                    p for p in self.state.players if p.state.stack == 0
+                ]
+                for player in eliminated_players:
+                    self._emit(
+                        self._create_event(
+                            GameEventType.PLAYER_ELIMINATED, player_id=player.id
+                        )
+                    )
+                    self._log(
+                        f"Player {player.name} has been eliminated from the game.",
+                        logging.INFO,
+                        street_prefix=False,
+                    )
+                    self._event_queue.append(GameEventType.PLAYER_ELIMINATED)
+                
+                # Remove eliminated players from the game
                 self.state.players = [
                     p for p in self.state.players if p.state.stack > 0
                 ]
+                
+                # remove eliminated players from the table
+                for player in eliminated_players:
+                    self._emit(
+                        self._create_event(
+                            GameEventType.PLAYER_LEFT, player_id=player.id
+                        )
+                    )
+                    self._log(
+                        f"Player {player.name} has left the table.",
+                        logging.INFO,
+                        street_prefix=False,
+                    )
+                    self._event_queue.append(GameEventType.PLAYER_LEFT)
 
                 if len(self.state.players) < self.rules.dealing.min_players:
                     self._log(
@@ -502,11 +534,8 @@ class Game:
                     self.state.state_type = GameStateType.GAME_OVER
                     self._event_queue.append(GameEventType.GAME_ENDED)
                 else:
-                    n_players = len(self.state.players)
-                    self.state.button_position = (
-                        self.state.button_position + 1
-                    ) % n_players
-
+                    self._move_button()
+                    
                     if self.state.hand_number >= self.max_hands:
                         self._log(
                             "Reached maximum number of hands, ending game.",
@@ -531,6 +560,9 @@ class Game:
             case GameEventType.PLAYER_LEFT:
                 if len(self.state.players) < self.rules.dealing.min_players:
                     self.state.state_type = GameStateType.WAITING_FOR_PLAYERS
+                    
+            case GameEventType.PLAYER_ELIMINATED:
+                pass
 
             case _:  # pragma: no cover
                 raise ValueError(f"Unknown event: {event}")
@@ -1051,6 +1083,10 @@ class Game:
             f"Dealt river. Community cards: {[card.utf8() for card in self.state.community_cards]}",
             logging.INFO,
         )
+        
+    def _move_button(self) -> None:
+        n_players = len(self.state.players)
+        self.state.button_position = (self.state.button_position + 1) % n_players
 
     def _handle_showdown(self) -> None:
         players_in_hand = self.state.get_players_in_hand()
@@ -1081,18 +1117,25 @@ class Game:
                         f"Player {player.name} has holding {player_holding} at showdown,",
                         logging.INFO,
                     )
-                    self._emit(
-                        self._create_event(
-                            GameEventType.PLAYER_CARDS_REVEALED,
-                            player_id=player.id,
-                        )
-                    )
                     best_hand, best_hand_type, best_score = find_highest_scoring_hand(
                         private_cards=player.state.holding.cards,
                         community_cards=self.state.community_cards,
                         n_private=self.rules.showdown.hole_cards_required,
                     )
                     player_scores.append((player, best_score))
+                    
+                    self._emit(
+                        self._create_event(
+                            GameEventType.PLAYER_CARDS_REVEALED,
+                            player_id=player.id,
+                            payload={
+                                "holding": [card.code() for card in player.state.holding.cards],
+                                "best_hand": [card.code() for card in best_hand],
+                                "best_hand_type": best_hand_type.name,
+                                "best_score": best_score,
+                            },
+                        )
+                    )
                     self._log(
                         (
                             f"Player {player.name} has hand {best_hand_type.name} with "

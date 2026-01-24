@@ -323,13 +323,15 @@ class GameEventType(Enum):
     PLAYER_CARDS_REVEALED : str
         Player's cards have been revealed at showdown. This only happends if there are multiple
         winners. If there is a single winner, their cards are not revealed.
+    PLAYER_ELIMINATED : str
+        Player has been eliminated from the game.
     """
 
     # Game lifecycle events
     GAME_STARTED = auto()
+    GAME_ENDED = auto()
     HAND_STARTED = auto()
     HAND_ENDED = auto()
-    GAME_ENDED = auto()
     SHOWDOWN_STARTED = auto()
     SHOWDOWN_COMPLETED = auto()
 
@@ -343,13 +345,12 @@ class GameEventType(Enum):
     PLAYER_ACTION_TAKEN = auto()
     POT_WON = auto()
     PLAYER_CARDS_REVEALED = auto()
+    PLAYER_JOINED = auto()
+    PLAYER_LEFT = auto()
+    PLAYER_ELIMINATED = auto()
 
-    # Stakes events
+    # Betting events
     BLINDS_POSTED = auto()
     ANTES_POSTED = auto()
     BETTING_ROUND_STARTED = auto()
     BETTING_ROUND_COMPLETED = auto()
-
-    # Table events
-    PLAYER_JOINED = auto()
-    PLAYER_LEFT = auto()
