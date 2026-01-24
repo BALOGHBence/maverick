@@ -131,6 +131,7 @@ class Game:
         self._logger = logging.getLogger("maverick")
         self._log_events = log_events
         self._first_button_position = first_button_position
+        self._all_stacks_at_game_start = 0
 
         # Event handling
         self._events = EventBus(strict=exc_handling_mode == "raise")
@@ -586,6 +587,9 @@ class Game:
     def _initialize_game(self) -> None:
         self.state.hand_number = 0
         self.state.button_position = self._find_first_button_position()
+        
+        for p in self.state.players:
+            self._all_stacks_at_game_start += p.state.stack
 
     def _start_new_hand(self) -> None:
         self.state.hand_number += 1
@@ -1087,6 +1091,15 @@ class Game:
     def _move_button(self) -> None:
         n_players = len(self.state.players)
         self.state.button_position = (self.state.button_position + 1) % n_players
+        
+    def _winners_in_button_order(self, winners: list[PlayerLike]) -> list[PlayerLike]:
+        n_players = len(self.state.players)
+        idx_btn = self.state.button_position
+        rel_btn_idx = {}
+        for i in range(n_players):
+            p = self.state.players[(idx_btn + 1 + i) % n_players]
+            rel_btn_idx[p.id] = i
+        return sorted(winners, key=lambda p: rel_btn_idx[p.id])
 
     def _handle_showdown(self) -> None:
         players_in_hand = self.state.get_players_in_hand()
@@ -1105,8 +1118,14 @@ class Game:
                     payload={"amount": self.state.pot},
                 )
             )
+            self.state.pot = 0
         else:
-            assert len(self.state.community_cards) == 5
+            assert len(self.state.community_cards) == 5, "Community cards incomplete at showdown."
+            
+            all_contributions = sum([p.state.total_contributed for p in self.state.players])
+            assert self.state.pot == all_contributions, f"{self.state.pot} vs {all_contributions}"
+            
+            # Calculate best hands and scores for all players in hand
             player_scores: list[tuple[PlayerLike, float]] = []
             for player in players_in_hand:
                 if player.state.holding:
@@ -1145,28 +1164,88 @@ class Game:
                         logging.INFO,
                     )
 
-            player_scores.sort(key=lambda x: x[1], reverse=True)
-            highest_score = player_scores[0][1]
-            winners = [p for p, s in player_scores if s == highest_score]
+            score_by_id = {p.id: s for p, s in player_scores}
+            players_in_hand_ids = {p.id for p in players_in_hand}
+            
+            # Record total contributions for pot distribution
+            contributions = {p.id: p.state.total_contributed for p in self.state.players}
+            contribution_levels = sorted({amt for amt in contributions.values() if amt > 0})
+            
+            # Distribute pot based on contributions (handles side pots)
+            pot_to_distribute = self.state.pot
+            awards = {p.id: 0 for p in self.state.players}
+            previous_level = 0
+            for level in contribution_levels:
+                segment_contributors = [p for p in self.state.players if contributions[p.id] >= level]
+                delta = level - previous_level
+                segment_amount = delta * len(segment_contributors)
+                previous_level = level
+                
+                # eligibility: must have contributed enough AND not folded
+                eligible = [p for p in segment_contributors if p.id in players_in_hand_ids]
+                
+                if not eligible:  # pragma: no cover
+                    # should never happen in a sane game, but don't crash silently
+                    raise RuntimeError("No eligible players for a pot segment.")
+                
+                # Deduct distributed segment from pot
+                self.state.pot -= segment_amount
+                
+                if len(segment_contributors) == 1:
+                    # uncalled top layer -> refund to that one contributor
+                    lone = segment_contributors[0]
+                    awards[lone.id] += segment_amount
+                    continue
+                
+                # determine winners among eligible for THIS segment
+                best = max(score_by_id[p.id] for p in eligible)
+                segment_winners = [p for p in eligible if score_by_id[p.id] == best]
 
-            winners_sorted: list[PlayerLike] = sorted(
-                winners, key=lambda p: p.state.seat if p.state.seat is not None else 0
-            )
+                share, rem = divmod(segment_amount, len(segment_winners))
 
-            pot_share = self.state.pot // len(winners)
-            remainder = self.state.pot % len(winners)
-            for i, winner in enumerate(winners_sorted):
-                amount = pot_share + (1 if i < remainder else 0)
-                winner.state.stack += amount
+                # distribute shares
+                for w in segment_winners:
+                    awards[w.id] += share
+
+                # distribute remainder in relative button order
+                segment_winners_sorted = self._winners_in_button_order(segment_winners)
+                for i in range(rem):
+                    idx = i % len(segment_winners_sorted)
+                    awards[segment_winners_sorted[idx].id] += 1
+            
+            # Sanity check if the pot is fully distributed
+            assert self.state.pot == 0, f"Pot should be fully distributed, {self.state.pot} remaining."
+            
+            # Pay out awards to winners
+            pot_distributed = 0
+            id_to_player = {p.id: p for p in self.state.players}
+            for p_id in awards:
+                amount = awards[p_id]
+                if amount == 0:
+                    continue
+                player = id_to_player[p_id]
+                player.state.stack += amount
+                pot_distributed += amount
                 self._log(
-                    f"Player {winner.name} wins {amount} from the pot.", logging.INFO
+                    f"Player {player.name} wins {amount} from the pot.", logging.INFO
                 )
                 self._emit(
                     self._create_event(
                         GameEventType.POT_WON,
-                        player_id=winner.id,
+                        player_id=player.id,
                         payload={"amount": amount},
                     )
                 )
+            
+            # Final sanity check
+            assert pot_distributed == pot_to_distribute
+            
+        
+        # Sanity check
+        total_stacks = sum(p.state.stack for p in self.state.players)
+        if not total_stacks == self._all_stacks_at_game_start:  # pragma: no cover
+            raise RuntimeError(
+                "Total chips in game do not match initial amount after showdown."
+            )
 
         self._log("Showdown complete\n", logging.INFO)
