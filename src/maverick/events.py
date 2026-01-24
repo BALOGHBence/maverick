@@ -22,7 +22,7 @@ class GameEvent(BaseModel):
 
     Represents a snapshot of a game event that occurred, including
     the type of event, current game state, and relevant action details.
-    
+
     Payload by event type:
     - PLAYER_CARDS_REVEALED:
         - holding: list[str] - The player's hole cards as a list of card codes.

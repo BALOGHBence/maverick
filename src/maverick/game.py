@@ -430,7 +430,9 @@ class Game:
             case GameEventType.PLAYER_ACTION_TAKEN:
                 if self.state.is_betting_round_complete():
                     self._complete_betting_round()
-                    self._emit(self._create_event(GameEventType.BETTING_ROUND_COMPLETED))
+                    self._emit(
+                        self._create_event(GameEventType.BETTING_ROUND_COMPLETED)
+                    )
                     self._event_queue.append(GameEventType.BETTING_ROUND_COMPLETED)
                 else:
                     self._advance_to_next_player()
@@ -508,12 +510,12 @@ class Game:
                         street_prefix=False,
                     )
                     self._event_queue.append(GameEventType.PLAYER_ELIMINATED)
-                
+
                 # Remove eliminated players from the game
                 self.state.players = [
                     p for p in self.state.players if p.state.stack > 0
                 ]
-                
+
                 # remove eliminated players from the table
                 for player in eliminated_players:
                     self._emit(
@@ -536,7 +538,7 @@ class Game:
                     self._event_queue.append(GameEventType.GAME_ENDED)
                 else:
                     self._move_button()
-                    
+
                     if self.state.hand_number >= self.max_hands:
                         self._log(
                             "Reached maximum number of hands, ending game.",
@@ -561,7 +563,7 @@ class Game:
             case GameEventType.PLAYER_LEFT:
                 if len(self.state.players) < self.rules.dealing.min_players:
                     self.state.state_type = GameStateType.WAITING_FOR_PLAYERS
-                    
+
             case GameEventType.PLAYER_ELIMINATED:
                 pass
 
@@ -587,7 +589,7 @@ class Game:
     def _initialize_game(self) -> None:
         self.state.hand_number = 0
         self.state.button_position = self._find_first_button_position()
-        
+
         for p in self.state.players:
             self._all_stacks_at_game_start += p.state.stack
 
@@ -1022,7 +1024,7 @@ class Game:
             self.state.current_player_index = (
                 self.state.current_player_index + 1
             ) % num_players
-            
+
             # get current player
             p = self.state.players[self.state.current_player_index]
 
@@ -1087,11 +1089,11 @@ class Game:
             f"Dealt river. Community cards: {[card.utf8() for card in self.state.community_cards]}",
             logging.INFO,
         )
-        
+
     def _move_button(self) -> None:
         n_players = len(self.state.players)
         self.state.button_position = (self.state.button_position + 1) % n_players
-        
+
     def _winners_in_button_order(self, winners: list[PlayerLike]) -> list[PlayerLike]:
         n_players = len(self.state.players)
         idx_btn = self.state.button_position
@@ -1120,11 +1122,17 @@ class Game:
             )
             self.state.pot = 0
         else:
-            assert len(self.state.community_cards) == 5, "Community cards incomplete at showdown."
-            
-            all_contributions = sum([p.state.total_contributed for p in self.state.players])
-            assert self.state.pot == all_contributions, f"{self.state.pot} vs {all_contributions}"
-            
+            assert (
+                len(self.state.community_cards) == 5
+            ), "Community cards incomplete at showdown."
+
+            all_contributions = sum(
+                [p.state.total_contributed for p in self.state.players]
+            )
+            assert (
+                self.state.pot == all_contributions
+            ), f"{self.state.pot} vs {all_contributions}"
+
             # Calculate best hands and scores for all players in hand
             player_scores: list[tuple[PlayerLike, float]] = []
             for player in players_in_hand:
@@ -1142,13 +1150,15 @@ class Game:
                         n_private=self.rules.showdown.hole_cards_required,
                     )
                     player_scores.append((player, best_score))
-                    
+
                     self._emit(
                         self._create_event(
                             GameEventType.PLAYER_CARDS_REVEALED,
                             player_id=player.id,
                             payload={
-                                "holding": [card.code() for card in player.state.holding.cards],
+                                "holding": [
+                                    card.code() for card in player.state.holding.cards
+                                ],
                                 "best_hand": [card.code() for card in best_hand],
                                 "best_hand_type": best_hand_type.name,
                                 "best_score": best_score,
@@ -1166,37 +1176,45 @@ class Game:
 
             score_by_id = {p.id: s for p, s in player_scores}
             players_in_hand_ids = {p.id for p in players_in_hand}
-            
+
             # Record total contributions for pot distribution
-            contributions = {p.id: p.state.total_contributed for p in self.state.players}
-            contribution_levels = sorted({amt for amt in contributions.values() if amt > 0})
-            
+            contributions = {
+                p.id: p.state.total_contributed for p in self.state.players
+            }
+            contribution_levels = sorted(
+                {amt for amt in contributions.values() if amt > 0}
+            )
+
             # Distribute pot based on contributions (handles side pots)
             pot_to_distribute = self.state.pot
             awards = {p.id: 0 for p in self.state.players}
             previous_level = 0
             for level in contribution_levels:
-                segment_contributors = [p for p in self.state.players if contributions[p.id] >= level]
+                segment_contributors = [
+                    p for p in self.state.players if contributions[p.id] >= level
+                ]
                 delta = level - previous_level
                 segment_amount = delta * len(segment_contributors)
                 previous_level = level
-                
+
                 # eligibility: must have contributed enough AND not folded
-                eligible = [p for p in segment_contributors if p.id in players_in_hand_ids]
-                
+                eligible = [
+                    p for p in segment_contributors if p.id in players_in_hand_ids
+                ]
+
                 if not eligible:  # pragma: no cover
                     # should never happen in a sane game, but don't crash silently
                     raise RuntimeError("No eligible players for a pot segment.")
-                
+
                 # Deduct distributed segment from pot
                 self.state.pot -= segment_amount
-                
+
                 if len(segment_contributors) == 1:
                     # uncalled top layer -> refund to that one contributor
                     lone = segment_contributors[0]
                     awards[lone.id] += segment_amount
                     continue
-                
+
                 # determine winners among eligible for THIS segment
                 best = max(score_by_id[p.id] for p in eligible)
                 segment_winners = [p for p in eligible if score_by_id[p.id] == best]
@@ -1212,10 +1230,12 @@ class Game:
                 for i in range(rem):
                     idx = i % len(segment_winners_sorted)
                     awards[segment_winners_sorted[idx].id] += 1
-            
+
             # Sanity check if the pot is fully distributed
-            assert self.state.pot == 0, f"Pot should be fully distributed, {self.state.pot} remaining."
-            
+            assert (
+                self.state.pot == 0
+            ), f"Pot should be fully distributed, {self.state.pot} remaining."
+
             # Pay out awards to winners
             pot_distributed = 0
             id_to_player = {p.id: p for p in self.state.players}
@@ -1236,11 +1256,10 @@ class Game:
                         payload={"amount": amount},
                     )
                 )
-            
+
             # Final sanity check
             assert pot_distributed == pot_to_distribute
-            
-        
+
         # Sanity check
         total_stacks = sum(p.state.stack for p in self.state.players)
         if not total_stacks == self._all_stacks_at_game_start:  # pragma: no cover
