@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - BETTING_ROUND_STARTED
   - POT_WON
   - PLAYER_CARDS_REVEALED
+  - PLAYER_ELIMINATED
 
 - New code were added to the Game class to emit the newly introduced events.
 
