@@ -22,6 +22,13 @@ class GameEvent(BaseModel):
 
     Represents a snapshot of a game event that occurred, including
     the type of event, current game state, and relevant action details.
+    
+    Payload by event type:
+    - PLAYER_CARDS_REVEALED:
+        - holding: list[str] - The player's hole cards as a list of card codes.
+        - best_hand: list[str] - The best hand the player can make as a list of card codes.
+        - best_hand_type: str - The type of the best hand (e.g., "FLUSH") according to HandType.
+        - best_score: float - The score of the best hand the player can make.
 
     Fields
     ------
