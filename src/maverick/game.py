@@ -1141,7 +1141,7 @@ class Game:
         else:
             assert (
                 len(self.state.community_cards) == 5
-            ), "Community cards incomplete at showdown."
+            ), "Community cards incomplete at multi-player showdown."
 
             all_contributions = sum(
                 [p.state.total_contributed for p in self.state.players]

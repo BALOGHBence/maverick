@@ -327,7 +327,7 @@ class GameEventType(Enum):
 
         .. versionadded:: 0.2.0
     PLAYER_CARDS_REVEALED : str
-        Player's cards have been revealed at showdown. This only happends if there are multiple
+        Player's cards have been revealed at showdown. This only happens if there are multiple
         winners. If there is a single winner, their cards are not revealed.
 
         .. versionadded:: 0.2.0

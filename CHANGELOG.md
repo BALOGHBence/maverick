@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `PLAYER_CARDS_REVEALED`
   - `PLAYER_ELIMINATED`
 
-- New code were added to the `Game` class to emit the newly introduced events.
+- New code was added to the `Game` class to emit the newly introduced events.
 
 - `Table` class to manage seats and table related state.
 
