@@ -136,7 +136,7 @@ class Table:
         for offset in range(1, self._n_seats + 1):
             next_seat = (start_seat + offset) % self._n_seats
             next_player = self.seats[next_seat]
-            
+
             if next_player is None:
                 continue
 

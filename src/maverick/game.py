@@ -510,6 +510,10 @@ class Game:
                         self._create_event(GameEventType.BETTING_ROUND_COMPLETED)
                     )
                     self._event_queue.append(GameEventType.BETTING_ROUND_COMPLETED)
+                    self._log(
+                        f"There are not active players at the table.",
+                        logging.INFO,
+                    )
                 else:
                     self._take_action_from_current_player()
                     self._event_queue.append(GameEventType.PLAYER_ACTION_TAKEN)
@@ -789,8 +793,10 @@ class Game:
             self.state.current_player_index = sb_index
         else:
             self.state.current_player_index = self.table.next_occupied_seat(bb_index)
-        
-        assert isinstance(self.state.current_player_index, int), "Current player index must be an integer"
+
+        assert isinstance(
+            self.state.current_player_index, int
+        ), "Current player index must be an integer"
 
     def _post_antes(self) -> None:
         """Post antes for all active players."""
