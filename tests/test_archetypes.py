@@ -1,7 +1,6 @@
 import unittest
 
-from maverick import Game
-from maverick.playerstate import PlayerState
+from maverick import Game, PlayerState
 from maverick.players import (
     TightAggressiveBot,
     LooseAggressiveBot,

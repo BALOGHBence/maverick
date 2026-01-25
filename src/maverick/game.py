@@ -504,8 +504,19 @@ class Game:
                 | GameEventType.RIVER_DEALT
             ):
                 self._emit(self._create_event(GameEventType.BETTING_ROUND_STARTED))
-                self._take_action_from_current_player()
-                self._event_queue.append(GameEventType.PLAYER_ACTION_TAKEN)
+                if self.state.is_betting_round_complete():
+                    self._complete_betting_round()
+                    self._emit(
+                        self._create_event(GameEventType.BETTING_ROUND_COMPLETED)
+                    )
+                    self._event_queue.append(GameEventType.BETTING_ROUND_COMPLETED)
+                    self._log(
+                        "There are not active players at the table.",
+                        logging.INFO,
+                    )
+                else:
+                    self._take_action_from_current_player()
+                    self._event_queue.append(GameEventType.PLAYER_ACTION_TAKEN)
 
             case GameEventType.SHOWDOWN_COMPLETED:
                 self.state.stage = GameStage.HAND_COMPLETE
@@ -732,6 +743,8 @@ class Game:
             # - BB = left of SB
             sb_index = self.table.next_occupied_seat(self.state.button_position)
             bb_index = self.table.next_occupied_seat(sb_index)
+        assert isinstance(sb_index, int)
+        assert isinstance(bb_index, int)
 
         # --- Small blind ---
         sb_player = self.table[sb_index]
@@ -780,8 +793,10 @@ class Game:
             self.state.current_player_index = sb_index
         else:
             self.state.current_player_index = self.table.next_occupied_seat(bb_index)
-        
-        assert isinstance(self.state.current_player_index, int), "Current player index must be an integer"
+
+        assert isinstance(
+            self.state.current_player_index, int
+        ), "Current player index must be an integer"
 
     def _post_antes(self) -> None:
         """Post antes for all active players."""

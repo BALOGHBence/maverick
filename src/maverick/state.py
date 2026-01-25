@@ -33,9 +33,7 @@ class GameState(BaseModel):
         The current betting round (e.g., PRE_FLOP, FLOP, TURN, RIVER).
     players : list[PlayerLike]
         The list of players in the game.
-    active_players : list[int]
-        Indices of players who are still active in the current hand.
-    current_player_index : int
+    current_player_index : Optional[int]
         The index of the player whose turn it is to act.
     deck : Optional[Deck]
         The deck of cards used in the game.
@@ -64,8 +62,7 @@ class GameState(BaseModel):
     stage: GameStage = GameStage.WAITING_FOR_PLAYERS
     street: Optional[Street] = None
     players: list[PlayerLike] = Field(default_factory=list)
-    active_players: list[int] = Field(default_factory=list)  # Indices of active players
-    current_player_index: int = 0
+    current_player_index: Optional[int] = None
 
     # Cards
     deck: Optional[Deck] = None
