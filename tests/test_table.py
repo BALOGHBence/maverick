@@ -10,7 +10,15 @@ from maverick.enums import PlayerStateType
 class SimpleTestPlayer(Player):
     """A simple test player for testing purposes."""
 
-    def decide_action(self, /, **_) -> PlayerAction:
+    def decide_action(
+        self,
+        *,
+        game,
+        valid_actions,
+        min_raise_amount,
+        call_amount,
+        min_bet_amount,
+    ) -> PlayerAction:
         return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
 
 
@@ -356,9 +364,7 @@ class TestNextOccupiedSeat(unittest.TestCase):
         table.seat_player(players[1], seat_index=3)
         table.seat_player(players[2], seat_index=5)
 
-        players[0].state.state_type = PlayerStateType.ACTIVE
         players[1].state.state_type = PlayerStateType.FOLDED
-        players[2].state.state_type = PlayerStateType.ACTIVE
 
         next_seat = table.next_occupied_seat(1, active=True)
         self.assertEqual(next_seat, 5)
