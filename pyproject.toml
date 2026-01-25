@@ -1,6 +1,6 @@
 [project]
 name = "maverick"
-version = "0.2.0"
+version = "0.2.1"
 description = "A Python library for simulating poker games with custom player strategies"
 readme = "README.md"
 authors = [
