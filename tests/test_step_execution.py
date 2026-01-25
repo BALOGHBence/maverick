@@ -2,7 +2,7 @@ import unittest
 from maverick import Game
 from maverick.players import FoldBot, CallBot
 from maverick.playerstate import PlayerState
-from maverick.enums import GameStateType, GameEventType
+from maverick.enums import GameStage, GameEventType
 
 
 DEFAULT_SMALL_BLIND = 10
@@ -60,7 +60,7 @@ class TestStepExecution(unittest.TestCase):
         self.assertTrue(result)
 
         # Game state should have changed to STARTED (and HAND_STARTED event queued)
-        self.assertEqual(game.state.state_type, GameStateType.STARTED)
+        self.assertEqual(game.state.stage, GameStage.STARTED)
         self.assertTrue(game.has_events())  # Should have HAND_STARTED queued
 
         # Process next event (HAND_STARTED)
@@ -68,7 +68,7 @@ class TestStepExecution(unittest.TestCase):
         self.assertTrue(result)
 
         # Now state should be DEALING
-        self.assertEqual(game.state.state_type, GameStateType.DEALING)
+        self.assertEqual(game.state.stage, GameStage.DEALING)
 
     def test_step_by_step_execution_completes_game(self) -> None:
         """Test that stepping through all events completes a game."""

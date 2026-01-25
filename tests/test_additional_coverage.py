@@ -71,7 +71,6 @@ class TestEnumMethods(unittest.TestCase):
         self.assertLess(Street.PRE_FLOP.value, Street.FLOP.value)
         self.assertLess(Street.FLOP.value, Street.TURN.value)
         self.assertLess(Street.TURN.value, Street.RIVER.value)
-        self.assertLess(Street.RIVER.value, Street.SHOWDOWN.value)
 
 
 class TestPlayerStateOperations(unittest.TestCase):
@@ -284,6 +283,23 @@ class TestEventBusEdgeCases(unittest.TestCase):
 
         bus.subscribe(GameEventType.GAME_STARTED, handler)
         self.assertEqual(len(called), 0)
+
+
+class TestGameStateEdgeCases(unittest.TestCase):
+    """Test GameState edge cases."""
+
+    def test_gamestate_raises_deprecation_warning(self):
+        """Test that accessing deprecated properties raises warning."""
+        from maverick.state import GameState
+        import warnings
+
+        state = GameState(small_blind=5, big_blind=10)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            _ = state.state_type  # Assuming this is deprecated
+            self.assertEqual(len(w), 1)
+            self.assertIn("deprecated", str(w[-1].message).lower())
 
 
 if __name__ == "__main__":

@@ -371,7 +371,7 @@ class TestNextOccupiedSeat(unittest.TestCase):
 
         next_seat = table.next_occupied_seat(1, active=True)
         self.assertEqual(next_seat, 5)
-        
+
     def test_next_occupied_seat_with_active_filter_returns_None(self):
         """Test finding next occupied seat with active filter."""
         table = Table(n_seats=6)

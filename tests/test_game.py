@@ -11,7 +11,7 @@ from maverick import (
     GameEventType,
     GameEvent,
 )
-from maverick.enums import GameStateType
+from maverick.enums import GameStage
 
 
 class SimpleTestPlayer(Player):
@@ -75,6 +75,19 @@ class TestGameInitialization(unittest.TestCase):
         """Test that game initialization creates an empty event queue."""
         game = create_game()
         self.assertEqual(len(game._event_queue), 0)
+
+    def test_game_init_with_ante(self):
+        """Test game initialization with ante."""
+        game = create_game(ante=2)
+        self.assertEqual(game.rules.stakes.ante, 2)
+
+    def test_game_init_ilvalid_exc_handling_mode_raises_error(self):
+        """Test that invalid exc_handling_mode raises ValueError."""
+        with self.assertRaises(ValueError) as context:
+            create_game(exc_handling_mode="invalid_mode")
+        self.assertIn(
+            "exc_handling_mode must be 'log' or 'raise'", str(context.exception)
+        )
 
 
 class TestAddPlayer(unittest.TestCase):
@@ -251,7 +264,7 @@ class TestRemovePlayer(unittest.TestCase):
 
         # Simulate hand in progress
         game._initialize_game()
-        game.state.state_type = GameStateType.STARTED
+        game.state.stage = GameStage.STARTED
 
         with self.assertRaises(ValueError) as context:
             game.remove_player(player)
@@ -360,7 +373,7 @@ class TestStepAndHasEvents(unittest.TestCase):
         game.add_player(p2)
 
         game._initialize_game()
-        game.state.state_type = GameStateType.READY
+        game.state.stage = GameStage.READY
 
         game._event_queue.append(GameEventType.GAME_STARTED)
 
@@ -375,10 +388,10 @@ class TestStepAndHasEvents(unittest.TestCase):
         self.assertFalse(result)
 
 
-class TestGameStart(unittest.TestCase):
+class TestGameHistory(unittest.TestCase):
     """Test Game.start method."""
 
-    def test_start_with_enough_players(self):
+    def test_game_history_type(self):
         """Test starting a game with enough players."""
         game = create_game(max_hands=1)
         p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
@@ -388,7 +401,26 @@ class TestGameStart(unittest.TestCase):
 
         game.start()
 
-        self.assertEqual(game.state.hand_number, 1)
+        history = game.history
+        self.assertIsInstance(history, list)
+        for h in history:
+            self.assertIsInstance(h, GameEvent)
+
+
+class TestGameStart(unittest.TestCase):
+    """Test Game.start method."""
+
+    def test_start_with_enough_players(self):
+        """Test starting a game with enough players."""
+        game = create_game(max_hands=2, ante=1)
+        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
+        p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
+        game.add_player(p1)
+        game.add_player(p2)
+
+        game.start()
+
+        self.assertEqual(game.state.hand_number, 2)
 
     def test_start_emits_game_started_event(self):
         """Test that start emits GAME_STARTED event."""
@@ -422,7 +454,7 @@ class TestCreateEvent(unittest.TestCase):
 
         self.assertEqual(event.type, GameEventType.GAME_STARTED)
         self.assertEqual(event.hand_number, 5)
-        self.assertIsNotNone(event.street)
+        self.assertIsNone(event.street)
 
     def test_create_event_with_player_id(self):
         """Test creating an event with player_id."""
@@ -522,7 +554,7 @@ class TestGameEdgeCases(unittest.TestCase):
 
         # Start the game (changes state from WAITING/READY)
         game._initialize_game()
-        game.state.state_type = GameStateType.STARTED
+        game.state.stage = GameStage.STARTED
 
         p3 = SimpleTestPlayer(id="p3", name="P3", state=PlayerState(stack=100))
         with self.assertRaises(ValueError) as context:

@@ -8,6 +8,7 @@ __all__ = [
     "PlayerStateType",
     "GameStateType",
     "ActionType",
+    "GameStage",
     "GameEventType",
 ]
 
@@ -104,15 +105,12 @@ class Street(Enum):
         Third betting round, after the fourth community card is dealt (value 2).
     RIVER : int
         Fourth betting round, after the fifth community card is dealt (value 3).
-    SHOWDOWN : int
-        Final stage where remaining players reveal their hands (value 4).
     """
 
     PRE_FLOP = 0
     FLOP = 1
     TURN = 2
     RIVER = 3
-    SHOWDOWN = 4
 
 
 class HandType(Enum):
@@ -199,9 +197,9 @@ class PlayerStateType(Enum):
     ALL_IN = auto()
 
 
-class GameStateType(Enum):
+class GameStage(Enum):
     """
-    Game state enumeration for Texas Hold'em.
+    Game stage enumeration.
 
     Represents the different states of the game from waiting for players
     to game completion.
@@ -224,7 +222,7 @@ class GameStateType(Enum):
         Third betting round after the fourth community card is dealt.
     RIVER : str
         Final betting round after the fifth community card is dealt.
-    SHOWDOWN_COMPLETED : str
+    SHOWDOWN : str
         Players reveal hands and the winner is determined.
     HAND_COMPLETE : str
         Hand has ended; preparing for the next hand.
@@ -243,6 +241,9 @@ class GameStateType(Enum):
     SHOWDOWN = auto()
     HAND_COMPLETE = auto()
     GAME_OVER = auto()
+
+
+GameStateType = GameStage
 
 
 class ActionType(Enum):

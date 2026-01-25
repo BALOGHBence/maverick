@@ -10,7 +10,7 @@ import time, uuid
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .enums import GameEventType, Street
+from .enums import GameEventType, Street, GameStage
 from .playeraction import PlayerAction
 
 __all__ = ["GameEvent"]
@@ -38,8 +38,12 @@ class GameEvent(BaseModel):
         The type of event that occurred.
     hand_number : int
         The current hand number.
-    street : Street
+    street : Optional[Street]
         The current betting street.
+    stage : Optional[GameStage]
+        The current game stage.
+
+        .. versionadded:: 0.2.0
     player_id : Optional[str]
         ID of the player involved in the event, if applicable.
     action : Optional[PlayerAction]
@@ -53,7 +57,8 @@ class GameEvent(BaseModel):
     type: GameEventType
 
     hand_number: int
-    street: Street
+    street: Optional[Street] = None
+    stage: Optional[GameStage] = None
 
     player_id: Optional[str] = None
     action: Optional[PlayerAction] = None
