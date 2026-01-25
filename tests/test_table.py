@@ -356,7 +356,10 @@ class TestNextOccupiedSeat(unittest.TestCase):
         """Test finding next occupied seat with active filter."""
         table = Table(n_seats=6)
         players = [
-            SimpleTestPlayer(name=f"Player{i}", state=PlayerState(stack=1000))
+            SimpleTestPlayer(
+                name=f"Player{i}",
+                state=PlayerState(stack=1000, state_type=PlayerStateType.ACTIVE),
+            )
             for i in range(3)
         ]
 
