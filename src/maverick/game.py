@@ -511,7 +511,7 @@ class Game:
                     )
                     self._event_queue.append(GameEventType.BETTING_ROUND_COMPLETED)
                     self._log(
-                        f"There are not active players at the table.",
+                        "There are not active players at the table.",
                         logging.INFO,
                     )
                 else:
