@@ -84,6 +84,12 @@ class TestDeckDealEdgeCases(unittest.TestCase):
             deck.deal(23)  # Try to deal more than remaining
         self.assertIn("Not enough cards in the deck to deal", str(context.exception))
 
+    def test_shuffle_warns_on_negative_deal(self):
+        """Test that shuffling the deck does not affect dealing negative cards."""
+        deck = Deck.build()
+        with self.assertWarns(UserWarning):
+            deck.shuffle(n=-1)
+
 
 if __name__ == "__main__":
     unittest.main()

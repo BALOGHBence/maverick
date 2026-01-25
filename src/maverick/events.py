@@ -10,7 +10,7 @@ import time, uuid
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .enums import GameEventType, Street
+from .enums import GameEventType, Street, GameStage
 from .playeraction import PlayerAction
 
 __all__ = ["GameEvent"]
@@ -23,14 +23,27 @@ class GameEvent(BaseModel):
     Represents a snapshot of a game event that occurred, including
     the type of event, current game state, and relevant action details.
 
+    Payload by event type:
+    - PLAYER_CARDS_REVEALED:
+        - holding: list[str] - The player's hole cards as a list of card codes.
+        - best_hand: list[str] - The best hand the player can make as a list of card codes.
+        - best_hand_type: str - The type of the best hand (e.g., "FLUSH") according to HandType.
+        - best_score: float - The score of the best hand the player can make.
+
+        .. versionadded:: 0.2.0
+
     Fields
     ------
     type : GameEventType
         The type of event that occurred.
     hand_number : int
         The current hand number.
-    street : Street
+    street : Optional[Street]
         The current betting street.
+    stage : Optional[GameStage]
+        The current game stage.
+
+        .. versionadded:: 0.2.0
     player_id : Optional[str]
         ID of the player involved in the event, if applicable.
     action : Optional[PlayerAction]
@@ -44,7 +57,8 @@ class GameEvent(BaseModel):
     type: GameEventType
 
     hand_number: int
-    street: Street
+    street: Optional[Street] = None
+    stage: Optional[GameStage] = None
 
     player_id: Optional[str] = None
     action: Optional[PlayerAction] = None

@@ -1,11 +1,12 @@
 from typing import Optional, Any
+import warnings
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
 from .card import Card
 from .deck import Deck
 from .enums import (
-    GameStateType,
+    GameStage,
     PlayerStateType,
     Street,
 )
@@ -24,9 +25,11 @@ class GameState(BaseModel):
 
     Fields
     ------
-    state_type : GameStateType
+    stage : GameStage
         The current state of the game (e.g., WAITING_FOR_PLAYERS, IN_PROGRESS).
-    street : Street
+
+        .. versionadded:: 0.2.0
+    street : Optional[Street]
         The current betting round (e.g., PRE_FLOP, FLOP, TURN, RIVER).
     players : list[PlayerLike]
         The list of players in the game.
@@ -58,8 +61,8 @@ class GameState(BaseModel):
         The position of the dealer button at the table.
     """
 
-    state_type: GameStateType = GameStateType.WAITING_FOR_PLAYERS
-    street: Street = Street.PRE_FLOP
+    stage: GameStage = GameStage.WAITING_FOR_PLAYERS
+    street: Optional[Street] = None
     players: list[PlayerLike] = Field(default_factory=list)
     active_players: list[int] = Field(default_factory=list)  # Indices of active players
     current_player_index: int = 0
@@ -84,6 +87,20 @@ class GameState(BaseModel):
     model_config = {
         "arbitrary_types_allowed": True,
     }
+
+    @property
+    def state_type(self) -> GameStage:
+        """Get the current game state type.
+
+        .. deprecated:: 0.2.0
+            Use `stage` attribute instead.
+        """
+        warnings.warn(
+            "'state_type' is deprecated and will be removed in v1.0.0; use stage 'instead'.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.stage
 
     @field_serializer("players")
     def _ser_players(self, players: list[PlayerLike]) -> list[dict]:
@@ -130,12 +147,6 @@ class GameState(BaseModel):
     def get_players_in_hand(self) -> list[PlayerLike]:
         """Return list of players still in the hand (not folded)."""
         return [p for p in self.players if p.state.state_type != PlayerStateType.FOLDED]
-
-    def get_current_player(self) -> Optional[PlayerLike]:
-        """Return the player whose turn it is."""
-        if 0 <= self.current_player_index < len(self.players):
-            return self.players[self.current_player_index]
-        return None
 
     def is_betting_round_complete(self) -> bool:
         """Betting round is complete when no further action is possible/required."""

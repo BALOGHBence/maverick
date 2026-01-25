@@ -44,6 +44,13 @@ class TestFirstButtonLogic(unittest.TestCase):
 
         self.assertLess(game._find_first_button_position(), len(players))
 
+    def test_empty_table_raises_on_button_position(self):
+        """Test that empty table raises ValueError when finding first button position."""
+        game = Game(small_blind=10, big_blind=20, max_hands=1)
+
+        with self.assertRaises(ValueError):
+            game._find_first_button_position()
+
 
 if __name__ == "__main__":
     unittest.main()
