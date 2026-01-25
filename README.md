@@ -32,22 +32,72 @@
 
 </div>
 
+Poker is a great sandbox for decision-making systems: hidden information, imperfect opponents, probabilistic outcomes, and lots of room for experimentation.
+
+**Maverick** is a Python library for simulating poker games with custom player strategies. It gives you a complete poker game loop (dealing, betting rounds, showdown, pot distribution) plus a clean player interface so you can swap strategies in and out.
+
 ## Highlights
 
-- **Configurable Poker Games**: Full rules and mechanics supporting a variety of flavours
-- **State Machine Architecture**: Clean separation of game states and transitions
-- **Flexible Player System**: Protocol-based player interface for custom implementations
-- **Hand Evaluation**: Built-in poker hand scoring and comparison
-- **Event System**: Track all game events for analysis and replay
-- **Well Documented**: Comprehensive documentation of rules and APIs
-- **Thoroughly Tested**: Features are heavily tested with high code coverage
+Maverick is designed for building and testing strategies:
+
+- **Composable API**: build your own players by implementing a single method.
+- **State-machine engine**: clear phases and transitions, easier to reason about.
+- **Event stream**: observe what happens (for logging, analytics, replay, debugging).
+- **Hand evaluation utilities**: score hands and compare outcomes.
+
+If you’ve ever wanted to:
+
+- benchmark bots against each other,
+- run repeatable simulations,
+- prototype an agent that makes betting decisions,
+
+…Maverick is meant to make that workflow straightforward.
+
+## Installation
+
+You can install Maverick from PyPI
+
+```bash
+pip install maverick
+```
+
+## Your first game (minimal example)
+
+Here’s an end-to-end example using built-in bots:
+
+```python
+from maverick import Game, PlayerLike, PlayerState
+from maverick.players import FoldBot, CallBot, AggressiveBot
+
+# Create a game with blinds and a stop condition
+game = Game(small_blind=10, big_blind=20, max_hands=10)
+
+# Create players
+players: list[PlayerLike] = [
+    CallBot(name="CallBot", state=PlayerState(stack=1000)),
+    AggressiveBot(name="AggroBot", state=PlayerState(stack=1000)),
+    FoldBot(name="FoldBot", state=PlayerState(stack=1000)),
+]
+
+for player in players:
+    game.add_player(player)
+
+game.start()
+
+# Inspect results
+for player in players:
+    print(f"{player.name} - Stack: {player.state.stack}")
+```
+
+(See the documentation for more examples and APIs.)
 
 ## Documentation
 
 The project has extensive [documentation](https://pymaverick.readthedocs.io/en/latest/index.html) hosted on ReadTheDocs. Most library information is documented there, with only the essentials kept here.
 
-## Versioning
+## Changes and Versioning
 
+The changelog is maintained in [CHANGELOG.md](CHANGELOG.md).
 The project adheres to [semantic versioning](https://semver.org/).
 
 ## Contributing

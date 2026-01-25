@@ -8,6 +8,7 @@ __all__ = [
     "PlayerStateType",
     "GameStateType",
     "ActionType",
+    "GameStage",
     "GameEventType",
 ]
 
@@ -104,15 +105,12 @@ class Street(Enum):
         Third betting round, after the fourth community card is dealt (value 2).
     RIVER : int
         Fourth betting round, after the fifth community card is dealt (value 3).
-    SHOWDOWN_COMPLETED : int
-        Final stage where remaining players reveal their hands (value 4).
     """
 
     PRE_FLOP = 0
     FLOP = 1
     TURN = 2
     RIVER = 3
-    SHOWDOWN = 4
 
 
 class HandType(Enum):
@@ -199,9 +197,9 @@ class PlayerStateType(Enum):
     ALL_IN = auto()
 
 
-class GameStateType(Enum):
+class GameStage(Enum):
     """
-    Game state enumeration for Texas Hold'em.
+    Game stage enumeration.
 
     Represents the different states of the game from waiting for players
     to game completion.
@@ -224,7 +222,7 @@ class GameStateType(Enum):
         Third betting round after the fourth community card is dealt.
     RIVER : str
         Final betting round after the fifth community card is dealt.
-    SHOWDOWN_COMPLETED : str
+    SHOWDOWN : str
         Players reveal hands and the winner is determined.
     HAND_COMPLETE : str
         Hand has ended; preparing for the next hand.
@@ -243,6 +241,9 @@ class GameStateType(Enum):
     SHOWDOWN = auto()
     HAND_COMPLETE = auto()
     GAME_OVER = auto()
+
+
+GameStateType = GameStage
 
 
 class ActionType(Enum):
@@ -302,25 +303,47 @@ class GameEventType(Enum):
         Fifth community card dealt.
     PLAYER_ACTION_TAKEN : str
         Player takes an action.
+    BETTING_ROUND_STARTED : str
+        Betting round started.
+
+        .. versionadded:: 0.2.0
     BETTING_ROUND_COMPLETED : str
         Betting round completed.
     BLINDS_POSTED : str
         Blind bets posted.
     ANTES_POSTED : str
         Ante bets posted.
+    SHOWDOWN_STARTED : str
+        Showdown has started.
+
+        .. versionadded:: 0.2.0
     SHOWDOWN_COMPLETED : str
-        SHOWDOWN_COMPLETED occurs.
+        Showdown has completed.
     PLAYER_JOINED : str
         Player joined the game.
     PLAYER_LEFT : str
         Player left the game.
+    POT_WON : str
+        Pot has been won by a player.
+
+        .. versionadded:: 0.2.0
+    PLAYER_CARDS_REVEALED : str
+        Player's cards have been revealed at showdown. This only happens if there are multiple
+        winners. If there is a single winner, their cards are not revealed.
+
+        .. versionadded:: 0.2.0
+    PLAYER_ELIMINATED : str
+        Player has been eliminated from the game.
+
+        .. versionadded:: 0.2.0
     """
 
     # Game lifecycle events
     GAME_STARTED = auto()
+    GAME_ENDED = auto()
     HAND_STARTED = auto()
     HAND_ENDED = auto()
-    GAME_ENDED = auto()
+    SHOWDOWN_STARTED = auto()
     SHOWDOWN_COMPLETED = auto()
 
     # Dealing events
@@ -329,14 +352,16 @@ class GameEventType(Enum):
     TURN_DEALT = auto()
     RIVER_DEALT = auto()
 
-    # Player action events
+    # Player related events
     PLAYER_ACTION_TAKEN = auto()
-    BETTING_ROUND_COMPLETED = auto()
-
-    # Stakes events
-    BLINDS_POSTED = auto()
-    ANTES_POSTED = auto()
-
-    # Table events
+    POT_WON = auto()
+    PLAYER_CARDS_REVEALED = auto()
     PLAYER_JOINED = auto()
     PLAYER_LEFT = auto()
+    PLAYER_ELIMINATED = auto()
+
+    # Betting events
+    BLINDS_POSTED = auto()
+    ANTES_POSTED = auto()
+    BETTING_ROUND_STARTED = auto()
+    BETTING_ROUND_COMPLETED = auto()
