@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Deprecated
+
+- The `GameStateType` enum is deprecated, use `GameStage` instead. Also, the `state_type` field of `GameState` is also depracated. Use `GameState.stage` instead.
+
+### Removed
+
+- `SHOWDOWN` was removed from the streets in the `Street` enum.
+
 ### Added
 
 - New event types added to the `GameEventType` class:
@@ -19,6 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New code was added to the `Game` class to emit the newly introduced events.
 
 - `Table` class to manage seats and table related state.
+
+- The `GameEvent` class has a new field called `stage`.
+
+### Fixed
+
+- Showdown logic was corrected, now it builds side pots correctly.
 
 ## [0.1.0] - 2026.01.22
 
