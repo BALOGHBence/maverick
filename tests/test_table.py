@@ -371,6 +371,26 @@ class TestNextOccupiedSeat(unittest.TestCase):
 
         next_seat = table.next_occupied_seat(1, active=True)
         self.assertEqual(next_seat, 5)
+        
+    def test_next_occupied_seat_with_active_filter_returns_None(self):
+        """Test finding next occupied seat with active filter."""
+        table = Table(n_seats=6)
+        players = [
+            SimpleTestPlayer(
+                name=f"Player{i}",
+                state=PlayerState(stack=1000),
+            )
+            for i in range(3)
+        ]
+
+        table.seat_player(players[0], seat_index=1)
+        table.seat_player(players[1], seat_index=3)
+        table.seat_player(players[2], seat_index=5)
+
+        players[1].state.state_type = PlayerStateType.FOLDED
+
+        next_seat = table.next_occupied_seat(1, active=True)
+        self.assertEqual(next_seat, None)
 
     def test_next_occupied_seat_with_active_filter_all_folded(self):
         """Test next occupied seat when all players are folded."""
