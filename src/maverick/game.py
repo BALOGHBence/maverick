@@ -327,7 +327,7 @@ class Game:
             self.table.seat_player(player)
         else:
             self.table.seat_player(player, seat_index=player.state.seat)
-            player.state.state_type = PlayerStateType.ACTIVE
+        player.state.state_type = PlayerStateType.ACTIVE
 
         self.state.players.append(player)
 
@@ -780,6 +780,8 @@ class Game:
             self.state.current_player_index = sb_index
         else:
             self.state.current_player_index = self.table.next_occupied_seat(bb_index)
+        
+        assert isinstance(self.state.current_player_index, int), "Current player index must be an integer"
 
     def _post_antes(self) -> None:
         """Post antes for all active players."""
