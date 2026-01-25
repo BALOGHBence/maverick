@@ -9,15 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- New event types added to the GameEventType class:
-  - SHOWDOWN_STARTED
-  - BETTING_ROUND_STARTED
-  - POT_WON
-  - PLAYER_CARDS_REVEALED
-  - PLAYER_ELIMINATED
+- New event types added to the `GameEventType` class:
+  - `SHOWDOWN_STARTED`
+  - `BETTING_ROUND_STARTED`
+  - `POT_WON`
+  - `PLAYER_CARDS_REVEALED`
+  - `PLAYER_ELIMINATED`
 
-- New code were added to the Game class to emit the newly introduced events.
+- New code were added to the `Game` class to emit the newly introduced events.
 
-## [0.0.1]
+- `Table` class to manage seats and table related state.
+
+## [0.1.0] - 2026.01.22
 
 This is the first release.
