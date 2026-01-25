@@ -136,7 +136,8 @@ class Table:
         for offset in range(1, self._n_seats + 1):
             next_seat = (start_seat + offset) % self._n_seats
             next_player = self.seats[next_seat]
-            if not next_player:
+            
+            if next_player is None:
                 continue
 
             if not active or (next_player.state.state_type == PlayerStateType.ACTIVE):
