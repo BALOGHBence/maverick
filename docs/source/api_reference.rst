@@ -129,6 +129,6 @@ Enumerations
    maverick.enums.Street
    maverick.enums.HandType
    maverick.enums.PlayerStateType
-   maverick.enums.GameStateType
+   maverick.enums.GameStage
    maverick.enums.ActionType
    maverick.enums.GameEventType
