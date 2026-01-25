@@ -52,7 +52,7 @@ class TestGameInitialization(unittest.TestCase):
         self.assertEqual(game.state.big_blind, 20)
         self.assertEqual(game.rules.dealing.min_players, 2)
         self.assertEqual(game.rules.dealing.max_players, 9)
-        self.assertEqual(game.max_hands, 1000)
+        self.assertEqual(game._max_hands, 1000)
 
     def test_game_init_with_custom_parameters(self):
         """Test game initialization with custom parameters."""
@@ -68,7 +68,7 @@ class TestGameInitialization(unittest.TestCase):
         self.assertEqual(game.state.big_blind, 10)
         self.assertEqual(game.rules.dealing.min_players, 3)
         self.assertEqual(game.rules.dealing.max_players, 6)
-        self.assertEqual(game.max_hands, 50)
+        self.assertEqual(game._max_hands, 50)
         self.assertTrue(game._events._strict)
 
     def test_game_init_creates_event_queue(self):
@@ -151,6 +151,39 @@ class TestAddPlayer(unittest.TestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0].type, GameEventType.PLAYER_JOINED)
         self.assertEqual(events[0].player_id, "p1")
+        
+    def test_add_player_with_existing_name_raises_error(self):
+        """Test that adding a player to a full table raises ValueError."""
+        game = create_game(max_players=9)
+        p1 = SimpleTestPlayer(id="p1", name="Player1")
+        p2 = SimpleTestPlayer(id="p2", name="Player1")
+        game.add_player(p1)
+
+        with self.assertRaises(ValueError) as context:
+            game.add_player(p2)
+        self.assertIn("Player name 'Player1' is already taken", str(context.exception))
+        
+    def test_add_player_with_existing_id_raises_error(self):
+        """Test that adding a player to a full table raises ValueError."""
+        game = create_game(max_players=9)
+        p1 = SimpleTestPlayer(id="p1", name="Player1")
+        p2 = SimpleTestPlayer(id="p1", name="Player2")
+        game.add_player(p1)
+
+        with self.assertRaises(ValueError) as context:
+            game.add_player(p2)
+        self.assertIn("Player id 'p1' is already taken", str(context.exception))
+        
+    def test_add_player_with_existing_seat_raises_error(self):
+        """Test that adding a player to a full table raises ValueError."""
+        game = create_game(max_players=9)
+        p1 = SimpleTestPlayer(id="p1", name="Player1", state=PlayerState(stack=100, seat=0))
+        p2 = SimpleTestPlayer(id="p2", name="Player2", state=PlayerState(stack=100, seat=0))
+        game.add_player(p1)
+
+        with self.assertRaises(ValueError) as context:
+            game.add_player(p2)
+        self.assertIn("Seat 0 is already occupied.", str(context.exception))
 
 
 class TestRemovePlayer(unittest.TestCase):
@@ -315,14 +348,15 @@ class TestStepAndHasEvents(unittest.TestCase):
     def test_step_processes_event(self):
         """Test step processes an event from the queue."""
         game = create_game()
-        game._initialize_game()
-        game.state.state_type = GameStateType.READY
-
+        
         # Add players so _start_new_hand doesn't fail
         p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
         p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
         game.add_player(p2)
+        
+        game._initialize_game()
+        game.state.state_type = GameStateType.READY
 
         game._event_queue.append(GameEventType.GAME_STARTED)
 
@@ -459,6 +493,11 @@ class TestInitializeGame(unittest.TestCase):
     def test_initialize_game_resets_hand_number(self):
         """Test that _initialize_game sets hand_number to 0."""
         game = create_game()
+        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
+        p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
+        game.add_player(p1)
+        game.add_player(p2)
+        
         game.state.hand_number = 5
 
         game._initialize_game()

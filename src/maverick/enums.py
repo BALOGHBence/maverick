@@ -304,6 +304,8 @@ class GameEventType(Enum):
         Player takes an action.
     BETTING_ROUND_STARTED : str
         Betting round started.
+
+        .. versionadded:: 0.2.0
     BETTING_ROUND_COMPLETED : str
         Betting round completed.
     BLINDS_POSTED : str
@@ -312,6 +314,8 @@ class GameEventType(Enum):
         Ante bets posted.
     SHOWDOWN_STARTED : str
         Showdown has started.
+
+        .. versionadded:: 0.2.0
     SHOWDOWN_COMPLETED : str
         Showdown has completed.
     PLAYER_JOINED : str
@@ -320,11 +324,17 @@ class GameEventType(Enum):
         Player left the game.
     POT_WON : str
         Pot has been won by a player.
+
+        .. versionadded:: 0.2.0
     PLAYER_CARDS_REVEALED : str
         Player's cards have been revealed at showdown. This only happends if there are multiple
         winners. If there is a single winner, their cards are not revealed.
+
+        .. versionadded:: 0.2.0
     PLAYER_ELIMINATED : str
         Player has been eliminated from the game.
+
+        .. versionadded:: 0.2.0
     """
 
     # Game lifecycle events

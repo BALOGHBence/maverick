@@ -131,12 +131,6 @@ class GameState(BaseModel):
         """Return list of players still in the hand (not folded)."""
         return [p for p in self.players if p.state.state_type != PlayerStateType.FOLDED]
 
-    def get_current_player(self) -> Optional[PlayerLike]:
-        """Return the player whose turn it is."""
-        if 0 <= self.current_player_index < len(self.players):
-            return self.players[self.current_player_index]
-        return None
-
     def is_betting_round_complete(self) -> bool:
         """Betting round is complete when no further action is possible/required."""
         in_hand = [

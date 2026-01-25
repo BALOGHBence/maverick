@@ -30,6 +30,8 @@ class GameEvent(BaseModel):
         - best_hand_type: str - The type of the best hand (e.g., "FLUSH") according to HandType.
         - best_score: float - The score of the best hand the player can make.
 
+        .. versionadded:: 0.2.0
+
     Fields
     ------
     type : GameEventType

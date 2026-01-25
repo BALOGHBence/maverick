@@ -22,6 +22,7 @@ from .protocol import PlayerLike
 from .playeraction import PlayerAction
 from .playerstate import PlayerState
 from .events import GameEvent
+from .table import Table
 
 __all__ = [
     "Card",
@@ -44,6 +45,7 @@ __all__ = [
     "PlayerAction",
     "PlayerState",
     "GameEvent",
+    "Table",
 ]
 
 __pkg_name__ = "maverick"
