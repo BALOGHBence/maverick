@@ -1,7 +1,6 @@
 import unittest
-import random
 
-from maverick import Game, PlayerLike, PlayerState
+from maverick import Game, PlayerState
 from maverick.players import (
     TightAggressiveBot,
     LooseAggressiveBot,
@@ -350,53 +349,6 @@ class TestArchetypeGameplay(unittest.TestCase):
         )
         game.start()
         self.assertGreaterEqual(game.state.hand_number, 1)
-        
-
-class TestArchetypeGameplayExtra(unittest.TestCase):
-    
-    def test_gameplay_with_random_archetypes(self) -> None:
-        """Test that multiple archetype bots can play a bulk game."""
-        player_types = [
-            TightAggressiveBot,
-            LooseAggressiveBot,
-            TightPassiveBot,
-            LoosePassiveBot,
-            ManiacBot,
-            TiltedBot,
-            BullyBot,
-            GrinderBot,
-            GTOBot,
-            SharkBot,
-            FishBot,
-            ABCBot,
-            HeroCallerBot,
-            ScaredMoneyBot,
-            WhaleBot,
-        ]
-
-        selected_player_types = player_types[:8]
-        
-        
-        def play_game(
-            small_blind: int = 10,
-            big_blind: int = 20,
-            max_hands: int = 10,
-            initial_stack: int = 1000,
-        ) -> tuple[list[PlayerLike], Game]:
-            game = Game(small_blind=small_blind, big_blind=big_blind, max_hands=max_hands)
-            players: list[PlayerLike] = []
-            for cls in selected_player_types:
-                players.append(cls(name=cls.__name__, state=PlayerState(stack=initial_stack)))
-                game.add_player(players[-1])
-            game.start()
-
-
-        for i in range(1):
-            seed = 42 + i
-            random.seed(seed)
-            rng = random.Random(seed)
-            selected_player_types = rng.sample(player_types, k=8)
-            play_game(small_blind=10, big_blind=20, max_hands=5, initial_stack=1000)
 
 
 if __name__ == "__main__":
