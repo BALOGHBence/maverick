@@ -1063,7 +1063,8 @@ class Game:
         what makes short all-ins work correctly without resetting acted flags.
         """
         idx = self.state.current_player_index
-        num_players = len(self.state.players)
+        starting_idx = idx
+        num_players = len(self.table.seats)
 
         for _ in range(num_players):
             # get player at next occupied seat
@@ -1079,6 +1080,12 @@ class Game:
             needs_action = (not p.state.acted_this_street) or facing_call
 
             if needs_action:
+                # Safety check: ensure we've actually moved to a different player
+                if idx == starting_idx:
+                    # This should not happen in a well-formed game state
+                    raise RuntimeError(
+                        "Cannot advance to next player: same player would act again"
+                    )
                 # we've found the next player who needs to act
                 self.state.current_player_index = idx
                 return

@@ -582,5 +582,49 @@ class TestGameLoggingEvents(unittest.TestCase):
         game._emit(event)
 
 
+class TestPlayerEvolutionEdgeCases(unittest.TestCase):
+    """Test edge cases in player evolution during betting rounds."""
+
+    def test_advance_to_next_player_with_sparse_table(self):
+        """Test that _advance_to_next_player works correctly when table has empty seats.
+        
+        This tests the bug fix where we iterate through len(self.table.seats) instead of
+        len(self.state.players) to ensure we cover all positions even with empty seats.
+        """
+        from maverick.enums import PlayerStateType
+        
+        # Create a game with more seats than players (max_players=9, 1 hand)
+        game = create_game(max_players=9, max_hands=1)
+        
+        # Add only 3 players to a 9-seat table
+        p1 = SimpleTestPlayer(name="P1", id="p1", initial_stack=1000)
+        p2 = SimpleTestPlayer(name="P2", id="p2", initial_stack=1000)
+        p3 = SimpleTestPlayer(name="P3", id="p3", initial_stack=1000)
+        
+        # Seat them at non-consecutive seats to create gaps
+        p1.state = PlayerState(state_type=PlayerStateType.ACTIVE, seat=0, stack=1000)
+        game.add_player(p1)
+        
+        p2.state = PlayerState(state_type=PlayerStateType.ACTIVE, seat=3, stack=1000)
+        game.add_player(p2)
+        
+        p3.state = PlayerState(state_type=PlayerStateType.ACTIVE, seat=7, stack=1000)
+        game.add_player(p3)
+        
+        # Verify the table has empty seats
+        self.assertEqual(len(game.state.players), 3)
+        self.assertEqual(len(game.table.seats), 9)
+        empty_seats = sum(1 for seat in game.table.seats if seat is None)
+        self.assertEqual(empty_seats, 6)
+        
+        # Start the game - this will run one hand
+        # If the bug existed, the game would get stuck in an infinite loop
+        # or raise an error. Successfully completing the hand means the fix works.
+        game.start()
+        
+        # Game should have completed successfully
+        self.assertIn(game.state.stage, [GameStage.READY, GameStage.GAME_OVER, GameStage.HAND_COMPLETE])
+
+
 if __name__ == "__main__":
     unittest.main()
