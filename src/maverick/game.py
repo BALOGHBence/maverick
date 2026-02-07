@@ -1081,7 +1081,7 @@ class Game:
 
             if needs_action:
                 # Safety check: ensure we've actually moved to a different player
-                if idx == starting_idx:
+                if idx == starting_idx:  # pragma: no cover
                     # This should not happen in a well-formed game state
                     raise RuntimeError(
                         "Cannot advance to next player: same player would act again"
