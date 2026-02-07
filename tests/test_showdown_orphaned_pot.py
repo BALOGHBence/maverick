@@ -1,8 +1,8 @@
 """
-Test for the showdown bug fix where all contributors to a pot segment have folded.
+Test for the showdown bug fix: RuntimeError "No eligible players for a pot segment."
 
-This test validates the fix for the issue: "Event flow bug, incorrect player selection, 
-and pot inconsistencies in showdown"
+This test validates the fix for the critical issue where the game would crash
+during showdown when all contributors to a specific pot segment had folded.
 """
 
 import pytest

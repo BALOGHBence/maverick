@@ -1261,7 +1261,7 @@ class Game:
                         for w in segment_winners:
                             awards[w.id] += share
                         
-                        # distribute remainder in relative button order
+                        # Distribute remainder in relative button order
                         segment_winners_sorted = self._winners_in_button_order(segment_winners)
                         for i in range(rem):
                             idx = i % len(segment_winners_sorted)
