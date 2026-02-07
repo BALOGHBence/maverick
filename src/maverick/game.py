@@ -1248,28 +1248,32 @@ class Game:
                 self.state.pot -= segment_amount
 
                 if not eligible:
-                    # All contributors to this segment have folded.
-                    # Award this segment to all remaining players in the hand.
-                    # This can occur in edge cases where only the smallest contributors folded.
-                    if players_in_hand:
-                        # Use all players still in hand as eligible for this "orphaned" segment
-                        eligible_for_orphaned = players_in_hand
-                        best = max(score_by_id[p.id] for p in eligible_for_orphaned)
-                        segment_winners = [p for p in eligible_for_orphaned if score_by_id[p.id] == best]
-                        
-                        share, rem = divmod(segment_amount, len(segment_winners))
-                        for w in segment_winners:
-                            awards[w.id] += share
-                        
-                        # Distribute remainder in relative button order
-                        segment_winners_sorted = self._winners_in_button_order(segment_winners)
-                        for i in range(rem):
-                            idx = i % len(segment_winners_sorted)
-                            awards[segment_winners_sorted[idx].id] += 1
-                        continue
-                    else:
-                        # No players left at all - should never happen during showdown
-                        raise RuntimeError("No players in hand during showdown.")  # pragma: no cover
+                    # This should never happen in a correctly functioning game.
+                    # If all contributors to this segment have folded, then no one at higher
+                    # levels could be in the hand either (since they also contributed at this level).
+                    # This error indicates a bug in contribution tracking.
+                    self._log(
+                        f"CRITICAL BUG: No eligible players for pot segment at level {level}.",
+                        logging.ERROR,
+                    )
+                    self._log(
+                        f"Segment contributors: {[p.name for p in segment_contributors]}",
+                        logging.ERROR,
+                    )
+                    self._log(
+                        f"Players in hand: {[p.name for p in players_in_hand]}",
+                        logging.ERROR,
+                    )
+                    self._log(
+                        f"All contributions: {contributions}",
+                        logging.ERROR,
+                    )
+                    raise RuntimeError(
+                        f"No eligible players for pot segment at level {level}. "
+                        f"This indicates a bug in contribution tracking. "
+                        f"Segment contributors: {[p.name for p in segment_contributors]}. "
+                        f"Players in hand: {[p.name for p in players_in_hand]}."
+                    )
 
                 if len(segment_contributors) == 1:
                     # uncalled top layer -> refund to that one contributor
