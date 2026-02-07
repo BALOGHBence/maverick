@@ -337,7 +337,7 @@ class Game:
             f"Player {player.name} joined the game.", logging.INFO, stage_prefix=False
         )
 
-    def remove_player(self, player: PlayerLike, flush:bool=True) -> None:
+    def remove_player(self, player: PlayerLike, flush: bool = True) -> None:
         """Remove a player from the game.
 
         Parameters
@@ -345,7 +345,7 @@ class Game:
         player : PlayerLike
             The player to remove from the game.
         flush : bool
-            If True, immediately process the resulting events. If False, the events will be 
+            If True, immediately process the resulting events. If False, the events will be
             added to the queue but not processed until step() is called. Default is True.
         """
         player_id = player.id
@@ -369,7 +369,7 @@ class Game:
             self._handle_event(GameEventType.PLAYER_LEFT)
         else:
             self._event_queue.append(GameEventType.PLAYER_LEFT)
-            
+
         self._emit(self._create_event(GameEventType.PLAYER_LEFT, player_id=player_id))
         self._log(
             f"Player {player.name} has left the game.", logging.INFO, stage_prefix=False
@@ -730,12 +730,16 @@ class Game:
         # - Other player is BIG blind
         if num_players == 2:
             sb_index = self.state.button_position
-            bb_index = self.table.next_occupied_seat(self.state.button_position, active=True)
+            bb_index = self.table.next_occupied_seat(
+                self.state.button_position, active=True
+            )
         else:
             # Multi-way:
             # - SB = left of button
             # - BB = left of SB
-            sb_index = self.table.next_occupied_seat(self.state.button_position, active=True)
+            sb_index = self.table.next_occupied_seat(
+                self.state.button_position, active=True
+            )
             bb_index = self.table.next_occupied_seat(sb_index, active=True)
         assert isinstance(sb_index, int)
         assert isinstance(bb_index, int)
@@ -786,7 +790,9 @@ class Game:
         if num_players == 2:
             self.state.current_player_index = sb_index
         else:
-            self.state.current_player_index = self.table.next_occupied_seat(bb_index, active=True)
+            self.state.current_player_index = self.table.next_occupied_seat(
+                bb_index, active=True
+            )
 
         assert isinstance(
             self.state.current_player_index, int
