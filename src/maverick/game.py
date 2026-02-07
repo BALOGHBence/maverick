@@ -749,8 +749,8 @@ class Game:
         # --- Small blind ---
         sb_player = self.table[sb_index]
         sb_amount = min(self.state.small_blind, sb_player.state.stack)
-        sb_player.state.current_bet = sb_amount
-        sb_player.state.total_contributed = sb_amount
+        sb_player.state.current_bet += sb_amount
+        sb_player.state.total_contributed += sb_amount
         sb_player.state.stack -= sb_amount
         self.state.pot += sb_amount
         if sb_player.state.stack == 0:
@@ -765,8 +765,8 @@ class Game:
         # --- Big blind ---
         bb_player = self.table[bb_index]
         bb_amount = min(self.state.big_blind, bb_player.state.stack)
-        bb_player.state.current_bet = bb_amount
-        bb_player.state.total_contributed = bb_amount
+        bb_player.state.current_bet += bb_amount
+        bb_player.state.total_contributed += bb_amount
         bb_player.state.stack -= bb_amount
         self.state.pot += bb_amount
         if bb_player.state.stack == 0:
@@ -1244,12 +1244,32 @@ class Game:
                     p for p in segment_contributors if p.id in players_in_hand_ids
                 ]
 
-                if not eligible:  # pragma: no cover
-                    # should never happen in a sane game, but don't crash silently
-                    raise RuntimeError("No eligible players for a pot segment.")
-
                 # Deduct distributed segment from pot
                 self.state.pot -= segment_amount
+
+                if not eligible:
+                    # All contributors to this segment have folded.
+                    # Award this segment to all remaining players in the hand.
+                    # This can occur in edge cases where only the smallest contributors folded.
+                    if players_in_hand:
+                        # Use all players still in hand as eligible for this "orphaned" segment
+                        eligible_for_orphaned = players_in_hand
+                        best = max(score_by_id[p.id] for p in eligible_for_orphaned)
+                        segment_winners = [p for p in eligible_for_orphaned if score_by_id[p.id] == best]
+                        
+                        share, rem = divmod(segment_amount, len(segment_winners))
+                        for w in segment_winners:
+                            awards[w.id] += share
+                        
+                        # distribute remainder in relative button order
+                        segment_winners_sorted = self._winners_in_button_order(segment_winners)
+                        for i in range(rem):
+                            idx = i % len(segment_winners_sorted)
+                            awards[segment_winners_sorted[idx].id] += 1
+                        continue
+                    else:
+                        # No players left at all - should never happen during showdown
+                        raise RuntimeError("No players in hand during showdown.")  # pragma: no cover
 
                 if len(segment_contributors) == 1:
                     # uncalled top layer -> refund to that one contributor
