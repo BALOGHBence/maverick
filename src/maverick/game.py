@@ -468,7 +468,7 @@ class Game:
                     self._event_queue.append(GameEventType.PLAYER_ACTION_TAKEN)
 
             case GameEventType.BETTING_ROUND_COMPLETED:
-                if len(self.state.get_active_players()) == 1:
+                if len(self.state.get_players_in_hand()) == 1:
                     # There is no or only one active player left, so we skip to showdown
                     self.state.stage = GameStage.SHOWDOWN
                     self.state.street = None
@@ -1165,7 +1165,7 @@ class Game:
             self.state.pot = 0
         else:
             assert (
-                len(self.state.community_cards) == 5
+                len(self.state.community_cards) == self.rules.dealing.board_cards_total
             ), "Community cards incomplete at multi-player showdown."
 
             all_contributions = sum(
