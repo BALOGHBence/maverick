@@ -190,11 +190,14 @@ class PlayerStateType(Enum):
     ALL_IN : str
         Player has bet all their chips and cannot take further actions, but remains
         in the hand competing for pots they contributed to.
+    ELIMINATED : str
+        Player has lost all their chips and is out of the game.
     """
 
     ACTIVE = auto()
     FOLDED = auto()
     ALL_IN = auto()
+    ELIMINATED = auto()
 
 
 class GameStage(Enum):
