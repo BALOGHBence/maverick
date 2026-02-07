@@ -143,22 +143,24 @@ class GameState(BaseModel):
 
     def get_players_in_hand(self) -> list[PlayerLike]:
         """Return list of players still in the hand (not folded)."""
-        return [p for p in self.players if p.state.state_type != PlayerStateType.FOLDED]
+        return [
+            p
+            for p in self.players
+            if p.state.state_type in [PlayerStateType.ACTIVE, PlayerStateType.ALL_IN]
+        ]
 
     def is_betting_round_complete(self) -> bool:
         """Betting round is complete when no further action is possible/required."""
-        in_hand = [
-            p for p in self.players if p.state.state_type != PlayerStateType.FOLDED
-        ]
+        in_hand = self.get_players_in_hand()
 
         # If only one player remains, hand is effectively over
         if len(in_hand) <= 1:
             return True
 
-        can_act = [p for p in in_hand if p.state.state_type == PlayerStateType.ACTIVE]
+        can_act = self.get_active_players()
 
-        # If nobody can act (everyone left is all-in), betting is complete
-        if not can_act:
+        # If less than 2 players can act, betting is complete
+        if len(can_act) < 2:
             return True
 
         # Everyone who can act must have acted since the last reopen

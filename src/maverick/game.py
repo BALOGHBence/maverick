@@ -337,13 +337,16 @@ class Game:
             f"Player {player.name} joined the game.", logging.INFO, stage_prefix=False
         )
 
-    def remove_player(self, player: PlayerLike) -> None:
+    def remove_player(self, player: PlayerLike, flush: bool = True) -> None:
         """Remove a player from the game.
 
         Parameters
         ----------
         player : PlayerLike
             The player to remove from the game.
+        flush : bool
+            If True, immediately process the resulting events. If False, the events will be
+            added to the queue but not processed until step() is called. Default is True.
         """
         player_id = player.id
 
@@ -362,10 +365,14 @@ class Game:
         self.table.remove_player(player)
         self.state.players = [p for p in self.state.players if p.id != player_id]
 
-        self._handle_event(GameEventType.PLAYER_LEFT)
+        if flush:
+            self._handle_event(GameEventType.PLAYER_LEFT)
+        else:
+            self._event_queue.append(GameEventType.PLAYER_LEFT)
+
         self._emit(self._create_event(GameEventType.PLAYER_LEFT, player_id=player_id))
         self._log(
-            f"Player {player.name} left the game.", logging.INFO, stage_prefix=False
+            f"Player {player.name} has left the game.", logging.INFO, stage_prefix=False
         )
 
     def start(self) -> None:
@@ -462,6 +469,7 @@ class Game:
 
             case GameEventType.BETTING_ROUND_COMPLETED:
                 if len(self.state.get_players_in_hand()) == 1:
+                    # There is no or only one active player left, so we skip to showdown
                     self.state.stage = GameStage.SHOWDOWN
                     self.state.street = None
                     self._emit(self._create_event(GameEventType.SHOWDOWN_STARTED))
@@ -469,6 +477,7 @@ class Game:
                     self._emit(self._create_event(GameEventType.SHOWDOWN_COMPLETED))
                     self._event_queue.append(GameEventType.SHOWDOWN_COMPLETED)
                 else:
+                    # There is at least 2 active players, so we continue to next street
                     if self.state.stage == GameStage.PRE_FLOP:
                         self.state.stage = GameStage.FLOP
                         self.state.street = Street.FLOP
@@ -526,11 +535,12 @@ class Game:
             case GameEventType.HAND_ENDED:
                 self._log("Hand ended\n", logging.INFO, stage_prefix=False)
 
-                # eliminate players with zero stack
+                # Eliminate players with zero stack
                 eliminated_players = [
                     p for p in self.state.players if p.state.stack == 0
                 ]
                 for player in eliminated_players:
+                    player.state.state_type = PlayerStateType.ELIMINATED
                     self._emit(
                         self._create_event(
                             GameEventType.PLAYER_ELIMINATED, player_id=player.id
@@ -542,26 +552,9 @@ class Game:
                         stage_prefix=False,
                     )
                     self._event_queue.append(GameEventType.PLAYER_ELIMINATED)
+                    self.remove_player(player, flush=False)
 
-                # Remove eliminated players from the game
-                self.state.players = [
-                    p for p in self.state.players if p.state.stack > 0
-                ]
-
-                # remove eliminated players from the table
-                for player in eliminated_players:
-                    self._emit(
-                        self._create_event(
-                            GameEventType.PLAYER_LEFT, player_id=player.id
-                        )
-                    )
-                    self._log(
-                        f"Player {player.name} has left the table.",
-                        logging.INFO,
-                        stage_prefix=False,
-                    )
-                    self._event_queue.append(GameEventType.PLAYER_LEFT)
-
+                # Check if we have enough players to continue
                 if len(self.state.players) < self.rules.dealing.min_players:
                     self._log(
                         "Not enough players to continue, ending game.", logging.INFO
@@ -569,6 +562,7 @@ class Game:
                     self.state.stage = GameStage.GAME_OVER
                     self._event_queue.append(GameEventType.GAME_ENDED)
                 else:
+                    # Move button and start next hand
                     self._move_button()
 
                     if self.state.hand_number >= self._max_hands:
@@ -736,13 +730,17 @@ class Game:
         # - Other player is BIG blind
         if num_players == 2:
             sb_index = self.state.button_position
-            bb_index = self.table.next_occupied_seat(self.state.button_position)
+            bb_index = self.table.next_occupied_seat(
+                self.state.button_position, active=True
+            )
         else:
             # Multi-way:
             # - SB = left of button
             # - BB = left of SB
-            sb_index = self.table.next_occupied_seat(self.state.button_position)
-            bb_index = self.table.next_occupied_seat(sb_index)
+            sb_index = self.table.next_occupied_seat(
+                self.state.button_position, active=True
+            )
+            bb_index = self.table.next_occupied_seat(sb_index, active=True)
         assert isinstance(sb_index, int)
         assert isinstance(bb_index, int)
 
@@ -792,7 +790,9 @@ class Game:
         if num_players == 2:
             self.state.current_player_index = sb_index
         else:
-            self.state.current_player_index = self.table.next_occupied_seat(bb_index)
+            self.state.current_player_index = self.table.next_occupied_seat(
+                bb_index, active=True
+            )
 
         assert isinstance(
             self.state.current_player_index, int
@@ -1165,7 +1165,7 @@ class Game:
             self.state.pot = 0
         else:
             assert (
-                len(self.state.community_cards) == 5
+                len(self.state.community_cards) == self.rules.dealing.board_cards_total
             ), "Community cards incomplete at multi-player showdown."
 
             all_contributions = sum(
