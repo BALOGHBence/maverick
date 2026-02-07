@@ -157,8 +157,8 @@ class GameState(BaseModel):
 
         can_act = [p for p in in_hand if p.state.state_type == PlayerStateType.ACTIVE]
 
-        # If nobody can act (everyone left is all-in), betting is complete
-        if not can_act:
+        # If less than 2 players can act, betting is complete
+        if len(can_act) < 2:
             return True
 
         # Everyone who can act must have acted since the last reopen
