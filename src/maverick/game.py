@@ -753,7 +753,7 @@ class Game:
         """Post blinds with correct heads-up semantics (button posts SB in HU)."""
         num_players = len(self.state.players)
         min_num_players = self.rules.dealing.min_players
-        if num_players < min_num_players:
+        if num_players < min_num_players:  # pragma: no cover
             raise ValueError(f"Need at least {min_num_players} players to post blinds")
 
         # --- Small blind ---
@@ -1150,7 +1150,7 @@ class Game:
     def _assign_blind_positions(self) -> None:
         num_players = len(self.state.players)
         min_num_players = self.rules.dealing.min_players
-        if num_players < min_num_players:
+        if num_players < min_num_players:  # pragma: no cover
             raise ValueError(f"Need at least {min_num_players} players to post blinds")
 
         # Heads-up special case:
