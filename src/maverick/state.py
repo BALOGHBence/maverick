@@ -56,7 +56,7 @@ class GameState(BaseModel):
     hand_number : int
         The current hand number in the game.
     button_position : int
-        The position of the dealer button at the table.
+        The position (seat index) of the dealer button at the table.
     """
 
     stage: GameStage = GameStage.WAITING_FOR_PLAYERS
