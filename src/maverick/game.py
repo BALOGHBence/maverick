@@ -649,8 +649,6 @@ class Game:
             self._all_stacks_at_game_start += p.state.stack
 
     def _start_new_hand(self) -> None:
-        self._assign_blind_positions()
-
         self.state.hand_number += 1
 
         self._log(
@@ -677,6 +675,8 @@ class Game:
                 player.state.state_type = PlayerStateType.ACTIVE
 
         self.state.street = Street.PRE_FLOP
+
+        self._assign_blind_positions()
 
     def get_current_player(self) -> Optional[PlayerLike]:
         """Return the player whose turn it is.
@@ -753,8 +753,16 @@ class Game:
         """Post blinds with correct heads-up semantics (button posts SB in HU)."""
         num_players = len(self.state.players)
         min_num_players = self.rules.dealing.min_players
+
+        # Sanity check: ensure we have enough players to post blinds
         if num_players < min_num_players:  # pragma: no cover
             raise ValueError(f"Need at least {min_num_players} players to post blinds")
+
+        # Sanity check: ensure small_blind and big_blind positions are assigned correctly
+        if not self.small_blind or not self.big_blind:  # pragma: no cover
+            raise ValueError("Small blind or big blind player not assigned")
+        if self.small_blind.state.seat == self.big_blind.state.seat:  # pragma: no cover
+            raise ValueError("Small blind and big blind cannot be the same player")
 
         # --- Small blind ---
         sb_player = self.small_blind
@@ -1158,9 +1166,7 @@ class Game:
         # - Other player is BIG blind
         if num_players == 2:
             sb_index = self.state.button_position
-            bb_index = self.table.next_occupied_seat(
-                self.state.button_position, active=True
-            )
+            bb_index = self.table.next_occupied_seat(sb_index, active=True)
         else:
             # Multi-way:
             # - SB = left of button
@@ -1171,6 +1177,7 @@ class Game:
             bb_index = self.table.next_occupied_seat(sb_index, active=True)
         assert isinstance(sb_index, int)
         assert isinstance(bb_index, int)
+        assert sb_index != bb_index, "SB and BB cannot be the same player"
 
         # Store blind positions in state for easy access by event handlers and player logic
         self.state.small_blind_position = sb_index
