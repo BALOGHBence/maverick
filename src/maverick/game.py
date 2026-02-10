@@ -170,6 +170,36 @@ class Game:
         """
         return self._table
 
+    @property
+    def button(self) -> Optional[PlayerLike]:
+        """Returns the player currently on the button, or None if no button assigned.
+
+        .. versionadded:: 0.3.0
+        """
+        if self.state.button_position is not None:
+            return self.table[self.state.button_position]
+        return None
+
+    @property
+    def small_blind(self) -> Optional[PlayerLike]:
+        """Returns the player currently in the small blind position, or None if no small blind assigned.
+
+        .. versionadded:: 0.3.0
+        """
+        if self.state.small_blind_position is not None:
+            return self.table[self.state.small_blind_position]
+        return None
+
+    @property
+    def big_blind(self) -> Optional[PlayerLike]:
+        """Returns the player currently in the big blind position, or None if no big blind assigned.
+
+        .. versionadded:: 0.3.0
+        """
+        if self.state.big_blind_position is not None:
+            return self.table[self.state.big_blind_position]
+        return None
+
     def _log(
         self,
         message: str,
@@ -743,6 +773,10 @@ class Game:
             bb_index = self.table.next_occupied_seat(sb_index, active=True)
         assert isinstance(sb_index, int)
         assert isinstance(bb_index, int)
+
+        # Store blind positions in state for easy access by event handlers and player logic
+        self.state.small_blind_position = sb_index
+        self.state.big_blind_position = bb_index
 
         # --- Small blind ---
         sb_player = self.table[sb_index]
