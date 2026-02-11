@@ -170,6 +170,36 @@ class Game:
         """
         return self._table
 
+    @property
+    def button(self) -> Optional[PlayerLike]:
+        """Returns the player currently on the button, or None if no button assigned.
+
+        .. versionadded:: 0.3.0
+        """
+        if self.state.button_position is not None:
+            return self.table[self.state.button_position]
+        return None
+
+    @property
+    def small_blind(self) -> Optional[PlayerLike]:
+        """Returns the player currently in the small blind position, or None if no small blind assigned.
+
+        .. versionadded:: 0.3.0
+        """
+        if self.state.small_blind_position is not None:
+            return self.table[self.state.small_blind_position]
+        return None
+
+    @property
+    def big_blind(self) -> Optional[PlayerLike]:
+        """Returns the player currently in the big blind position, or None if no big blind assigned.
+
+        .. versionadded:: 0.3.0
+        """
+        if self.state.big_blind_position is not None:
+            return self.table[self.state.big_blind_position]
+        return None
+
     def _log(
         self,
         message: str,
@@ -563,8 +593,6 @@ class Game:
                     self._event_queue.append(GameEventType.GAME_ENDED)
                 else:
                     # Move button and start next hand
-                    self._move_button()
-
                     if self.state.hand_number >= self._max_hands:
                         self._log(
                             "Reached maximum number of hands, ending game.",
@@ -574,6 +602,7 @@ class Game:
                         self.state.stage = GameStage.GAME_OVER
                         self._event_queue.append(GameEventType.GAME_ENDED)
                     else:
+                        self._move_button()
                         self._start_new_hand()
                         self._event_queue.append(GameEventType.HAND_STARTED)
 
@@ -646,6 +675,8 @@ class Game:
                 player.state.state_type = PlayerStateType.ACTIVE
 
         self.state.street = Street.PRE_FLOP
+
+        self._assign_blind_positions()
 
     def get_current_player(self) -> Optional[PlayerLike]:
         """Return the player whose turn it is.
@@ -722,30 +753,19 @@ class Game:
         """Post blinds with correct heads-up semantics (button posts SB in HU)."""
         num_players = len(self.state.players)
         min_num_players = self.rules.dealing.min_players
-        if num_players < min_num_players:
+
+        # Sanity check: ensure we have enough players to post blinds
+        if num_players < min_num_players:  # pragma: no cover
             raise ValueError(f"Need at least {min_num_players} players to post blinds")
 
-        # Heads-up special case:
-        # - Button is SMALL blind
-        # - Other player is BIG blind
-        if num_players == 2:
-            sb_index = self.state.button_position
-            bb_index = self.table.next_occupied_seat(
-                self.state.button_position, active=True
-            )
-        else:
-            # Multi-way:
-            # - SB = left of button
-            # - BB = left of SB
-            sb_index = self.table.next_occupied_seat(
-                self.state.button_position, active=True
-            )
-            bb_index = self.table.next_occupied_seat(sb_index, active=True)
-        assert isinstance(sb_index, int)
-        assert isinstance(bb_index, int)
+        # Sanity check: ensure small_blind and big_blind positions are assigned correctly
+        if not self.small_blind or not self.big_blind:  # pragma: no cover
+            raise ValueError("Small blind or big blind player not assigned")
+        if self.small_blind.state.seat == self.big_blind.state.seat:  # pragma: no cover
+            raise ValueError("Small blind and big blind cannot be the same player")
 
         # --- Small blind ---
-        sb_player = self.table[sb_index]
+        sb_player = self.small_blind
         sb_amount = min(self.state.small_blind, sb_player.state.stack)
         sb_player.state.current_bet = sb_amount
         sb_player.state.total_contributed = sb_amount
@@ -761,7 +781,7 @@ class Game:
         )
 
         # --- Big blind ---
-        bb_player = self.table[bb_index]
+        bb_player = self.big_blind
         bb_amount = min(self.state.big_blind, bb_player.state.stack)
         bb_player.state.current_bet = bb_amount
         bb_player.state.total_contributed = bb_amount
@@ -788,10 +808,10 @@ class Game:
         # - Heads-up: button (SB) acts first
         # - Multi-way: player left of BB acts first
         if num_players == 2:
-            self.state.current_player_index = sb_index
+            self.state.current_player_index = sb_player.state.seat
         else:
             self.state.current_player_index = self.table.next_occupied_seat(
-                bb_index, active=True
+                bb_player.state.seat, active=True
             )
 
         assert isinstance(
@@ -1134,6 +1154,34 @@ class Game:
     def _move_button(self) -> None:
         self.table.move_button()
         self.state.button_position = self.table.button_seat
+
+    def _assign_blind_positions(self) -> None:
+        num_players = len(self.state.players)
+        min_num_players = self.rules.dealing.min_players
+        if num_players < min_num_players:  # pragma: no cover
+            raise ValueError(f"Need at least {min_num_players} players to post blinds")
+
+        # Heads-up special case:
+        # - Button is SMALL blind
+        # - Other player is BIG blind
+        if num_players == 2:
+            sb_index = self.state.button_position
+            bb_index = self.table.next_occupied_seat(sb_index, active=True)
+        else:
+            # Multi-way:
+            # - SB = left of button
+            # - BB = left of SB
+            sb_index = self.table.next_occupied_seat(
+                self.state.button_position, active=True
+            )
+            bb_index = self.table.next_occupied_seat(sb_index, active=True)
+        assert isinstance(sb_index, int)
+        assert isinstance(bb_index, int)
+        assert sb_index != bb_index, "SB and BB cannot be the same player"
+
+        # Store blind positions in state for easy access by event handlers and player logic
+        self.state.small_blind_position = sb_index
+        self.state.big_blind_position = bb_index
 
     def _winners_in_button_order(self, winners: list[PlayerLike]) -> list[PlayerLike]:
         n_players = len(self.state.players)

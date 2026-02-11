@@ -90,6 +90,64 @@ class TestGameInitialization(unittest.TestCase):
         )
 
 
+class TestGamePositionProperties(unittest.TestCase):
+    """Tests for positional convenience properties on Game."""
+
+    def test_button_returns_none_when_unassigned(self):
+        game = create_game(max_players=6)
+        self.assertIsNone(game.state.button_position)
+        self.assertIsNone(game.button)
+
+    def test_button_returns_player_when_assigned(self):
+        game = create_game(max_players=6)
+        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100, seat=3))
+        game.add_player(p1)
+
+        game.state.button_position = 3
+        self.assertIs(game.button, p1)
+
+    def test_button_returns_none_when_seat_empty(self):
+        game = create_game(max_players=6)
+        game.state.button_position = 5
+        self.assertIsNone(game.button)
+
+    def test_small_blind_returns_none_when_unassigned(self):
+        game = create_game(max_players=6)
+        self.assertIsNone(game.state.small_blind_position)
+        self.assertIsNone(game.small_blind)
+
+    def test_small_blind_returns_player_when_assigned(self):
+        game = create_game(max_players=6)
+        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100, seat=1))
+        game.add_player(p1)
+
+        game.state.small_blind_position = 1
+        self.assertIs(game.small_blind, p1)
+
+    def test_small_blind_returns_none_when_seat_empty(self):
+        game = create_game(max_players=6)
+        game.state.small_blind_position = 4
+        self.assertIsNone(game.small_blind)
+
+    def test_big_blind_returns_none_when_unassigned(self):
+        game = create_game(max_players=6)
+        self.assertIsNone(game.state.big_blind_position)
+        self.assertIsNone(game.big_blind)
+
+    def test_big_blind_returns_player_when_assigned(self):
+        game = create_game(max_players=6)
+        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100, seat=2))
+        game.add_player(p1)
+
+        game.state.big_blind_position = 2
+        self.assertIs(game.big_blind, p1)
+
+    def test_big_blind_returns_none_when_seat_empty(self):
+        game = create_game(max_players=6)
+        game.state.big_blind_position = 0
+        self.assertIsNone(game.big_blind)
+
+
 class TestAddPlayer(unittest.TestCase):
     """Test Game.add_player method."""
 

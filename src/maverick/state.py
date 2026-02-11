@@ -55,8 +55,16 @@ class GameState(BaseModel):
         The ante amount for the game.
     hand_number : int
         The current hand number in the game.
-    button_position : int
+    button_position : Optional[int]
         The position (seat index) of the dealer button at the table.
+    small_blind_position : Optional[int]
+        The position (seat index) of the small blind at the table.
+
+        .. versionadded:: 0.3.0
+    big_blind_position : Optional[int]
+        The position (seat index) of the big blind at the table.
+
+        .. versionadded:: 0.3.0
     """
 
     stage: GameStage = GameStage.WAITING_FOR_PLAYERS
@@ -79,7 +87,9 @@ class GameState(BaseModel):
 
     # Hand tracking
     hand_number: int = 0
-    button_position: int = 0
+    button_position: Optional[int] = None
+    small_blind_position: Optional[int] = None
+    big_blind_position: Optional[int] = None
 
     model_config = {
         "arbitrary_types_allowed": True,
