@@ -23,6 +23,8 @@ class ManiacBot(Player):
     - **Common At:** Short bursts in live and online play.
     """
 
+    cls_uid = "59e513d214354d499983ede7741d6c8e"
+
     def decide_action(
         self,
         *,

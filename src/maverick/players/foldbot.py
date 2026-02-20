@@ -8,6 +8,8 @@ __all__ = ["FoldBot"]
 class FoldBot(Player):
     """A passive bot that always folds when possible."""
 
+    cls_uid = "102fbcd28bf74c598c0eefefed39e070"
+
     def decide_action(self, *, valid_actions: list[ActionType], **_) -> PlayerAction:
         """Always call or check if possible, otherwise fold."""
         if ActionType.FOLD in valid_actions:

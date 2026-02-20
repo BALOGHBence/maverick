@@ -24,6 +24,8 @@ class WhaleBot(Player):
     - **Common At:** High-stakes games, recreational millionaires.
     """
 
+    cls_uid = "664c10aa04d34e0d8bfd2a7525539e9e"
+
     def decide_action(
         self,
         *,

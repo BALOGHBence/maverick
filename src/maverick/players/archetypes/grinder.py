@@ -24,6 +24,8 @@ class GrinderBot(Player):
     - **Common At:** Online cash games.
     """
 
+    cls_uid = "eae4e67da03d4aed8b90ef4f9d232df1"
+
     def decide_action(
         self,
         *,

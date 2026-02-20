@@ -24,6 +24,8 @@ class TiltedBot(Player):
     - **Common At:** All stakes, especially after big pots.
     """
 
+    cls_uid = "f78a8edbc4fc419099e7ac86c4f6f43c"
+
     def decide_action(
         self,
         *,

@@ -24,6 +24,8 @@ class LooseAggressiveBot(Player):
     - **Common At:** Higher-stakes games, experienced online players.
     """
 
+    cls_uid = "e84b81f275c348e8ba589ac278f73a52"
+
     def decide_action(
         self,
         *,
