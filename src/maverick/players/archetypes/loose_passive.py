@@ -18,6 +18,8 @@ class LoosePassiveBot(Player):
     - **Common At:** Casual home games and low-stakes casinos.
     """
 
+    cls_uid = "6920b2a799ba43659491a1b95e87a3ed"
+
     def decide_action(
         self, *, valid_actions: list[ActionType], min_bet_amount: int, **_
     ) -> PlayerAction:

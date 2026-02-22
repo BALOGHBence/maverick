@@ -26,6 +26,8 @@ class FishBot(Player):
     - **Common At:** Low-stakes online games, casual live games.
     """
 
+    cls_uid = "38781a3af8c4437f94cbaa351398aee9"
+
     def decide_action(
         self,
         *,

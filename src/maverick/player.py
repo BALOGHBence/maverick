@@ -13,6 +13,9 @@ if TYPE_CHECKING:  # pragma: no cover
 
 __all__ = ["Player"]
 
+# Registry for classes by their cls_uid
+_uid_registry: dict[str, type["Player"]] = {}
+
 
 class PlayerMeta(ABCMeta):
 
@@ -23,6 +26,10 @@ class PlayerMeta(ABCMeta):
         cls = super().__new__(metaclass, name, bases, namespace, *args, **kwargs)
         if not ABC in bases and getattr(cls, "register", True):
             registered_players[cls.__name__] = cls
+            # Register by cls_uid if it exists
+            cls_uid = getattr(cls, "cls_uid", None)
+            if cls_uid is not None:
+                _uid_registry[cls_uid] = cls
         return cls
 
 
@@ -30,6 +37,7 @@ class Player(metaclass=PlayerMeta):
     """Abstract base class for a poker player."""
 
     register: bool = True
+    cls_uid: Optional[str] = None
 
     def __init__(
         self,
@@ -46,6 +54,23 @@ class Player(metaclass=PlayerMeta):
             if isinstance(state, PlayerState) or state is None
             else PlayerState.model_validate(state)
         )
+
+    @classmethod
+    def get_by_uid(cls, uid: str) -> Optional[type["Player"]]:
+        """
+        Get a player class by its unique identifier.
+
+        Parameters
+        ----------
+        uid : str
+            The unique identifier of the player class.
+
+        Returns
+        -------
+        Optional[type[Player]]
+            The player class with the given uid, or None if not found.
+        """
+        return _uid_registry.get(uid)
 
     @abstractmethod
     def decide_action(

@@ -24,6 +24,8 @@ class ABCBot(Player):
     - **Common At:** Low to mid-stakes games.
     """
 
+    cls_uid = "f0c69546d5c54e7d8d3f3b1e1aa21ba7"
+
     def decide_action(
         self,
         *,
