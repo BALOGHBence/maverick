@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added new positional properties to `Game`: `button`, `small_blind`, and `big_blind`.
 - Extended `GameState` with `small_blind_position` and `big_blind_position` fields.
+- Added `cls_uid` class attribute to all player classes for unique identification and runtime lookup via `Player.get_by_uid()`.
 
 ## [0.2.3] - 2026.02.07
 
