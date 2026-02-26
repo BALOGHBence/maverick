@@ -24,6 +24,8 @@ class ScaredMoneyBot(Player):
     - **Common At:** Players playing above their bankroll.
     """
 
+    cls_uid = "f2756fdf666e47bda99bdfb14b9af9f8"
+
     def decide_action(
         self,
         *,

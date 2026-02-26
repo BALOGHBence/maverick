@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file. If you are 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0]
+## [0.4.0] - 2026.02.22
+
+### Added
+
+- Added `cls_uid` class attribute to all player classes for unique identification and runtime lookup via `Player.get_by_uid()`.
+
+## [0.3.0] - 2026.02.14
 
 - Added new positional properties to `Game`: `button`, `small_blind`, and `big_blind`.
 - Extended `GameState` with `small_blind_position` and `big_blind_position` fields.

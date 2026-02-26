@@ -24,6 +24,8 @@ class SharkBot(Player):
     - **Common At:** Live games and mixed-skill environments.
     """
 
+    cls_uid = "1e411ce49f304f9fa95e16beafd49dda"
+
     def decide_action(
         self,
         *,

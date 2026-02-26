@@ -24,6 +24,8 @@ class TightAggressiveBot(Player):
     - **Common At:** Winning regulars in cash games and tournaments.
     """
 
+    cls_uid = "c358f76838c0417d9ed2a917d2551a6b"
+
     def decide_action(
         self,
         *,

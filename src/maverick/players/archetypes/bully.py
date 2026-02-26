@@ -24,6 +24,8 @@ class BullyBot(Player):
     - **Common At:** Deep-stack live games.
     """
 
+    cls_uid = "aca0b351a0014764aee814f30c485f2a"
+
     def decide_action(
         self,
         *,

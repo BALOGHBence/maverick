@@ -13,6 +13,8 @@ __all__ = ["AggressiveBot"]
 class AggressiveBot(Player):
     """An aggressive bot that frequently bets and raises."""
 
+    cls_uid = "06b62659dd7543fabd500d0b19ae3ecb"
+
     def decide_action(
         self,
         *,

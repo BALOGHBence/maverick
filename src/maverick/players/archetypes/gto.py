@@ -24,6 +24,8 @@ class GTOBot(Player):
     - **Common At:** Mid-to-high stakes online.
     """
 
+    cls_uid = "ef7bc5f2eca24a09b25b1daeb0056353"
+
     def decide_action(
         self,
         *,

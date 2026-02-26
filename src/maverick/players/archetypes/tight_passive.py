@@ -24,6 +24,8 @@ class TightPassiveBot(Player):
     - **Common At:** Low-stakes live games.
     """
 
+    cls_uid = "901a5f5a990a448b9fba7cd52129c1b8"
+
     def decide_action(
         self,
         *,

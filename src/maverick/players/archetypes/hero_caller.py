@@ -25,6 +25,8 @@ class HeroCallerBot(Player):
     - **Common At:** All stakes, recreational players.
     """
 
+    cls_uid = "04c4fb16c2d043d9881ee4a42b534809"
+
     def decide_action(
         self,
         *,
