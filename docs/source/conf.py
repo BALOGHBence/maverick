@@ -41,6 +41,10 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
     "sphinx_copybutton",
+    
+    # LLM-powered content generation
+    # https://github.com/NVIDIA/sphinx-llm
+    "sphinx_llm.txt",  
 ]
 
 source_suffix = {
