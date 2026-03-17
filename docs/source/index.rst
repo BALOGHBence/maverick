@@ -57,6 +57,7 @@ Contents
    overview
    getting_started
    poker_fundamentals
+   LLMs
 
 .. toctree::
    :maxdepth: 2
