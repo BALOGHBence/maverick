@@ -109,6 +109,7 @@ nb_execution_in_temp = True
 
 html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
+html_js_files = ["js/download_md.js"]
 
 html_theme = "sphinx_book_theme"
 
