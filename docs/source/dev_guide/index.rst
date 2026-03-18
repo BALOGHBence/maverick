@@ -14,6 +14,7 @@ Please also read the code of conduct for contributors: https://github.com/BALOGH
    gitflow_and_branching
    coding_conventions        
    documentation
+   llm_friendly_docs
    git_cookbook
    testing_and_coverage
    changes_and_versioning
