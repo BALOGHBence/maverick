@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added a `game_id` read-only property to the `Game` class that exposes a unique identifier (32-character hex UUID) for each game session. A new `game_id` is generated every time the `GAME_STARTED` event is processed, so reusing a `Game` instance across multiple sessions always produces a fresh identifier. The value is `None` before `start()` is called.
+- Added a `game_uid` read-only property to the `Game` class that exposes a unique identifier (32-character hex UUID) for each game session. A new `game_uid` is generated every time the `GAME_STARTED` event is processed, so reusing a `Game` instance across multiple sessions always produces a fresh identifier. The value is `None` before `start()` is called.
 
 ## [0.4.0] - 2026.02.22
 

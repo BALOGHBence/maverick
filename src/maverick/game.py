@@ -146,10 +146,10 @@ class Game:
         self._game_uid: Optional[str] = None
 
     @property
-    def game_id(self) -> Optional[str]:
+    def game_uid(self) -> Optional[str]:
         """Returns the unique identifier for the current game session.
 
-        A new ``game_id`` is generated each time :meth:`start` is called (i.e.
+        A new ``game_uid`` is generated each time :meth:`start` is called (i.e.
         each time the ``GAME_STARTED`` event is processed). The value is
         ``None`` before the game has been started.
 
