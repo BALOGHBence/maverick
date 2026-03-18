@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Deque, Optional
 from collections import deque
 import logging
+import uuid
 from warnings import warn
 
 from .deck import Deck
@@ -140,6 +141,27 @@ class Game:
 
         # Table
         self._table = Table(n_seats=rules.dealing.max_players)
+
+        # Game UID - assigned when GAME_STARTED is processed
+        self._game_uid: Optional[str] = None
+
+    @property
+    def game_id(self) -> Optional[str]:
+        """Returns the unique identifier for the current game session.
+
+        A new ``game_id`` is generated each time :meth:`start` is called (i.e.
+        each time the ``GAME_STARTED`` event is processed). The value is
+        ``None`` before the game has been started.
+
+        Returns
+        -------
+        str | None
+            A 32-character hexadecimal UUID string, or ``None`` if the game
+            has not been started yet.
+
+        .. versionadded:: 0.5.0
+        """
+        return self._game_uid
 
     @property
     def rules(self) -> PokerRules:
@@ -451,6 +473,7 @@ class Game:
             case GameEventType.GAME_STARTED:
                 assert self.state.stage == GameStage.READY
                 self.state.stage = GameStage.STARTED
+                self._game_uid = uuid.uuid4().hex
                 self._emit(self._create_event(GameEventType.GAME_STARTED))
                 self._start_new_hand()
                 self._event_queue.append(GameEventType.HAND_STARTED)
