@@ -1,4 +1,4 @@
-"""Tests for the game_id (unique game identifier) feature."""
+"""Tests for the game_uid (unique game identifier) feature."""
 
 import unittest
 
@@ -53,39 +53,39 @@ def _make_game(max_hands=1):
     return game
 
 
-class TestGameIdBeforeStart(unittest.TestCase):
-    """Test game_id before the game has been started."""
+class TestGameUidBeforeStart(unittest.TestCase):
+    """Test game_uid before the game has been started."""
 
-    def test_game_id_is_none_before_start(self):
-        """game_id should be None before start() is called."""
+    def test_game_uid_is_none_before_start(self):
+        """game_uid should be None before start() is called."""
         game = Game(small_blind=1, big_blind=2)
-        self.assertIsNone(game.game_id)
+        self.assertIsNone(game.game_uid)
 
 
-class TestGameIdAfterStart(unittest.TestCase):
-    """Test game_id after the game has been started."""
+class TestGameUidAfterStart(unittest.TestCase):
+    """Test game_uid after the game has been started."""
 
-    def test_game_id_is_string_after_start(self):
-        """game_id should be a string after start() is called."""
+    def test_game_uid_is_string_after_start(self):
+        """game_uid should be a string after start() is called."""
         game = _make_game()
         game.start()
-        self.assertIsInstance(game.game_id, str)
+        self.assertIsInstance(game.game_uid, str)
 
-    def test_game_id_is_32_char_hex(self):
-        """game_id should be a 32-character hexadecimal string."""
+    def test_game_uid_is_32_char_hex(self):
+        """game_uid should be a 32-character hexadecimal string."""
         game = _make_game()
         game.start()
-        self.assertEqual(len(game.game_id), 32)
+        self.assertEqual(len(game.game_uid), 32)
         # Should be a valid hex string
-        int(game.game_id, 16)
+        int(game.game_uid, 16)
 
-    def test_game_id_is_set_when_game_started_event_fires(self):
-        """game_id should be set by the time the GAME_STARTED handler is called."""
+    def test_game_uid_is_set_when_game_started_event_fires(self):
+        """game_uid should be set by the time the GAME_STARTED handler is called."""
         game = Game(small_blind=1, big_blind=2, max_hands=1)
-        captured_game_id = []
+        captured_game_uid = []
 
         def on_game_started(event: GameEvent, g: Game):
-            captured_game_id.append(g.game_id)
+            captured_game_uid.append(g.game_uid)
 
         game.subscribe(GameEventType.GAME_STARTED, on_game_started)
 
@@ -101,24 +101,24 @@ class TestGameIdAfterStart(unittest.TestCase):
         game.add_player(p2)
         game.start()
 
-        self.assertEqual(len(captured_game_id), 1)
-        self.assertIsNotNone(captured_game_id[0])
-        self.assertEqual(len(captured_game_id[0]), 32)
+        self.assertEqual(len(captured_game_uid), 1)
+        self.assertIsNotNone(captured_game_uid[0])
+        self.assertEqual(len(captured_game_uid[0]), 32)
 
-    def test_game_id_is_read_only(self):
-        """game_id property should be read-only."""
+    def test_game_uid_is_read_only(self):
+        """game_uid property should be read-only."""
         game = _make_game()
         game.start()
         with self.assertRaises(AttributeError):
-            game.game_id = "some-value"
+            game.game_uid = "some-value"
 
-    def test_game_id_unique_across_instances(self):
-        """Different game instances started independently should have different game_ids."""
+    def test_game_uid_unique_across_instances(self):
+        """Different game instances started independently should have different game_uids."""
         game1 = _make_game()
         game2 = _make_game()
         game1.start()
         game2.start()
-        self.assertNotEqual(game1.game_id, game2.game_id)
+        self.assertNotEqual(game1.game_uid, game2.game_uid)
 
 
 if __name__ == "__main__":
