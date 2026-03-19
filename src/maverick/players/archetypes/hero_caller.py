@@ -66,25 +66,25 @@ class HeroCallerBot(Player):
         if ActionType.CALL in valid_actions and marginal_hand:
             # Hero caller calls even big bets (often incorrectly)
             if call_amount <= self.state.stack * 0.6:
-                return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
+                return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Check when possible
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
 
         # Will bet sometimes but not aggressively
         if ActionType.BET in valid_actions:
             bet_amount = min(min_bet_amount * 2, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.BET, amount=bet_amount
+                player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Rarely raises
         if ActionType.RAISE in valid_actions:
             raise_amount = min(min_raise_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
+                player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_amount
             )
 
         # Folds only when forced to
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)

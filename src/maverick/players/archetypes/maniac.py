@@ -45,14 +45,14 @@ class ManiacBot(Player):
             raise_by_amount = max(min_raise_amount * 2, game.state.big_blind * 5)
             raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.RAISE, amount=raise_by_amount
+                player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_by_amount
             )
 
         # Bet aggressively
         if ActionType.BET in valid_actions:
             bet_amount = min(min_bet_amount * 5, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.BET, amount=bet_amount
+                player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Will even go all-in on marginal situations
@@ -61,17 +61,17 @@ class ManiacBot(Player):
             and self.state.stack <= game.state.pot * 2
         ):
             return PlayerAction(
-                player_id=self.id,
+                player_uid=self.uid,
                 action_type=ActionType.ALL_IN,
                 amount=self.state.stack,
             )
 
         # Call if can't raise or bet
         if ActionType.CALL in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Even check is better than fold for a maniac
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
 
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)

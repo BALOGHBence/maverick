@@ -67,7 +67,7 @@ class ABCBot(Player):
             # Textbook bet: 2-3x BB
             bet_amount = min(min_bet_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.BET, amount=bet_amount
+                player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Standard raise with strong hands
@@ -75,7 +75,7 @@ class ABCBot(Player):
             # Textbook raise: minimum raise
             raise_amount = min(min_raise_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
+                player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_amount
             )
 
         # Call with proper pot odds and decent hands
@@ -87,11 +87,11 @@ class ABCBot(Player):
                 and call_amount * 3 <= game.state.pot
                 and decent_hand
             ):
-                return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
+                return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Check when it's free
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
 
         # Fold when not getting proper odds or weak hand
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)

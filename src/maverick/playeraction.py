@@ -1,6 +1,7 @@
+import warnings
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .enums import ActionType
 
@@ -12,7 +13,7 @@ class PlayerAction(BaseModel):
 
     Fields
     ------
-    player_id : str
+    player_uid : str
         Unique identifier of the player taking the action.
     action_type : ActionType
         Type of action being taken.
@@ -23,7 +24,7 @@ class PlayerAction(BaseModel):
         after the action is taken.
     """
 
-    player_id: str = Field(
+    player_uid: str = Field(
         ..., description="Unique identifier of the player taking the action."
     )
     action_type: ActionType = Field(..., description="Type of action being taken.")
@@ -37,3 +38,30 @@ class PlayerAction(BaseModel):
             "after the action is taken."
         ),
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _handle_deprecated_player_id(cls, data: object) -> object:
+        if isinstance(data, dict) and "player_id" in data and "player_uid" not in data:
+            warnings.warn(
+                "PlayerAction.player_id is deprecated, use player_uid instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            data = dict(data)
+            data["player_uid"] = data.pop("player_id")
+        return data
+
+    @property
+    def player_id(self) -> str:
+        """Deprecated alias for player_uid.
+
+        .. deprecated::
+            Use :attr:`player_uid` instead.
+        """
+        warnings.warn(
+            "PlayerAction.player_id is deprecated, use player_uid instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.player_uid

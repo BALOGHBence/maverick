@@ -62,13 +62,13 @@ class TightPassiveBot(Player):
 
         # Check is always preferred when free
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
 
         # Call only if the amount is small relative to the pot and hand is strong
         if ActionType.CALL in valid_actions and strong_hand:
             # Only call if it's less than 10% of stack and pot is worth it
             if call_amount <= self.state.stack * 0.1:
-                return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
+                return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Fold in most other situations (never raises or bets, even with premium)
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)

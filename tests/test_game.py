@@ -243,7 +243,7 @@ class TestAddPlayer(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             game.add_player(p2)
-        self.assertIn("Player id 'p1' is already taken", str(context.exception))
+        self.assertIn("Player uid 'p1' is already taken", str(context.exception))
 
     def test_add_player_with_existing_seat_raises_error(self):
         """Test that adding a player to a full table raises ValueError."""
@@ -515,25 +515,25 @@ class TestCreateEvent(unittest.TestCase):
         self.assertIsNone(event.street)
 
     def test_create_event_with_player_id(self):
-        """Test creating an event with player_id."""
+        """Test creating an event with player_uid."""
         game = create_game()
 
         event = game._create_event(
             GameEventType.PLAYER_ACTION_TAKEN,
-            player_id="p1",
+            player_uid="p1",
         )
 
         self.assertEqual(event.type, GameEventType.PLAYER_ACTION_TAKEN)
-        self.assertEqual(event.player_id, "p1")
+        self.assertEqual(event.player_uid, "p1")
 
     def test_create_event_with_action(self):
         """Test creating an event with action."""
         game = create_game()
-        action = PlayerAction(player_id="p1", action_type=ActionType.FOLD)
+        action = PlayerAction(player_uid="p1", action_type=ActionType.FOLD)
 
         event = game._create_event(
             GameEventType.PLAYER_ACTION_TAKEN,
-            player_id="p1",
+            player_uid="p1",
             action=action,
         )
 

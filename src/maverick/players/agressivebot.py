@@ -30,7 +30,7 @@ class AggressiveBot(Player):
             # Use minimum raise increment
             if min_raise_amount <= self.state.stack:
                 return PlayerAction(
-                    player_id=self.id,
+                    player_uid=self.uid,
                     action_type=ActionType.RAISE,
                     amount=min_raise_amount,
                 )
@@ -40,16 +40,16 @@ class AggressiveBot(Player):
             bet_amount = max(min_bet_amount, game.state.big_blind * 2)
             if bet_amount <= self.state.stack:
                 return PlayerAction(
-                    player_id=self.id, action_type=ActionType.BET, amount=bet_amount
+                    player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
                 )
 
         # Call if we can't bet/raise
         if ActionType.CALL in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Check if possible
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
 
         # Otherwise fold
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)

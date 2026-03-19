@@ -1,3 +1,4 @@
+import warnings
 from abc import ABC, ABCMeta, abstractmethod
 from typing import TYPE_CHECKING, Optional
 import uuid
@@ -42,18 +43,41 @@ class Player(metaclass=PlayerMeta):
     def __init__(
         self,
         *,
+        uid: Optional[str] = None,
         id: Optional[str] = None,
         name: str,
         state: Optional[PlayerState | dict] = None,
         **_,
     ):
-        self.id = id or uuid.uuid4().hex
+        if id is not None:
+            warnings.warn(
+                "Player.__init__ id parameter is deprecated, use uid instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if uid is None:
+                uid = id
+        self.uid = uid or uuid.uuid4().hex
         self.name = name
         self.state = (
             state
             if isinstance(state, PlayerState) or state is None
             else PlayerState.model_validate(state)
         )
+
+    @property
+    def id(self) -> str:
+        """Deprecated alias for uid.
+
+        .. deprecated::
+            Use :attr:`uid` instead.
+        """
+        warnings.warn(
+            "Player.id is deprecated, use Player.uid instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.uid
 
     @classmethod
     def get_by_uid(cls, uid: str) -> Optional[type["Player"]]:
@@ -138,7 +162,7 @@ class Player(metaclass=PlayerMeta):
             A dictionary representation of the player.
         """
         return {
-            "id": self.id,
+            "uid": self.uid,
             "name": self.name,
             "state": self.state.model_dump() if self.state else None,
         }

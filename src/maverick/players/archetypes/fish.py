@@ -67,18 +67,18 @@ class FishBot(Player):
         if ActionType.CALL in valid_actions:
             # Fish calls with bad odds and weak hands
             if call_amount <= self.state.stack * 0.4:
-                return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
+                return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Check when possible (passive)
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
 
         # Occasionally bets with weird sizing, regardless of hand strength
         if ActionType.BET in valid_actions:
             # Inconsistent sizing - sometimes min bet
             bet_amount = min(min_bet_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.BET, amount=bet_amount
+                player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Rarely raises (not aggressive enough), even with good hands
@@ -86,8 +86,8 @@ class FishBot(Player):
             # Weak raises when does raise
             raise_amount = min(min_raise_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
+                player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_amount
             )
 
         # Folds when can't call
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)

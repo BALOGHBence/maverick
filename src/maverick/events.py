@@ -5,10 +5,11 @@ This module defines an immutable GameEvent payload that represents
 a snapshot of what happened in the game at a specific point in time.
 """
 
+import warnings
 from typing import Optional, Any
 import time, uuid
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .enums import GameEventType, Street, GameStage
 from .playeraction import PlayerAction
@@ -44,8 +45,8 @@ class GameEvent(BaseModel):
         The current game stage.
 
         .. versionadded:: 0.2.0
-    player_id : Optional[str]
-        ID of the player involved in the event, if applicable.
+    player_uid : Optional[str]
+        UID of the player involved in the event, if applicable.
     action : Optional[PlayerAction]
         The action taken by the player, if applicable.
     payload : dict[str, Any]
@@ -60,7 +61,7 @@ class GameEvent(BaseModel):
     street: Optional[Street] = None
     stage: Optional[GameStage] = None
 
-    player_id: Optional[str] = None
+    player_uid: Optional[str] = None
     action: Optional[PlayerAction] = None
 
     payload: dict[str, Any] = Field(default_factory=dict)
@@ -70,3 +71,30 @@ class GameEvent(BaseModel):
         extra="forbid",  # Prevents accidental fields
         arbitrary_types_allowed=True,
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _handle_deprecated_player_id(cls, data: object) -> object:
+        if isinstance(data, dict) and "player_id" in data and "player_uid" not in data:
+            warnings.warn(
+                "GameEvent.player_id is deprecated, use player_uid instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            data = dict(data)
+            data["player_uid"] = data.pop("player_id")
+        return data
+
+    @property
+    def player_id(self) -> Optional[str]:
+        """Deprecated alias for player_uid.
+
+        .. deprecated::
+            Use :attr:`player_uid` instead.
+        """
+        warnings.warn(
+            "GameEvent.player_id is deprecated, use player_uid instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.player_uid

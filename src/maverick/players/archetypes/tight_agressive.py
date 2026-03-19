@@ -69,7 +69,7 @@ class TightAggressiveBot(Player):
             raise_by_amount = max(min_raise_amount, game.state.big_blind * 3)
             raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.RAISE, amount=raise_by_amount
+                player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_by_amount
             )
 
         # Bet for value with strong hands
@@ -80,18 +80,18 @@ class TightAggressiveBot(Player):
                 self.state.stack,
             )
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.BET, amount=bet_amount
+                player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Call selectively with good odds and playable hands
         if ActionType.CALL in valid_actions and playable_hand:
             # TAG calls with proper odds (better than 3:1)
             if call_amount <= self.state.stack and call_amount * 3 <= game.state.pot:
-                return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
+                return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Check when free
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
 
         # Fold without proper odds or weak holding
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)
