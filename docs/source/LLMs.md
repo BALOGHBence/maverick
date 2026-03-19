@@ -51,6 +51,10 @@ Maverick poker library documentation. Then fetch whichever pages are relevant an
 me write a custom player that folds pre-flop unless it holds a pocket pair.
 ```
 
+```{note}
+As of today, these files cannot be natively leveraged by LLM frameworks or IDEs. Alternatively, a [MCP server](https://modelcontextprotocol.io/docs/getting-started/intro) can be implemented to properly parse the llms.txt file.
+```
+
 ## Option 3: Per-page Markdown
 
 Every page in this documentation has a Markdown twin at the same URL with `.md` appended (e.g. `api_reference.html.md`). Use this when:
