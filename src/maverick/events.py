@@ -9,7 +9,7 @@ import warnings
 from typing import Optional, Any
 import time, uuid, warnings
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from .enums import GameEventType, Street, GameStage
 from .playeraction import PlayerAction
