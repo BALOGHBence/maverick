@@ -3,7 +3,6 @@
 import warnings
 import unittest
 
-from maverick.player import Player
 from maverick.playeraction import PlayerAction
 from maverick.events import GameEvent
 from maverick.enums import ActionType, GameEventType
@@ -52,7 +51,7 @@ class TestPlayerUidDeprecations(unittest.TestCase):
             "Expected DeprecationWarning when using id= parameter",
         )
         self.assertTrue(
-            any("id parameter is deprecated" in str(w.message) for w in caught)
+            any("Passing id= to Player.__init__ is deprecated" in str(w.message) for w in caught)
         )
 
     def test_player_uid_takes_precedence_over_id(self):
