@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -22,6 +22,8 @@ class PlayerAction(BaseModel):
         IMPORTANT: The amount is always the value that you want to
         put into the pot from your stack, NOT the total bet/raise amount
         after the action is taken.
+    payload : dict[str, Any]
+        Additional action-specific data.
     """
 
     model_config = ConfigDict(populate_by_name=True)
@@ -42,6 +44,8 @@ class PlayerAction(BaseModel):
             "after the action is taken."
         ),
     )
+    
+    payload: dict[str, Any] = Field(default_factory=dict)
     
     @model_validator(mode="before")
     @classmethod
