@@ -81,7 +81,7 @@ class Table:
 
         self.seats[seat_index] = player
         player.state.seat = seat_index
-        self._id_to_seat[player.id] = seat_index
+        self._id_to_seat[player.uid] = seat_index
 
         return seat_index
 
@@ -94,11 +94,11 @@ class Table:
 
         self.seats[seat_index] = None
         player.state.seat = None
-        del self._id_to_seat[player.id]
+        del self._id_to_seat[player.uid]
 
     def get_player_seat(self, player: PlayerLike) -> Optional[int]:
         """Get the seat index of the specified player, or None if not seated."""
-        return self._id_to_seat.get(player.id, None)
+        return self._id_to_seat.get(player.uid, None)
 
     def move_button(self) -> int:
         """Move the dealer button to the next occupied seat and return the new button seat index."""

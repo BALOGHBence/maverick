@@ -37,15 +37,15 @@ class PlayerLike(Protocol):
 
     Attributes
     ----------
-    id : Optional[str]
-        Unique identifier for the player.
+    uid : Optional[str]
+        Unique identifier for the player. Replaces deprecated ``id``.
     name : Optional[str]
         Display name for the player.
     state : Optional[PlayerState]
         Current player state containing seat, stack, holding, bets, etc.
     """
 
-    id: Optional[str]
+    uid: Optional[str]
     name: Optional[str]
     state: Optional["PlayerState"]
 

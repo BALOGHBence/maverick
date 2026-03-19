@@ -13,7 +13,7 @@ class CallBot(Player):
     def decide_action(self, *, valid_actions: list[ActionType], **_) -> PlayerAction:
         """Always call or check if possible, otherwise fold."""
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
         elif ActionType.CALL in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)

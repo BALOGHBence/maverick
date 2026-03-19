@@ -68,22 +68,24 @@ class LooseAggressiveBot(Player):
             raise_by_amount = max(min_raise_amount, game.state.big_blind * 3)
             raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.RAISE, amount=raise_by_amount
+                player_uid=self.uid,
+                action_type=ActionType.RAISE,
+                amount=raise_by_amount,
             )
 
         if ActionType.BET in valid_actions and any_equity:
             # Aggressive bets
             bet_amount = min(min_bet_amount * 3, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.BET, amount=bet_amount
+                player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Even when can't raise/bet, still call frequently
         if ActionType.CALL in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
 
         # Fold only as last resort
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)

@@ -69,7 +69,7 @@ class GTOBot(Player):
         if ActionType.BET in valid_actions and strong_hand:
             bet_amount = min(max(pot_bet, min_bet_amount), self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.BET, amount=bet_amount
+                player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Raise with proper sizing when strong
@@ -84,18 +84,20 @@ class GTOBot(Player):
             # Cap at stack
             raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.RAISE, amount=raise_by_amount
+                player_uid=self.uid,
+                action_type=ActionType.RAISE,
+                amount=raise_by_amount,
             )
 
         # Call with proper odds and medium+ hands
         if ActionType.CALL in valid_actions and medium_hand:
             # GTO calling requires proper pot odds
             if call_amount <= self.state.stack and call_amount <= game.state.pot:
-                return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
+                return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Check in balanced way
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
 
         # Fold when no good option
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)

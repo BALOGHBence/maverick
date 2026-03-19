@@ -5,10 +5,12 @@ This module defines an immutable GameEvent payload that represents
 a snapshot of what happened in the game at a specific point in time.
 """
 
+import time
+import uuid
+import warnings
 from typing import Optional, Any
-import time, uuid
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .enums import GameEventType, Street, GameStage
 from .playeraction import PlayerAction
@@ -44,15 +46,17 @@ class GameEvent(BaseModel):
         The current game stage.
 
         .. versionadded:: 0.2.0
-    player_id : Optional[str]
-        ID of the player involved in the event, if applicable.
+    uid : str
+        Unique identifier for the event. Replaces deprecated ``id``.
+    player_uid : Optional[str]
+        UID of the player involved in the event, if applicable. Replaces deprecated ``player_id``.
     action : Optional[PlayerAction]
         The action taken by the player, if applicable.
     payload : dict[str, Any]
         Additional event-specific data.
     """
 
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex)
+    uid: str = Field(default_factory=lambda: uuid.uuid4().hex, alias="id")
     ts: float = Field(default_factory=time.time)
     type: GameEventType
 
@@ -60,13 +64,52 @@ class GameEvent(BaseModel):
     street: Optional[Street] = None
     stage: Optional[GameStage] = None
 
-    player_id: Optional[str] = None
+    player_uid: Optional[str] = Field(default=None, alias="player_id")
     action: Optional[PlayerAction] = None
 
     payload: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _warn_on_deprecated_params(cls, data):
+        if isinstance(data, dict):
+            if "id" in data and "uid" not in data:
+                warnings.warn(
+                    "GameEvent 'id' parameter is deprecated, use 'uid' instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+            if "player_id" in data and "player_uid" not in data:
+                warnings.warn(
+                    "GameEvent 'player_id' parameter is deprecated, use 'player_uid' instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+        return data
 
     model_config = ConfigDict(
         frozen=True,  # Makes the model immutable
         extra="forbid",  # Prevents accidental fields
         arbitrary_types_allowed=True,
+        populate_by_name=True,  # Allow both uid= and id= in constructor
     )
+
+    @property
+    def id(self) -> str:
+        """Deprecated: use ``uid`` instead."""
+        warnings.warn(
+            "GameEvent.id is deprecated, use GameEvent.uid instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.uid
+
+    @property
+    def player_id(self) -> Optional[str]:
+        """Deprecated: use ``player_uid`` instead."""
+        warnings.warn(
+            "GameEvent.player_id is deprecated, use GameEvent.player_uid instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.player_uid

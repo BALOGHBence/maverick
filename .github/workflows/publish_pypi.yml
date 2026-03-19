@@ -43,7 +43,7 @@ jobs:
 
       - name: Build release distributions
         run: |
-          uv sync
+          uv sync --no-default-groups
           uv build
 
       - name: Upload distributions
