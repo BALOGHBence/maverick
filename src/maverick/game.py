@@ -13,6 +13,7 @@ from collections import deque
 import logging
 import uuid
 from warnings import warn
+import warnings
 
 from .deck import Deck
 from .enums import (
@@ -161,6 +162,21 @@ class Game:
 
         .. versionadded:: 0.5.0
         """
+        return self._game_uid
+    
+    @property
+    def uid(self) -> Optional[str]:
+        """Alias for game_uid."""
+        return self._game_uid
+    
+    @property
+    def game_id(self) -> Optional[str]:
+        """Deprecated: use ``uid`` instead."""
+        warnings.warn(
+            "Game.game_id is deprecated, use Game.uid instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self._game_uid
 
     @property
@@ -318,7 +334,7 @@ class Game:
     def _create_event(
         self,
         event_type: GameEventType,
-        player_id: Optional[str] = None,
+        player_uid: Optional[str] = None,
         action: Optional[ActionType] = None,
         payload: Optional[dict] = None,
     ) -> GameEvent:
@@ -329,8 +345,8 @@ class Game:
         ----------
         event_type : GameEventType
             The type of event.
-        player_id : Optional[str]
-            ID of the player involved in the event.
+        player_uid : Optional[str]
+            UID of the player involved in the event.
         action : Optional[ActionType]
             Type of action taken (for PLAYER_ACTION events).
 
@@ -344,7 +360,7 @@ class Game:
             hand_number=self.state.hand_number,
             street=self.state.street,
             stage=self.state.stage,
-            player_id=player_id,
+            player_uid=player_uid,
             action=action,
             payload=payload or {},
         )
@@ -370,9 +386,9 @@ class Game:
         if player.name in existing_names:
             raise ValueError(f"Player name '{player.name}' is already taken")
 
-        existing_ids = set([p.id for p in self.state.players])
-        if player.id in existing_ids:
-            raise ValueError(f"Player id '{player.id}' is already taken")
+        existing_ids = set([p.uid for p in self.state.players])
+        if player.uid in existing_ids:
+            raise ValueError(f"Player uid '{player.uid}' is already taken")
 
         if player.state is None:
             player.state = PlayerState(state_type=PlayerStateType.ACTIVE)
@@ -384,7 +400,7 @@ class Game:
         self.state.players.append(player)
 
         self._handle_event(GameEventType.PLAYER_JOINED)
-        self._emit(self._create_event(GameEventType.PLAYER_JOINED, player_id=player.id))
+        self._emit(self._create_event(GameEventType.PLAYER_JOINED, player_uid=player.uid))
         self._log(
             f"Player {player.name} joined the game.", logging.INFO, stage_prefix=False
         )
@@ -400,7 +416,7 @@ class Game:
             If True, immediately process the resulting events. If False, the events will be
             added to the queue but not processed until step() is called. Default is True.
         """
-        player_id = player.id
+        player_uid = player.uid
 
         if self.state.stage not in [
             GameStage.WAITING_FOR_PLAYERS,
@@ -410,19 +426,19 @@ class Game:
         ]:
             raise ValueError("Cannot remove players while hand is in progress")
 
-        player = next((p for p in self.state.players if p.id == player_id), None)
+        player = next((p for p in self.state.players if p.uid == player_uid), None)
         if not player:
-            raise ValueError(f"Player with id {player_id} not found")
+            raise ValueError(f"Player with uid {player_uid} not found")
 
         self.table.remove_player(player)
-        self.state.players = [p for p in self.state.players if p.id != player_id]
+        self.state.players = [p for p in self.state.players if p.uid != player_uid]
 
         if flush:
             self._handle_event(GameEventType.PLAYER_LEFT)
         else:
             self._event_queue.append(GameEventType.PLAYER_LEFT)
 
-        self._emit(self._create_event(GameEventType.PLAYER_LEFT, player_id=player_id))
+        self._emit(self._create_event(GameEventType.PLAYER_LEFT, player_uid=player_uid))
         self._log(
             f"Player {player.name} has left the game.", logging.INFO, stage_prefix=False
         )
@@ -596,7 +612,7 @@ class Game:
                     player.state.state_type = PlayerStateType.ELIMINATED
                     self._emit(
                         self._create_event(
-                            GameEventType.PLAYER_ELIMINATED, player_id=player.id
+                            GameEventType.PLAYER_ELIMINATED, player_uid=player.uid
                         )
                     )
                     self._log(
@@ -760,7 +776,7 @@ class Game:
             )
             warn(f"Player {current_player.name} action invalid, folding.")
             action = PlayerAction(
-                player_id=current_player.id, action_type=ActionType.FOLD
+                player_uid=current_player.uid, action_type=ActionType.FOLD
             )
             self._register_player_action(current_player, action)
 
@@ -904,7 +920,7 @@ class Game:
         other than the raiser.
         """
         for p in self.state.players:
-            if p.id != raiser_id and p.state.state_type == PlayerStateType.ACTIVE:
+            if p.uid != raiser_id and p.state.state_type == PlayerStateType.ACTIVE:
                 p.state.acted_this_street = False
 
     def _register_player_action(self, player: PlayerLike, action: PlayerAction) -> None:
@@ -912,7 +928,7 @@ class Game:
         amount = action.amount or 0
 
         current_player = self.get_current_player()
-        if not current_player or current_player.id != player.id:
+        if not current_player or current_player.uid != player.uid:
             raise ValueError("Not this player's turn")
 
         if current_player.state.state_type != PlayerStateType.ACTIVE:
@@ -966,7 +982,7 @@ class Game:
                 current_player.state.state_type = PlayerStateType.ALL_IN
 
             # A bet opens action for others (everyone else must respond)
-            self._reset_acted_flags_for_reopen(raiser_id=current_player.id)
+            self._reset_acted_flags_for_reopen(raiser_id=current_player.uid)
 
             self._log(
                 f"Player {current_player.name} bets amount {actual_amount}. Remaining stack: {current_player.state.stack}.",
@@ -1009,7 +1025,7 @@ class Game:
 
             if reopens_betting:
                 self.state.last_raise_size = raise_size
-                self._reset_acted_flags_for_reopen(raiser_id=current_player.id)
+                self._reset_acted_flags_for_reopen(raiser_id=current_player.uid)
             # else: short all-in raise does NOT reopen betting and must NOT reset flags
 
             self._log(
@@ -1046,7 +1062,7 @@ class Game:
                 reopens_betting = raise_size >= old_last_raise_size
                 if reopens_betting:
                     self.state.last_raise_size = raise_size
-                    self._reset_acted_flags_for_reopen(raiser_id=current_player.id)
+                    self._reset_acted_flags_for_reopen(raiser_id=current_player.uid)
                 # else: SHORT all-in -> DOES NOT reopen betting -> DO NOT reset acted flags
 
             self._log(
@@ -1065,7 +1081,7 @@ class Game:
         self._emit(
             self._create_event(
                 GameEventType.PLAYER_ACTION_TAKEN,
-                player_id=current_player.id,
+                player_uid=current_player.uid,
                 action=action,
             )
         )
@@ -1213,8 +1229,8 @@ class Game:
         for i in range(n_players):
             idx = self.table.next_occupied_seat(idx)
             p = self.table[idx]
-            rel_btn_idx[p.id] = i
-        return sorted(winners, key=lambda p: rel_btn_idx[p.id])
+            rel_btn_idx[p.uid] = i
+        return sorted(winners, key=lambda p: rel_btn_idx[p.uid])
 
     def _handle_showdown(self) -> None:
         players_in_hand = self.state.get_players_in_hand()
@@ -1229,7 +1245,7 @@ class Game:
             self._emit(
                 self._create_event(
                     GameEventType.POT_WON,
-                    player_id=winner.id,
+                    player_uid=winner.uid,
                     payload={"amount": self.state.pot},
                 )
             )
@@ -1267,7 +1283,7 @@ class Game:
                     self._emit(
                         self._create_event(
                             GameEventType.PLAYER_CARDS_REVEALED,
-                            player_id=player.id,
+                            player_uid=player.uid,
                             payload={
                                 "holding": [
                                     card.code() for card in player.state.holding.cards
@@ -1287,12 +1303,12 @@ class Game:
                         logging.INFO,
                     )
 
-            score_by_id = {p.id: s for p, s in player_scores}
-            players_in_hand_ids = {p.id for p in players_in_hand}
+            score_by_id = {p.uid: s for p, s in player_scores}
+            players_in_hand_ids = {p.uid for p in players_in_hand}
 
             # Record total contributions for pot distribution
             contributions = {
-                p.id: p.state.total_contributed for p in self.state.players
+                p.uid: p.state.total_contributed for p in self.state.players
             }
             contribution_levels = sorted(
                 {amt for amt in contributions.values() if amt > 0}
@@ -1300,11 +1316,11 @@ class Game:
 
             # Distribute pot based on contributions (handles side pots)
             pot_to_distribute = self.state.pot
-            awards = {p.id: 0 for p in self.state.players}
+            awards = {p.uid: 0 for p in self.state.players}
             previous_level = 0
             for level in contribution_levels:
                 segment_contributors = [
-                    p for p in self.state.players if contributions[p.id] >= level
+                    p for p in self.state.players if contributions[p.uid] >= level
                 ]
                 delta = level - previous_level
                 segment_amount = delta * len(segment_contributors)
@@ -1312,7 +1328,7 @@ class Game:
 
                 # eligibility: must have contributed enough AND not folded
                 eligible = [
-                    p for p in segment_contributors if p.id in players_in_hand_ids
+                    p for p in segment_contributors if p.uid in players_in_hand_ids
                 ]
 
                 if not eligible:  # pragma: no cover
@@ -1325,24 +1341,24 @@ class Game:
                 if len(segment_contributors) == 1:
                     # uncalled top layer -> refund to that one contributor
                     lone = segment_contributors[0]
-                    awards[lone.id] += segment_amount
+                    awards[lone.uid] += segment_amount
                     continue
 
                 # determine winners among eligible for THIS segment
-                best = max(score_by_id[p.id] for p in eligible)
-                segment_winners = [p for p in eligible if score_by_id[p.id] == best]
+                best = max(score_by_id[p.uid] for p in eligible)
+                segment_winners = [p for p in eligible if score_by_id[p.uid] == best]
 
                 share, rem = divmod(segment_amount, len(segment_winners))
 
                 # distribute shares
                 for w in segment_winners:
-                    awards[w.id] += share
+                    awards[w.uid] += share
 
                 # distribute remainder in relative button order
                 segment_winners_sorted = self._winners_in_button_order(segment_winners)
                 for i in range(rem):
                     idx = i % len(segment_winners_sorted)
-                    awards[segment_winners_sorted[idx].id] += 1
+                    awards[segment_winners_sorted[idx].uid] += 1
 
             # Sanity check if the pot is fully distributed
             assert (
@@ -1351,7 +1367,7 @@ class Game:
 
             # Pay out awards to winners
             pot_distributed = 0
-            id_to_player = {p.id: p for p in self.state.players}
+            id_to_player = {p.uid: p for p in self.state.players}
             for p_id in awards:
                 amount = awards[p_id]
                 if amount == 0:
@@ -1365,7 +1381,7 @@ class Game:
                 self._emit(
                     self._create_event(
                         GameEventType.POT_WON,
-                        player_id=player.id,
+                        player_uid=player.uid,
                         payload={"amount": amount},
                     )
                 )

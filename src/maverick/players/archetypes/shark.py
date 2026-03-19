@@ -73,7 +73,7 @@ class SharkBot(Player):
             # Cap at stack
             raise_amount = min(raise_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
+                player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_amount
             )
 
         # Value bet aggressively when ahead, or bluff with some equity
@@ -86,18 +86,18 @@ class SharkBot(Player):
             if bet_amount < min_bet_amount:
                 bet_amount = min(min_bet_amount * 2, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.BET, amount=bet_amount
+                player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Call when getting good odds or to trap
         if ActionType.CALL in valid_actions and strong_hand:
             # Sharks will call lighter in position or against weaker opponents
             if call_amount <= self.state.stack and call_amount <= game.state.pot * 0.66:
-                return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
+                return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Check to trap or for pot control
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
 
         # Fold when exploitative play isn't profitable
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)

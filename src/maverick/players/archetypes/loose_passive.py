@@ -29,19 +29,19 @@ class LoosePassiveBot(Player):
 
         # Check when possible
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
 
         # Call almost anything, even with weak equity
         if ActionType.CALL in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Rarely bet, but will if no one else has
         if ActionType.BET in valid_actions:
             bet_amount = min(min_bet_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.BET, amount=bet_amount
+                player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Almost never raise (not aggressive)
         # Fold only when can't call
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)

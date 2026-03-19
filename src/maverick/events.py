@@ -5,10 +5,12 @@ This module defines an immutable GameEvent payload that represents
 a snapshot of what happened in the game at a specific point in time.
 """
 
+import time
+import uuid
+import warnings
 from typing import Optional, Any
-import time, uuid, warnings
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .enums import GameEventType, Street, GameStage
 from .playeraction import PlayerAction
@@ -66,6 +68,24 @@ class GameEvent(BaseModel):
     action: Optional[PlayerAction] = None
 
     payload: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _warn_on_deprecated_params(cls, data):
+        if isinstance(data, dict):
+            if "id" in data and "uid" not in data:
+                warnings.warn(
+                    "GameEvent 'id' parameter is deprecated, use 'uid' instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+            if "player_id" in data and "player_uid" not in data:
+                warnings.warn(
+                    "GameEvent 'player_id' parameter is deprecated, use 'player_uid' instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+        return data
 
     model_config = ConfigDict(
         frozen=True,  # Makes the model immutable

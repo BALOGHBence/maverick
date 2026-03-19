@@ -1,3 +1,4 @@
+import warnings
 from abc import ABC, ABCMeta, abstractmethod
 from typing import TYPE_CHECKING, Optional
 import uuid
@@ -44,12 +45,18 @@ class Player(metaclass=PlayerMeta):
         self,
         *,
         uid: Optional[str] = None,
-        id: Optional[str] = None,  # deprecated: use uid
         name: str,
         state: Optional[PlayerState | dict] = None,
-        **_,
+        **kwargs,
     ):
-        self.uid = uid or id or uuid.uuid4().hex
+        _id = kwargs.pop("id", None)
+        if _id:
+            warnings.warn(
+                "Passing id= to Player.__init__ is deprecated, use uid= instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self.uid = uid or _id or uuid.uuid4().hex
         self.name = name
         self.state = (
             state

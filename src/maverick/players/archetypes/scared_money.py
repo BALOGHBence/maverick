@@ -62,7 +62,7 @@ class ScaredMoneyBot(Player):
 
         # Check whenever possible (free card)
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
 
         # Only calls very small amounts, even with decent equity
         if ActionType.CALL in valid_actions and premium_hand:
@@ -71,16 +71,16 @@ class ScaredMoneyBot(Player):
                 call_amount <= game.state.big_blind
                 and call_amount <= self.state.stack * 0.05
             ):
-                return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
+                return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Makes tiny bets when forced to bet, even with strong hands
         if ActionType.BET in valid_actions and premium_hand:
             # Min bet only
             bet_amount = min(min_bet_amount, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.BET, amount=bet_amount
+                player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Almost never raises (too scared)
         # Folds to any significant pressure
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)

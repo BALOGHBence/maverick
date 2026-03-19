@@ -67,7 +67,7 @@ class TiltedBot(Player):
             and tilted_mindset
         ):
             return PlayerAction(
-                player_id=self.id,
+                player_uid=self.uid,
                 action_type=ActionType.ALL_IN,
                 amount=self.state.stack,
             )
@@ -77,21 +77,21 @@ class TiltedBot(Player):
             # Tilt raises are often oversized
             raise_amount = min(min_raise_amount * 3, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
+                player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_amount
             )
 
         # Bet aggressively
         if ActionType.BET in valid_actions:
             bet_amount = min(min_bet_amount * 4, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.BET, amount=bet_amount
+                player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Call too often (chasing losses)
         if ActionType.CALL in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
 
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)

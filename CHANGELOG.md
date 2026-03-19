@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Harmonized player identifier naming convention: `Player.id` → `Player.uid`, `PlayerAction.player_id` → `PlayerAction.player_uid`, `GameEvent.player_id` → `GameEvent.player_uid`, and `PlayerLike.id` → `PlayerLike.uid`. All internal usages in `game.py`, `table.py`, and all built-in player classes have been updated to the canonical `uid`/`player_uid` names.
+
+### Deprecated
+
+- `Player.id` instance attribute is deprecated; use `Player.uid` instead. The `id` property still works but emits a `DeprecationWarning`.
+- `Player.__init__(id=...)` parameter is deprecated; use `uid=` instead. Passing `id=` still works but emits a `DeprecationWarning`.
+- `PlayerAction.player_id` field is deprecated; use `player_uid` instead. Constructing with `player_id=` and accessing `.player_id` still work but emit a `DeprecationWarning`.
+- `GameEvent.player_id` field is deprecated; use `player_uid` instead. Constructing with `player_id=` and accessing `.player_id` still work but emit a `DeprecationWarning`.
+- `PlayerLike.id` protocol attribute is deprecated; use `uid` instead.
+
 ## [0.5.1] - 2026.03.18
 
 ### Added

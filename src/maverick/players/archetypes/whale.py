@@ -46,7 +46,7 @@ class WhaleBot(Player):
                 max(min_raise_amount * 3, game.state.pot), self.state.stack
             )
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.RAISE, amount=raise_amount
+                player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_amount
             )
 
         # Big bets
@@ -56,24 +56,24 @@ class WhaleBot(Player):
             if bet_amount < min_bet_amount * 3:
                 bet_amount = min(min_bet_amount * 5, self.state.stack)
             return PlayerAction(
-                player_id=self.id, action_type=ActionType.BET, amount=bet_amount
+                player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Calls everything (loves action)
         if ActionType.CALL in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CALL)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Even all-in doesn't scare a whale
         if ActionType.ALL_IN in valid_actions:
             return PlayerAction(
-                player_id=self.id,
+                player_uid=self.uid,
                 action_type=ActionType.ALL_IN,
                 amount=self.state.stack,
             )
 
         # Check if must
         if ActionType.CHECK in valid_actions:
-            return PlayerAction(player_id=self.id, action_type=ActionType.CHECK)
+            return PlayerAction(player_uid=self.uid, action_type=ActionType.CHECK)
 
         # Rarely folds
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)
