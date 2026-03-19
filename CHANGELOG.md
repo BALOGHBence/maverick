@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026.03.20
+
 ### Added
 
 - The `PlayerAction` class has a new `payload` field that allows passing an arbitrary dictionary associated with the decision of a player.

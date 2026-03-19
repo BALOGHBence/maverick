@@ -24,6 +24,13 @@ class PlayerAction(BaseModel):
         after the action is taken.
     payload : dict[str, Any]
         Additional action-specific data.
+        
+        .. versionadded:: 0.6.0
+    decision_time_seconds : Optional[float]
+        Time in seconds it took the player to make the decision.
+        Automatically populated by the game engine when the action is taken.
+        
+        .. versionadded:: 0.6.0
     """
 
     model_config = ConfigDict(populate_by_name=True)
