@@ -164,12 +164,12 @@ class Game:
         .. versionadded:: 0.5.0
         """
         return self._game_uid
-    
+
     @property
     def uid(self) -> Optional[str]:
         """Alias for game_uid."""
         return self._game_uid
-    
+
     @property
     def game_id(self) -> Optional[str]:
         """Deprecated: use ``uid`` instead."""
@@ -401,7 +401,9 @@ class Game:
         self.state.players.append(player)
 
         self._handle_event(GameEventType.PLAYER_JOINED)
-        self._emit(self._create_event(GameEventType.PLAYER_JOINED, player_uid=player.uid))
+        self._emit(
+            self._create_event(GameEventType.PLAYER_JOINED, player_uid=player.uid)
+        )
         self._log(
             f"Player {player.name} joined the game.", logging.INFO, stage_prefix=False
         )

@@ -84,7 +84,9 @@ class GTOBot(Player):
             # Cap at stack
             raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
-                player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_by_amount
+                player_uid=self.uid,
+                action_type=ActionType.RAISE,
+                amount=raise_by_amount,
             )
 
         # Call with proper odds and medium+ hands

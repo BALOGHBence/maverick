@@ -24,12 +24,12 @@ class PlayerAction(BaseModel):
         after the action is taken.
     payload : dict[str, Any]
         Additional action-specific data.
-        
+
         .. versionadded:: 0.6.0
     decision_time_seconds : Optional[float]
         Time in seconds it took the player to make the decision.
         Automatically populated by the game engine when the action is taken.
-        
+
         .. versionadded:: 0.6.0
     """
 
@@ -51,13 +51,13 @@ class PlayerAction(BaseModel):
             "after the action is taken."
         ),
     )
-    
+
     payload: dict[str, Any] = Field(default_factory=dict)
     decision_time_seconds: Optional[float] = Field(
         default=None,
         description="Time in seconds it took the player to make the decision.",
     )
-    
+
     @model_validator(mode="before")
     @classmethod
     def _warn_on_player_id(cls, data):

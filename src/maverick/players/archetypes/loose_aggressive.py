@@ -68,7 +68,9 @@ class LooseAggressiveBot(Player):
             raise_by_amount = max(min_raise_amount, game.state.big_blind * 3)
             raise_by_amount = min(raise_by_amount, self.state.stack)
             return PlayerAction(
-                player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_by_amount
+                player_uid=self.uid,
+                action_type=ActionType.RAISE,
+                amount=raise_by_amount,
             )
 
         if ActionType.BET in valid_actions and any_equity:
