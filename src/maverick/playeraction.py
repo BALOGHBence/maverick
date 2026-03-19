@@ -26,17 +26,6 @@ class PlayerAction(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    @model_validator(mode="before")
-    @classmethod
-    def _warn_on_player_id(cls, data):
-        if isinstance(data, dict) and "player_id" in data and "player_uid" not in data:
-            warnings.warn(
-                "PlayerAction 'player_id' parameter is deprecated, use 'player_uid' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-        return data
-
     player_uid: str = Field(
         ...,
         alias="player_id",
@@ -53,6 +42,17 @@ class PlayerAction(BaseModel):
             "after the action is taken."
         ),
     )
+    
+    @model_validator(mode="before")
+    @classmethod
+    def _warn_on_player_id(cls, data):
+        if isinstance(data, dict) and "player_id" in data and "player_uid" not in data:
+            warnings.warn(
+                "PlayerAction 'player_id' parameter is deprecated, use 'player_uid' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return data
 
     @property
     def player_id(self) -> str:
