@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The `PlayerAction` class has a new `payload` field that allows passing an arbitrary dictionary associated with the decision of a player.
+
 ### Changed
 
 - Harmonized player identifier naming convention: `Player.id` → `Player.uid`, `PlayerAction.player_id` → `PlayerAction.player_uid`, `GameEvent.player_id` → `GameEvent.player_uid`, and `PlayerLike.id` → `PlayerLike.uid`. All internal usages in `game.py`, `table.py`, and all built-in player classes have been updated to the canonical `uid`/`player_uid` names.
