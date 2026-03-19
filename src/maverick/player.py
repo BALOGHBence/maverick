@@ -42,18 +42,24 @@ class Player(metaclass=PlayerMeta):
     def __init__(
         self,
         *,
-        id: Optional[str] = None,
+        uid: Optional[str] = None,
+        id: Optional[str] = None,  # deprecated: use uid
         name: str,
         state: Optional[PlayerState | dict] = None,
         **_,
     ):
-        self.id = id or uuid.uuid4().hex
+        self.uid = uid or id or uuid.uuid4().hex
         self.name = name
         self.state = (
             state
             if isinstance(state, PlayerState) or state is None
             else PlayerState.model_validate(state)
         )
+
+    @property
+    def id(self) -> str:
+        """Deprecated: use uid instead."""
+        return self.uid
 
     @classmethod
     def get_by_uid(cls, uid: str) -> Optional[type["Player"]]:
@@ -138,7 +144,7 @@ class Player(metaclass=PlayerMeta):
             A dictionary representation of the player.
         """
         return {
-            "id": self.id,
+            "uid": self.uid,
             "name": self.name,
             "state": self.state.model_dump() if self.state else None,
         }
