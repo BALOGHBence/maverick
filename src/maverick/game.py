@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Deque, Optional
 from collections import deque
 import logging
+import time
 import uuid
 from warnings import warn
 import warnings
@@ -754,6 +755,7 @@ class Game:
         valid_actions = self._get_valid_actions(current_player)
         min_raise_amount = self._calculate_min_raise_amount()
 
+        _t0 = time.perf_counter()
         action: PlayerAction = current_player.decide_action(
             game=self,
             valid_actions=valid_actions,
@@ -761,6 +763,7 @@ class Game:
             call_amount=self.state.current_bet - current_player.state.current_bet,
             min_bet_amount=self.state.min_bet,
         )
+        action.decision_time_seconds = time.perf_counter() - _t0
 
         try:
             self._register_player_action(current_player, action)

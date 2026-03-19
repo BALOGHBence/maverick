@@ -46,6 +46,10 @@ class PlayerAction(BaseModel):
     )
     
     payload: dict[str, Any] = Field(default_factory=dict)
+    decision_time_seconds: Optional[float] = Field(
+        default=None,
+        description="Time in seconds it took the player to make the decision.",
+    )
     
     @model_validator(mode="before")
     @classmethod

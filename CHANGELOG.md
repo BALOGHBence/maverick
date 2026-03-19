@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - The `PlayerAction` class has a new `payload` field that allows passing an arbitrary dictionary associated with the decision of a player.
+- The `PlayerAction` class has a new `decision_time_seconds` field that records how long (in seconds) the player took to make their decision. The game engine sets this automatically; it defaults to `None`.
 
 ### Changed
 
