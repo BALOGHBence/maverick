@@ -113,7 +113,7 @@ Key enums used throughout: `Street`, `GameStage`, `ActionType`, `GameEventType`,
 
 ## Git Workflow
 
-- **Branches:** `main` (stable) and `dev` (development). Feature branches cut from `dev`, PRs target `dev`.
+- **Branches:** `main` (stable) and `dev` (development). Feature branches cut from `dev`, PRs target `dev`. Feature branches follow the naming convention `feature/<the name of the feature branch>`
 - **PRs to `main`** only come from `dev` (enforced by CI).
 - **Versioning:** Semantic versioning; `CHANGELOG.md` follows Keep a Changelog format.
 
