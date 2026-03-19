@@ -7,7 +7,7 @@ a snapshot of what happened in the game at a specific point in time.
 
 import warnings
 from typing import Optional, Any
-import time, uuid
+import time, uuid, warnings
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -45,15 +45,17 @@ class GameEvent(BaseModel):
         The current game stage.
 
         .. versionadded:: 0.2.0
+    uid : str
+        Unique identifier for the event. Replaces deprecated ``id``.
     player_uid : Optional[str]
-        UID of the player involved in the event, if applicable.
+        UID of the player involved in the event, if applicable. Replaces deprecated ``player_id``.
     action : Optional[PlayerAction]
         The action taken by the player, if applicable.
     payload : dict[str, Any]
         Additional event-specific data.
     """
 
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex)
+    uid: str = Field(default_factory=lambda: uuid.uuid4().hex, alias="id")
     ts: float = Field(default_factory=time.time)
     type: GameEventType
 
@@ -61,7 +63,7 @@ class GameEvent(BaseModel):
     street: Optional[Street] = None
     stage: Optional[GameStage] = None
 
-    player_uid: Optional[str] = None
+    player_uid: Optional[str] = Field(default=None, alias="player_id")
     action: Optional[PlayerAction] = None
 
     payload: dict[str, Any] = Field(default_factory=dict)
@@ -70,30 +72,24 @@ class GameEvent(BaseModel):
         frozen=True,  # Makes the model immutable
         extra="forbid",  # Prevents accidental fields
         arbitrary_types_allowed=True,
+        populate_by_name=True,  # Allow both uid= and id= in constructor
     )
 
-    @model_validator(mode="before")
-    @classmethod
-    def _handle_deprecated_player_id(cls, data: object) -> object:
-        if isinstance(data, dict) and "player_id" in data and "player_uid" not in data:
-            warnings.warn(
-                "GameEvent.player_id is deprecated, use player_uid instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            data = dict(data)
-            data["player_uid"] = data.pop("player_id")
-        return data
+    @property
+    def id(self) -> str:
+        """Deprecated: use ``uid`` instead."""
+        warnings.warn(
+            "GameEvent.id is deprecated, use GameEvent.uid instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.uid
 
     @property
     def player_id(self) -> Optional[str]:
-        """Deprecated alias for player_uid.
-
-        .. deprecated::
-            Use :attr:`player_uid` instead.
-        """
+        """Deprecated: use ``player_uid`` instead."""
         warnings.warn(
-            "GameEvent.player_id is deprecated, use player_uid instead.",
+            "GameEvent.player_id is deprecated, use GameEvent.player_uid instead.",
             DeprecationWarning,
             stacklevel=2,
         )

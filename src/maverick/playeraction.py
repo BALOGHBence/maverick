@@ -1,7 +1,8 @@
 import warnings
 from typing import Optional
+import warnings
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from .enums import ActionType
 
@@ -14,7 +15,7 @@ class PlayerAction(BaseModel):
     Fields
     ------
     player_uid : str
-        Unique identifier of the player taking the action.
+        Unique identifier of the player taking the action. Replaces deprecated ``player_id``.
     action_type : ActionType
         Type of action being taken.
     amount : Optional[int]
@@ -24,8 +25,12 @@ class PlayerAction(BaseModel):
         after the action is taken.
     """
 
+    model_config = ConfigDict(populate_by_name=True)
+
     player_uid: str = Field(
-        ..., description="Unique identifier of the player taking the action."
+        ...,
+        alias="player_id",
+        description="Unique identifier of the player taking the action.",
     )
     action_type: ActionType = Field(..., description="Type of action being taken.")
     amount: Optional[int] = Field(
@@ -39,28 +44,11 @@ class PlayerAction(BaseModel):
         ),
     )
 
-    @model_validator(mode="before")
-    @classmethod
-    def _handle_deprecated_player_id(cls, data: object) -> object:
-        if isinstance(data, dict) and "player_id" in data and "player_uid" not in data:
-            warnings.warn(
-                "PlayerAction.player_id is deprecated, use player_uid instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            data = dict(data)
-            data["player_uid"] = data.pop("player_id")
-        return data
-
     @property
     def player_id(self) -> str:
-        """Deprecated alias for player_uid.
-
-        .. deprecated::
-            Use :attr:`player_uid` instead.
-        """
+        """Deprecated: use ``player_uid`` instead."""
         warnings.warn(
-            "PlayerAction.player_id is deprecated, use player_uid instead.",
+            "PlayerAction.player_id is deprecated, use PlayerAction.player_uid instead.",
             DeprecationWarning,
             stacklevel=2,
         )

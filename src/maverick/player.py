@@ -2,6 +2,7 @@ import warnings
 from abc import ABC, ABCMeta, abstractmethod
 from typing import TYPE_CHECKING, Optional
 import uuid
+import warnings
 
 from .enums import ActionType
 from .playeraction import PlayerAction
@@ -44,20 +45,12 @@ class Player(metaclass=PlayerMeta):
         self,
         *,
         uid: Optional[str] = None,
-        id: Optional[str] = None,
+        id: Optional[str] = None,  # deprecated: use uid
         name: str,
         state: Optional[PlayerState | dict] = None,
         **_,
     ):
-        if id is not None:
-            warnings.warn(
-                "Player.__init__ id parameter is deprecated, use uid instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if uid is None:
-                uid = id
-        self.uid = uid or uuid.uuid4().hex
+        self.uid = uid or id or uuid.uuid4().hex
         self.name = name
         self.state = (
             state
@@ -67,11 +60,7 @@ class Player(metaclass=PlayerMeta):
 
     @property
     def id(self) -> str:
-        """Deprecated alias for uid.
-
-        .. deprecated::
-            Use :attr:`uid` instead.
-        """
+        """Deprecated: use ``uid`` instead."""
         warnings.warn(
             "Player.id is deprecated, use Player.uid instead.",
             DeprecationWarning,
