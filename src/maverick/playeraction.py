@@ -1,8 +1,7 @@
 import warnings
 from typing import Optional
-import warnings
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .enums import ActionType
 
@@ -26,6 +25,17 @@ class PlayerAction(BaseModel):
     """
 
     model_config = ConfigDict(populate_by_name=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _warn_on_player_id(cls, data):
+        if isinstance(data, dict) and "player_id" in data and "player_uid" not in data:
+            warnings.warn(
+                "PlayerAction 'player_id' parameter is deprecated, use 'player_uid' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return data
 
     player_uid: str = Field(
         ...,
