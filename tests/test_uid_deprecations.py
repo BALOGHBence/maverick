@@ -171,6 +171,20 @@ class TestGameEventUidDeprecations(unittest.TestCase):
         self.assertIsNone(value)
         self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
 
+    def test_id_deprecated_constructor(self):
+        """Constructing with id= emits DeprecationWarning and sets uid."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            event = self._make_event(id="my-event-id")
+        self.assertEqual(event.uid, "my-event-id")
+        self.assertTrue(
+            any(issubclass(w.category, DeprecationWarning) for w in caught),
+            "Expected DeprecationWarning when using id= parameter",
+        )
+        self.assertTrue(
+            any("GameEvent 'id' parameter is deprecated" in str(w.message) for w in caught)
+        )
+
     def test_id_deprecated_property(self):
         """Accessing GameEvent.id emits DeprecationWarning and returns uid."""
         event = self._make_event(uid="test-uid-123")
