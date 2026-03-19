@@ -3,6 +3,7 @@
 import warnings
 import unittest
 
+from maverick.game import Game
 from maverick.playeraction import PlayerAction
 from maverick.events import GameEvent
 from maverick.enums import ActionType, GameEventType
@@ -192,6 +193,36 @@ class TestGameEventUidDeprecations(unittest.TestCase):
             warnings.simplefilter("always")
             id_value = event.id
         self.assertEqual(id_value, event.uid)
+
+
+class TestGameGameIdDeprecation(unittest.TestCase):
+    """Test that Game.uid is canonical and Game.game_id is a deprecated alias."""
+
+    def _make_game(self) -> Game:
+        return Game(small_blind=1, big_blind=2)
+
+    def test_game_id_deprecated_property(self):
+        """Accessing Game.game_id emits DeprecationWarning and returns uid."""
+        game = self._make_game()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            value = game.game_id
+        self.assertEqual(value, game.uid)
+        self.assertTrue(
+            any(issubclass(w.category, DeprecationWarning) for w in caught),
+            "Expected DeprecationWarning when accessing Game.game_id",
+        )
+        self.assertTrue(
+            any("Game.game_id is deprecated" in str(w.message) for w in caught)
+        )
+
+    def test_game_id_matches_uid(self):
+        """Game.game_id and Game.uid return the same value."""
+        game = self._make_game()
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            game_id_value = game.game_id
+        self.assertEqual(game_id_value, game.uid)
 
 
 if __name__ == "__main__":

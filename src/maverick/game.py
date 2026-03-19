@@ -13,6 +13,7 @@ from collections import deque
 import logging
 import uuid
 from warnings import warn
+import warnings
 
 from .deck import Deck
 from .enums import (
@@ -161,6 +162,21 @@ class Game:
 
         .. versionadded:: 0.5.0
         """
+        return self._game_uid
+    
+    @property
+    def uid(self) -> Optional[str]:
+        """Alias for game_uid."""
+        return self._game_uid
+    
+    @property
+    def game_id(self) -> Optional[str]:
+        """Deprecated: use ``uid`` instead."""
+        warnings.warn(
+            "Game.game_id is deprecated, use Game.uid instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self._game_uid
 
     @property

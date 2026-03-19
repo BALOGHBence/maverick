@@ -121,5 +121,27 @@ class TestGameUidAfterStart(unittest.TestCase):
         self.assertNotEqual(game1.game_uid, game2.game_uid)
 
 
+class TestGameUidAlias(unittest.TestCase):
+    """Test that Game.uid is an alias for Game.game_uid."""
+
+    def test_uid_is_none_before_start(self):
+        """uid should be None before start() is called."""
+        game = Game(small_blind=1, big_blind=2)
+        self.assertIsNone(game.uid)
+
+    def test_uid_matches_game_uid_after_start(self):
+        """uid should return the same value as game_uid after start()."""
+        game = _make_game()
+        game.start()
+        self.assertEqual(game.uid, game.game_uid)
+
+    def test_uid_is_string_after_start(self):
+        """uid should be a 32-character hex string after start()."""
+        game = _make_game()
+        game.start()
+        self.assertIsInstance(game.uid, str)
+        self.assertEqual(len(game.uid), 32)
+
+
 if __name__ == "__main__":
     unittest.main()
