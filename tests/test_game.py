@@ -157,16 +157,17 @@ class TestAddPlayer(unittest.TestCase):
         player = SimpleTestPlayer(uid="p1", name="Player1")
         game.add_player(player)
         self.assertEqual(len(game.state.players), 1)
-        self.assertEqual(game.state.players[0].id, "p1")
+        self.assertEqual(game.state.players[0].uid, "p1")
 
     def test_add_player_assigns_seat(self):
-        """Test that add_player assigns a seat to the player."""
+        """Test that add_player assigns a seat to the player via the snapshot."""
         game = create_game()
         player = SimpleTestPlayer(uid="p1", name="Player1")
         game.add_player(player)
-        self.assertIsNotNone(player.state)
-        self.assertIsNotNone(player.state.seat)
-        self.assertEqual(player.state.seat, 0)
+        snapshot = game.state.players[0]
+        self.assertIsNotNone(snapshot.state)
+        self.assertIsNotNone(snapshot.state.seat)
+        self.assertEqual(snapshot.state.seat, 0)
 
     def test_add_multiple_players(self):
         """Test adding multiple players."""
@@ -176,8 +177,8 @@ class TestAddPlayer(unittest.TestCase):
         game.add_player(p1)
         game.add_player(p2)
         self.assertEqual(len(game.state.players), 2)
-        self.assertEqual(p1.state.seat, 0)
-        self.assertEqual(p2.state.seat, 1)
+        self.assertEqual(game.state.players[0].state.seat, 0)
+        self.assertEqual(game.state.players[1].state.seat, 1)
 
     def test_add_player_to_full_table_raises_error(self):
         """Test that adding a player to a full table raises ValueError."""
@@ -203,8 +204,9 @@ class TestAddPlayer(unittest.TestCase):
         )
         game.add_player(player)
         self.assertEqual(len(game.state.players), 1)
-        self.assertEqual(player.state.stack, 500)
-        self.assertEqual(player.state.seat, 0)
+        snapshot = game.state.players[0]
+        self.assertEqual(snapshot.state.stack, 500)
+        self.assertEqual(snapshot.state.seat, 0)
 
     def test_add_player_emits_event(self):
         """Test that adding a player emits PLAYER_JOINED event."""
@@ -312,7 +314,7 @@ class TestRemovePlayer(unittest.TestCase):
         game.remove_player(p1)
 
         self.assertEqual(len(game.state.players), 1)
-        self.assertEqual(game.state.players[0].id, "p2")
+        self.assertEqual(game.state.players[0].uid, "p2")
 
     def remove_player_while_hand_is_in_progress_raises_error(self):
         """Test that removing a player while a hand is in progress raises ValueError."""

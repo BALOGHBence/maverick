@@ -13,6 +13,7 @@ from maverick import (
     Street,
     Deck,
     GameEventType,
+    PlayerSnapshot,
 )
 
 
@@ -31,37 +32,25 @@ class TestGameFlowEdgeCases(unittest.TestCase):
         for player in players:
             game.add_player(player)
 
-        p1.state = PlayerState(
-            seat=0,
-            stack=0,
-            state_type=PlayerStateType.ALL_IN,
-            current_bet=1000,
-            total_contributed=1000,
-            acted_this_street=True,
-        )
-
-        p2.state = PlayerState(
-            seat=1,
-            stack=0,
-            state_type=PlayerStateType.ALL_IN,
-            current_bet=1000,
-            total_contributed=1000,
-            acted_this_street=True,
-        )
-
-        p3.state = PlayerState(
-            seat=2,
-            stack=0,
-            state_type=PlayerStateType.ALL_IN,
-            current_bet=1000,
-            total_contributed=1000,
-            acted_this_street=True,
-        )
+        snapshots = [
+            PlayerSnapshot(uid=p1.uid, name=p1.name, state=PlayerState(
+                seat=0, stack=0, state_type=PlayerStateType.ALL_IN,
+                current_bet=1000, total_contributed=1000, acted_this_street=True,
+            )),
+            PlayerSnapshot(uid=p2.uid, name=p2.name, state=PlayerState(
+                seat=1, stack=0, state_type=PlayerStateType.ALL_IN,
+                current_bet=1000, total_contributed=1000, acted_this_street=True,
+            )),
+            PlayerSnapshot(uid=p3.uid, name=p3.name, state=PlayerState(
+                seat=2, stack=0, state_type=PlayerStateType.ALL_IN,
+                current_bet=1000, total_contributed=1000, acted_this_street=True,
+            )),
+        ]
 
         game._state = GameState(
             stage=GameStage.PRE_FLOP,
             street=Street.PRE_FLOP,
-            players=players,
+            players=snapshots,
             current_player_index=2,
             deck=Deck.standard_deck(),
             community_cards=[],
@@ -100,37 +89,25 @@ class TestGameFlowEdgeCases(unittest.TestCase):
         for player in players:
             game.add_player(player)
 
-        p1.state = PlayerState(
-            seat=0,
-            stack=0,
-            state_type=PlayerStateType.ALL_IN,
-            current_bet=1000,
-            total_contributed=1000,
-            acted_this_street=True,
-        )
-
-        p2.state = PlayerState(
-            seat=1,
-            stack=3000,
-            state_type=PlayerStateType.ALL_IN,
-            current_bet=1000,
-            total_contributed=1000,
-            acted_this_street=True,
-        )
-
-        p3.state = PlayerState(
-            seat=2,
-            stack=0,
-            state_type=PlayerStateType.ALL_IN,
-            current_bet=1000,
-            total_contributed=1000,
-            acted_this_street=True,
-        )
+        snapshots = [
+            PlayerSnapshot(uid=p1.uid, name=p1.name, state=PlayerState(
+                seat=0, stack=0, state_type=PlayerStateType.ALL_IN,
+                current_bet=1000, total_contributed=1000, acted_this_street=True,
+            )),
+            PlayerSnapshot(uid=p2.uid, name=p2.name, state=PlayerState(
+                seat=1, stack=3000, state_type=PlayerStateType.ALL_IN,
+                current_bet=1000, total_contributed=1000, acted_this_street=True,
+            )),
+            PlayerSnapshot(uid=p3.uid, name=p3.name, state=PlayerState(
+                seat=2, stack=0, state_type=PlayerStateType.ALL_IN,
+                current_bet=1000, total_contributed=1000, acted_this_street=True,
+            )),
+        ]
 
         game._state = GameState(
             stage=GameStage.SHOWDOWN,
             street=None,
-            players=players,
+            players=snapshots,
             current_player_index=2,
             deck=Deck.standard_deck(),
             community_cards=[],

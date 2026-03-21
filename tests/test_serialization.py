@@ -6,10 +6,6 @@ from maverick import (
     PlayerLike,
     PlayerState,
     GameState,
-    Player,
-    GameEvent,
-    PlayerAction,
-    ActionType,
 )
 
 
@@ -55,36 +51,7 @@ class TestGameStateSerialization(unittest.TestCase):
         self.assertEqual(payload, payload_)
 
     def test_player_state_serialization(self):
-        """Test PlayerState serialization and deserialization."""
-
-        class CustomPlayer(Player):
-
-            def __init__(self, event_counter=0, **kwargs):
-                super().__init__(**kwargs)
-                self._event_counter = event_counter
-
-            @property
-            def event_counter(self) -> int:
-                return self._event_counter
-
-            def on_event(self, event: GameEvent, game: Game) -> None:
-                self._event_counter += 1
-
-            def decide_action(
-                self,
-                *,
-                game: Game,
-                valid_actions: list["ActionType"],
-                min_raise_amount: int,
-                call_amount: int,
-                **_,
-            ) -> "PlayerAction":
-                return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
-
-            def to_dict(self) -> dict:
-                d = super().to_dict()
-                d.update({"event_counter": self._event_counter})
-                return d
+        """Test PlayerSnapshot serialization and deserialization."""
 
         game = Game(small_blind=10, big_blind=20, max_hands=2)
 
@@ -92,7 +59,6 @@ class TestGameStateSerialization(unittest.TestCase):
             CallBot(name="CallBot", state=PlayerState(stack=1000)),
             AggressiveBot(name="AggroBot", state=PlayerState(stack=1000)),
             FoldBot(name="FoldBot", state=PlayerState(stack=1000)),
-            CustomPlayer(name="CustomBot", state=PlayerState(stack=1000)),
         ]
 
         for player in players:
@@ -100,13 +66,15 @@ class TestGameStateSerialization(unittest.TestCase):
 
         game.start()
 
+        # Verify PlayerSnapshot round-trip: uid, name, and state should be preserved
         game_state = game.state.model_dump()
         recovered_game_state = GameState.model_validate(game_state)
 
-        self.assertEqual(
-            recovered_game_state.players[-1].event_counter,
-            game.state.players[-1].event_counter,
-        )
+        for orig, recovered in zip(game.state.players, recovered_game_state.players):
+            self.assertEqual(orig.uid, recovered.uid)
+            self.assertEqual(orig.name, recovered.name)
+            self.assertEqual(orig.state.stack, recovered.state.stack)
+            self.assertEqual(orig.state.state_type, recovered.state.state_type)
 
 
 if __name__ == "__main__":

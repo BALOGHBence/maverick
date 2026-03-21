@@ -52,6 +52,7 @@ def _make_game(pot=100, big_blind=10, community_cards=None, current_bet=20, n_pl
     game.state.get_players_in_hand.return_value = [Mock() for _ in range(n_players)]
     game.rules.showdown.hole_cards_required = 0
     snapshot = Mock()
+    snapshot.uid = "test"
     snapshot.state.stack = stack
     snapshot.state.current_bet = current_bet
     game.get_player_snapshot.return_value = snapshot
