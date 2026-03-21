@@ -19,3 +19,4 @@ Please also read the code of conduct for contributors: https://github.com/BALOGH
    testing_and_coverage
    changes_and_versioning
    release_flow
+   design_decisions
