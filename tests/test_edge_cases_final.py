@@ -77,12 +77,19 @@ class TestLoosePassiveBotPaths(unittest.TestCase):
 
     def test_loose_passive_with_check(self):
         """Test LoosePassiveBot checking."""
-        bot = LoosePassiveBot(id="lp", name="LP", state=PlayerState(stack=500, seat=0))
-        bot.state.holding = Holding(
-            cards=[
-                Card(suit=Suit.HEARTS, rank=Rank.SIX),
-                Card(suit=Suit.CLUBS, rank=Rank.FOUR),
-            ]
+        bot = LoosePassiveBot(
+            id="lp",
+            name="LP",
+            state=PlayerState(
+                stack=500,
+                seat=0,
+                holding=Holding(
+                    cards=[
+                        Card(suit=Suit.HEARTS, rank=Rank.SIX),
+                        Card(suit=Suit.CLUBS, rank=Rank.FOUR),
+                    ]
+                ),
+            ),
         )
 
         game = Mock()
@@ -108,13 +115,18 @@ class TestManiacBotPaths(unittest.TestCase):
     def test_maniac_with_bet(self):
         """Test ManiacBot betting."""
         bot = ManiacBot(
-            id="maniac", name="Maniac", state=PlayerState(stack=800, seat=0)
-        )
-        bot.state.holding = Holding(
-            cards=[
-                Card(suit=Suit.HEARTS, rank=Rank.THREE),
-                Card(suit=Suit.CLUBS, rank=Rank.NINE),
-            ]
+            id="maniac",
+            name="Maniac",
+            state=PlayerState(
+                stack=800,
+                seat=0,
+                holding=Holding(
+                    cards=[
+                        Card(suit=Suit.HEARTS, rank=Rank.THREE),
+                        Card(suit=Suit.CLUBS, rank=Rank.NINE),
+                    ]
+                ),
+            ),
         )
 
         game = Mock()
@@ -135,13 +147,18 @@ class TestManiacBotPaths(unittest.TestCase):
     def test_maniac_with_call(self):
         """Test ManiacBot calling."""
         bot = ManiacBot(
-            id="maniac", name="Maniac", state=PlayerState(stack=800, seat=0)
-        )
-        bot.state.holding = Holding(
-            cards=[
-                Card(suit=Suit.HEARTS, rank=Rank.THREE),
-                Card(suit=Suit.CLUBS, rank=Rank.NINE),
-            ]
+            id="maniac",
+            name="Maniac",
+            state=PlayerState(
+                stack=800,
+                seat=0,
+                holding=Holding(
+                    cards=[
+                        Card(suit=Suit.HEARTS, rank=Rank.THREE),
+                        Card(suit=Suit.CLUBS, rank=Rank.NINE),
+                    ]
+                ),
+            ),
         )
 
         game = Mock()

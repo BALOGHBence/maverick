@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The `is_betting_round_complete` function of the `GameState` class has been turned into a property.
 - `GameState` is now a fully immutable (frozen) Pydantic model. Direct attribute assignment raises a `ValidationError`. All state mutations are performed internally via `model_copy`.
+- `PlayerState` is now a fully immutable (frozen) Pydantic model. Direct attribute assignment raises a `ValidationError`. All player-level mutations in the game engine now go through `Game._update_player_state`, which replaces the `PlayerState` via `model_copy` and propagates the change by calling `_update_state`. This ensures `GAME_STATE_CHANGED` is emitted after every logical player state change (fold, all-in transition, stack deduction, stack gain, etc.).
 
 ## [0.6.0] - 2026.03.20
 
