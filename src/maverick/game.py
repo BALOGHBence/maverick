@@ -367,15 +367,17 @@ class Game:
         )
 
     def _update_state(self, **changes) -> None:
-        before = self.state.model_dump(mode="json")
+        has_listeners = self._events.has_subscribers(GameEventType.GAME_STATE_CHANGED)
+        before = self.state.model_dump(mode="json") if has_listeners else None
         self._state = self.state.model_copy(update=changes)
-        after = self.state.model_dump(mode="json")
-        self._emit(
-            self._create_event(
-                GameEventType.GAME_STATE_CHANGED,
-                payload={"before": before, "after": after},
+        if has_listeners:
+            after = self.state.model_dump(mode="json")
+            self._emit(
+                self._create_event(
+                    GameEventType.GAME_STATE_CHANGED,
+                    payload={"before": before, "after": after},
+                )
             )
-        )
 
     def add_player(self, player: PlayerLike) -> None:
         """Add a player to the game.

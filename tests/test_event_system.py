@@ -555,5 +555,86 @@ class TestEventPayloadAccuracy(unittest.TestCase):
             self.assertIsNotNone(event.action)
 
 
+class TestEventBusHasSubscribers(unittest.TestCase):
+    """Tests for EventBus.has_subscribers."""
+
+    def _make_bus(self):
+        from maverick.eventbus import EventBus
+
+        return EventBus()
+
+    def test_returns_false_when_no_subscribers(self):
+        bus = self._make_bus()
+        self.assertFalse(bus.has_subscribers(GameEventType.GAME_STATE_CHANGED))
+
+    def test_returns_true_after_subscribing(self):
+        bus = self._make_bus()
+        bus.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: None)
+        self.assertTrue(bus.has_subscribers(GameEventType.GAME_STATE_CHANGED))
+
+    def test_returns_false_after_unsubscribing(self):
+        bus = self._make_bus()
+        token = bus.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: None)
+        bus.unsubscribe(token)
+        self.assertFalse(bus.has_subscribers(GameEventType.GAME_STATE_CHANGED))
+
+    def test_only_matches_given_event_type(self):
+        bus = self._make_bus()
+        bus.subscribe(GameEventType.HAND_STARTED, lambda e, g: None)
+        self.assertFalse(bus.has_subscribers(GameEventType.GAME_STATE_CHANGED))
+        self.assertTrue(bus.has_subscribers(GameEventType.HAND_STARTED))
+
+
+class TestGameStateChangedOptimization(unittest.TestCase):
+    """Tests for the lazy serialization optimization in _update_state."""
+
+    def _make_game(self):
+        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        p1 = MockPlayer(
+            id="p1",
+            name="P1",
+            state=PlayerState(stack=500),
+            actions=[(ActionType.FOLD, None)],
+        )
+        p2 = MockPlayer(
+            id="p2",
+            name="P2",
+            state=PlayerState(stack=500),
+            actions=[(ActionType.FOLD, None)],
+        )
+        game.add_player(p1)
+        game.add_player(p2)
+        return game
+
+    def test_no_event_emitted_without_subscribers(self):
+        game = self._make_game()
+        events = []
+        # Subscribe to ALL events and filter for GAME_STATE_CHANGED manually
+        game.subscribe(GameEventType.HAND_STARTED, lambda e, g: None)  # unrelated sub
+        original_emit = game._emit
+
+        def capture(event):
+            if event.type == GameEventType.GAME_STATE_CHANGED:
+                events.append(event)
+            original_emit(event)
+
+        game._emit = capture
+        game.start()
+        self.assertEqual(len(events), 0)
+
+    def test_event_emitted_with_correct_payload_when_subscriber_exists(self):
+        game = self._make_game()
+        events = []
+        game.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: events.append(e))
+        game.start()
+
+        self.assertGreater(len(events), 0)
+        for event in events:
+            self.assertIn("before", event.payload)
+            self.assertIn("after", event.payload)
+            self.assertIsInstance(event.payload["before"], dict)
+            self.assertIsInstance(event.payload["after"], dict)
+
+
 if __name__ == "__main__":
     unittest.main()
