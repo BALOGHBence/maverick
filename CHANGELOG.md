@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The `is_betting_round_complete` function of the `GameState` class has been turned into a property.
+
 ## [0.6.0] - 2026.03.20
 
 ### Added

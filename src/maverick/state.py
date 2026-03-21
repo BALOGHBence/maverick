@@ -159,6 +159,7 @@ class GameState(BaseModel):
             if p.state.state_type in [PlayerStateType.ACTIVE, PlayerStateType.ALL_IN]
         ]
 
+    @property
     def is_betting_round_complete(self) -> bool:
         """Betting round is complete when no further action is possible/required."""
         in_hand = self.get_players_in_hand()

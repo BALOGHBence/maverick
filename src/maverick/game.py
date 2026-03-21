@@ -528,7 +528,7 @@ class Game:
                 self._event_queue.append(GameEventType.PLAYER_ACTION_TAKEN)
 
             case GameEventType.PLAYER_ACTION_TAKEN:
-                if self.state.is_betting_round_complete():
+                if self.state.is_betting_round_complete:
                     self._complete_betting_round()
                     self._emit(
                         self._create_event(GameEventType.BETTING_ROUND_COMPLETED)
@@ -585,7 +585,7 @@ class Game:
                 | GameEventType.RIVER_DEALT
             ):
                 self._emit(self._create_event(GameEventType.BETTING_ROUND_STARTED))
-                if self.state.is_betting_round_complete():
+                if self.state.is_betting_round_complete:
                     self._complete_betting_round()
                     self._emit(
                         self._create_event(GameEventType.BETTING_ROUND_COMPLETED)

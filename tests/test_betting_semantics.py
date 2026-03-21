@@ -496,7 +496,7 @@ class TestBettingRoundCompletion(unittest.TestCase):
         game.state.current_player_index = 1
         game._take_action_from_current_player()
 
-        self.assertTrue(game.state.is_betting_round_complete())
+        self.assertTrue(game.state.is_betting_round_complete)
 
 
 class TestShowdownStateMachine(unittest.TestCase):
