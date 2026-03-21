@@ -26,7 +26,7 @@ class SimpleTestPlayer(Player):
         call_amount,
         min_bet_amount,
     ):
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)
 
 
 DEFAULT_SMALL_BLIND = 10
@@ -100,7 +100,7 @@ class TestGamePositionProperties(unittest.TestCase):
 
     def test_button_returns_player_when_assigned(self):
         game = create_game(max_players=6)
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100, seat=3))
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=100, seat=3))
         game.add_player(p1)
 
         game._update_state(button_position=3)
@@ -118,7 +118,7 @@ class TestGamePositionProperties(unittest.TestCase):
 
     def test_small_blind_returns_player_when_assigned(self):
         game = create_game(max_players=6)
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100, seat=1))
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=100, seat=1))
         game.add_player(p1)
 
         game._update_state(small_blind_position=1)
@@ -136,7 +136,7 @@ class TestGamePositionProperties(unittest.TestCase):
 
     def test_big_blind_returns_player_when_assigned(self):
         game = create_game(max_players=6)
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100, seat=2))
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=100, seat=2))
         game.add_player(p1)
 
         game._update_state(big_blind_position=2)
@@ -154,7 +154,7 @@ class TestAddPlayer(unittest.TestCase):
     def test_add_player_to_empty_game(self):
         """Test adding a player to an empty game."""
         game = create_game()
-        player = SimpleTestPlayer(id="p1", name="Player1")
+        player = SimpleTestPlayer(uid="p1", name="Player1")
         game.add_player(player)
         self.assertEqual(len(game.state.players), 1)
         self.assertEqual(game.state.players[0].id, "p1")
@@ -162,7 +162,7 @@ class TestAddPlayer(unittest.TestCase):
     def test_add_player_assigns_seat(self):
         """Test that add_player assigns a seat to the player."""
         game = create_game()
-        player = SimpleTestPlayer(id="p1", name="Player1")
+        player = SimpleTestPlayer(uid="p1", name="Player1")
         game.add_player(player)
         self.assertIsNotNone(player.state)
         self.assertIsNotNone(player.state.seat)
@@ -171,8 +171,8 @@ class TestAddPlayer(unittest.TestCase):
     def test_add_multiple_players(self):
         """Test adding multiple players."""
         game = create_game()
-        p1 = SimpleTestPlayer(id="p1", name="Player1")
-        p2 = SimpleTestPlayer(id="p2", name="Player2")
+        p1 = SimpleTestPlayer(uid="p1", name="Player1")
+        p2 = SimpleTestPlayer(uid="p2", name="Player2")
         game.add_player(p1)
         game.add_player(p2)
         self.assertEqual(len(game.state.players), 2)
@@ -182,9 +182,9 @@ class TestAddPlayer(unittest.TestCase):
     def test_add_player_to_full_table_raises_error(self):
         """Test that adding a player to a full table raises ValueError."""
         game = create_game(max_players=2)
-        p1 = SimpleTestPlayer(id="p1", name="Player1")
-        p2 = SimpleTestPlayer(id="p2", name="Player2")
-        p3 = SimpleTestPlayer(id="p3", name="Player3")
+        p1 = SimpleTestPlayer(uid="p1", name="Player1")
+        p2 = SimpleTestPlayer(uid="p2", name="Player2")
+        p3 = SimpleTestPlayer(uid="p3", name="Player3")
 
         game.add_player(p1)
         game.add_player(p2)
@@ -197,7 +197,7 @@ class TestAddPlayer(unittest.TestCase):
         """Test adding a player with an existing PlayerState."""
         game = create_game()
         player = SimpleTestPlayer(
-            id="p1",
+            uid="p1",
             name="Player1",
             state=PlayerState(stack=500, seat=None),
         )
@@ -216,7 +216,7 @@ class TestAddPlayer(unittest.TestCase):
 
         game.subscribe(GameEventType.PLAYER_JOINED, record_event)
 
-        player = SimpleTestPlayer(id="p1", name="Player1")
+        player = SimpleTestPlayer(uid="p1", name="Player1")
         game.add_player(player)
 
         self.assertEqual(len(events), 1)
@@ -226,8 +226,8 @@ class TestAddPlayer(unittest.TestCase):
     def test_add_player_with_existing_name_raises_error(self):
         """Test that adding a player to a full table raises ValueError."""
         game = create_game(max_players=9)
-        p1 = SimpleTestPlayer(id="p1", name="Player1")
-        p2 = SimpleTestPlayer(id="p2", name="Player1")
+        p1 = SimpleTestPlayer(uid="p1", name="Player1")
+        p2 = SimpleTestPlayer(uid="p2", name="Player1")
         game.add_player(p1)
 
         with self.assertRaises(ValueError) as context:
@@ -237,8 +237,8 @@ class TestAddPlayer(unittest.TestCase):
     def test_add_player_with_existing_id_raises_error(self):
         """Test that adding a player to a full table raises ValueError."""
         game = create_game(max_players=9)
-        p1 = SimpleTestPlayer(id="p1", name="Player1")
-        p2 = SimpleTestPlayer(id="p1", name="Player2")
+        p1 = SimpleTestPlayer(uid="p1", name="Player1")
+        p2 = SimpleTestPlayer(uid="p1", name="Player2")
         game.add_player(p1)
 
         with self.assertRaises(ValueError) as context:
@@ -249,10 +249,10 @@ class TestAddPlayer(unittest.TestCase):
         """Test that adding a player to a full table raises ValueError."""
         game = create_game(max_players=9)
         p1 = SimpleTestPlayer(
-            id="p1", name="Player1", state=PlayerState(stack=100, seat=0)
+            uid="p1", name="Player1", state=PlayerState(stack=100, seat=0)
         )
         p2 = SimpleTestPlayer(
-            id="p2", name="Player2", state=PlayerState(stack=100, seat=0)
+            uid="p2", name="Player2", state=PlayerState(stack=100, seat=0)
         )
         game.add_player(p1)
 
@@ -267,7 +267,7 @@ class TestRemovePlayer(unittest.TestCase):
     def test_remove_player_from_waiting_game(self):
         """Test removing a player from a game in WAITING_FOR_PLAYERS state."""
         game = create_game()
-        player = SimpleTestPlayer(id="p1", name="Player1")
+        player = SimpleTestPlayer(uid="p1", name="Player1")
         game.add_player(player)
 
         game.remove_player(player)
@@ -276,7 +276,7 @@ class TestRemovePlayer(unittest.TestCase):
     def test_remove_nonexistent_player_raises_error(self):
         """Test removing a player that doesn't exist raises ValueError."""
         game = create_game()
-        player = SimpleTestPlayer(id="p1", name="Player1")
+        player = SimpleTestPlayer(uid="p1", name="Player1")
 
         with self.assertRaises(ValueError) as context:
             game.remove_player(player)
@@ -292,7 +292,7 @@ class TestRemovePlayer(unittest.TestCase):
 
         game.subscribe(GameEventType.PLAYER_LEFT, record_event)
 
-        player = SimpleTestPlayer(id="p1", name="Player1")
+        player = SimpleTestPlayer(uid="p1", name="Player1")
         game.add_player(player)
         game.remove_player(player)
 
@@ -304,8 +304,8 @@ class TestRemovePlayer(unittest.TestCase):
     def test_remove_player_updates_player_list(self):
         """Test that removing a player updates the player list correctly."""
         game = create_game()
-        p1 = SimpleTestPlayer(id="p1", name="Player1")
-        p2 = SimpleTestPlayer(id="p2", name="Player2")
+        p1 = SimpleTestPlayer(uid="p1", name="Player1")
+        p2 = SimpleTestPlayer(uid="p2", name="Player2")
         game.add_player(p1)
         game.add_player(p2)
 
@@ -317,7 +317,7 @@ class TestRemovePlayer(unittest.TestCase):
     def remove_player_while_hand_is_in_progress_raises_error(self):
         """Test that removing a player while a hand is in progress raises ValueError."""
         game = create_game()
-        player = SimpleTestPlayer(id="p1", name="Player1")
+        player = SimpleTestPlayer(uid="p1", name="Player1")
         game.add_player(player)
 
         # Simulate hand in progress
@@ -355,8 +355,8 @@ class TestSubscribeUnsubscribe(unittest.TestCase):
 
         game.subscribe(GameEventType.GAME_STARTED, handler)
 
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
-        p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=100))
+        p2 = SimpleTestPlayer(uid="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
         game.add_player(p2)
         game.start()
@@ -374,8 +374,8 @@ class TestSubscribeUnsubscribe(unittest.TestCase):
         token = game.subscribe(GameEventType.GAME_STARTED, handler)
         game.unsubscribe(token)
 
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
-        p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=100))
+        p2 = SimpleTestPlayer(uid="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
         game.add_player(p2)
         game.start()
@@ -396,8 +396,8 @@ class TestSubscribeUnsubscribe(unittest.TestCase):
         game.subscribe(GameEventType.GAME_STARTED, handler1)
         game.subscribe(GameEventType.GAME_STARTED, handler2)
 
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
-        p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=100))
+        p2 = SimpleTestPlayer(uid="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
         game.add_player(p2)
         game.start()
@@ -425,8 +425,8 @@ class TestStepAndHasEvents(unittest.TestCase):
         game = create_game()
 
         # Add players so _start_new_hand doesn't fail
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
-        p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=100))
+        p2 = SimpleTestPlayer(uid="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
         game.add_player(p2)
 
@@ -452,8 +452,8 @@ class TestGameHistory(unittest.TestCase):
     def test_game_history_type(self):
         """Test starting a game with enough players."""
         game = create_game(max_hands=1)
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
-        p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=100))
+        p2 = SimpleTestPlayer(uid="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
         game.add_player(p2)
 
@@ -471,8 +471,8 @@ class TestGameStart(unittest.TestCase):
     def test_start_with_enough_players(self):
         """Test starting a game with enough players."""
         game = create_game(max_hands=2, ante=1)
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
-        p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=100))
+        p2 = SimpleTestPlayer(uid="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
         game.add_player(p2)
 
@@ -490,8 +490,8 @@ class TestGameStart(unittest.TestCase):
 
         game.subscribe(GameEventType.GAME_STARTED, record_event)
 
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
-        p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=100))
+        p2 = SimpleTestPlayer(uid="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
         game.add_player(p2)
         game.start()
@@ -572,7 +572,7 @@ class TestEmitMethod(unittest.TestCase):
                 self.events_seen.append(event.type)
 
         game = create_game()
-        player = ObservantPlayer(id="p1", name="P1")
+        player = ObservantPlayer(uid="p1", name="P1")
         game.add_player(player)
 
         event = game._create_event(GameEventType.GAME_STARTED)
@@ -587,8 +587,8 @@ class TestInitializeGame(unittest.TestCase):
     def test_initialize_game_resets_hand_number(self):
         """Test that _initialize_game sets hand_number to 0."""
         game = create_game()
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
-        p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=100))
+        p2 = SimpleTestPlayer(uid="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
         game.add_player(p2)
 
@@ -605,8 +605,8 @@ class TestGameEdgeCases(unittest.TestCase):
     def test_add_player_during_game_raises_error(self):
         """Test that adding a player during a game raises ValueError."""
         game = create_game(max_hands=1)
-        p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100))
-        p2 = SimpleTestPlayer(id="p2", name="P2", state=PlayerState(stack=100))
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=100))
+        p2 = SimpleTestPlayer(uid="p2", name="P2", state=PlayerState(stack=100))
         game.add_player(p1)
         game.add_player(p2)
 
@@ -614,7 +614,7 @@ class TestGameEdgeCases(unittest.TestCase):
         game._initialize_game()
         game._update_state(stage=GameStage.STARTED)
 
-        p3 = SimpleTestPlayer(id="p3", name="P3", state=PlayerState(stack=100))
+        p3 = SimpleTestPlayer(uid="p3", name="P3", state=PlayerState(stack=100))
         with self.assertRaises(ValueError) as context:
             game.add_player(p3)
         self.assertIn(
@@ -655,9 +655,9 @@ class TestPlayerEvolutionEdgeCases(unittest.TestCase):
         game = create_game(max_players=9, max_hands=1)
         
         # Add only 3 players to a 9-seat table
-        p1 = SimpleTestPlayer(name="P1", id="p1", initial_stack=1000)
-        p2 = SimpleTestPlayer(name="P2", id="p2", initial_stack=1000)
-        p3 = SimpleTestPlayer(name="P3", id="p3", initial_stack=1000)
+        p1 = SimpleTestPlayer(name="P1", uid="p1", initial_stack=1000)
+        p2 = SimpleTestPlayer(name="P2", uid="p2", initial_stack=1000)
+        p3 = SimpleTestPlayer(name="P3", uid="p3", initial_stack=1000)
         
         # Seat them at non-consecutive seats to create gaps
         p1.state = PlayerState(state_type=PlayerStateType.ACTIVE, seat=0, stack=1000)
@@ -682,6 +682,52 @@ class TestPlayerEvolutionEdgeCases(unittest.TestCase):
         
         # Game should have completed successfully
         self.assertIn(game.state.stage, [GameStage.READY, GameStage.GAME_OVER, GameStage.HAND_COMPLETE])
+
+
+class TestAllStacksAtGameStart(unittest.TestCase):
+    """Test Game.all_stacks_at_game_start property."""
+
+    def test_returns_zero_before_game_starts(self):
+        """Property is 0 before start() is called."""
+        game = create_game()
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=500))
+        p2 = SimpleTestPlayer(uid="p2", name="P2", state=PlayerState(stack=300))
+        game.add_player(p1)
+        game.add_player(p2)
+        self.assertEqual(game.all_stacks_at_game_start, 0)
+
+    def test_equals_sum_of_stacks_after_start(self):
+        """Property equals the sum of all player stacks once the game starts."""
+        game = create_game(max_hands=1)
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=500))
+        p2 = SimpleTestPlayer(uid="p2", name="P2", state=PlayerState(stack=300))
+        game.add_player(p1)
+        game.add_player(p2)
+        game.start()
+        self.assertEqual(game.all_stacks_at_game_start, 800)
+
+    def test_three_players(self):
+        """Property equals the sum of stacks for three players."""
+        game = create_game(max_hands=1)
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=1000))
+        p2 = SimpleTestPlayer(uid="p2", name="P2", state=PlayerState(stack=2000))
+        p3 = SimpleTestPlayer(uid="p3", name="P3", state=PlayerState(stack=3000))
+        game.add_player(p1)
+        game.add_player(p2)
+        game.add_player(p3)
+        game.start()
+        self.assertEqual(game.all_stacks_at_game_start, 6000)
+
+    def test_does_not_change_after_chips_move(self):
+        """Property stays fixed at the initial total even after chips move between players."""
+        game = create_game(max_hands=1)
+        p1 = SimpleTestPlayer(uid="p1", name="P1", state=PlayerState(stack=500))
+        p2 = SimpleTestPlayer(uid="p2", name="P2", state=PlayerState(stack=500))
+        game.add_player(p1)
+        game.add_player(p2)
+        game.start()
+        # After the hand the stacks will have changed, but the property must not
+        self.assertEqual(game.all_stacks_at_game_start, 1000)
 
 
 if __name__ == "__main__":
