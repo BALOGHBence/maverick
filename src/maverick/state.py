@@ -1,4 +1,4 @@
-from time import time
+import time
 from typing import Optional, Any
 import uuid
 import warnings
@@ -107,6 +107,8 @@ class GameState(BaseModel):
 
     model_config = {
         "arbitrary_types_allowed": True,
+        "frozen": True,
+        "populate_by_name": True,
     }
 
     @property

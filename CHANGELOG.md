@@ -10,10 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added `uid` and `ts` fields to the `GameState` class.
+- Added `GAME_STATE_CHANGED` event type to `GameEventType`. This event is emitted every time the game state transitions to a new instance and carries a `before`/`after` payload with the full serialized `GameState` before and after the change.
+- Added `EventBus.has_subscribers(event_type)` method that returns `True` if at least one handler is subscribed to the given event type.
+- Added `all_stacks_at_game_start` property to the `Game` class.
 
 ### Changed
 
 - The `is_betting_round_complete` function of the `GameState` class has been turned into a property.
+- `GameState` is now a fully immutable (frozen) Pydantic model. Direct attribute assignment raises a `ValidationError`. All state mutations are performed internally via `model_copy`.
 
 ## [0.6.0] - 2026.03.20
 
