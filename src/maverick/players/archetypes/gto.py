@@ -36,8 +36,9 @@ class GTOBot(Player):
         min_bet_amount: int,
     ) -> PlayerAction:
         """Play balanced, theoretically sound poker using hand strength evaluation."""
+        snapshot = game.get_player_snapshot(self.uid)
         # Evaluate hand strength
-        private_cards = self.state.holding.cards
+        private_cards = snapshot.state.holding.cards
         community_cards = game.state.community_cards
 
         # Get hand equity
@@ -67,7 +68,7 @@ class GTOBot(Player):
 
         # Bet with balanced sizing when strong
         if ActionType.BET in valid_actions and strong_hand:
-            bet_amount = min(max(pot_bet, min_bet_amount), self.state.stack)
+            bet_amount = min(max(pot_bet, min_bet_amount), snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
@@ -78,11 +79,11 @@ class GTOBot(Player):
             # min_raise_amount is the minimum raise-by increment
             # Calculate raise-to target (2x current bet), then convert to raise-by increment
             raise_to_target = game.state.current_bet * 2
-            raise_by_amount = raise_to_target - self.state.current_bet
+            raise_by_amount = raise_to_target - snapshot.state.current_bet
             # Ensure we meet minimum raise requirement
             raise_by_amount = max(raise_by_amount, min_raise_amount)
             # Cap at stack
-            raise_by_amount = min(raise_by_amount, self.state.stack)
+            raise_by_amount = min(raise_by_amount, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid,
                 action_type=ActionType.RAISE,
@@ -92,7 +93,7 @@ class GTOBot(Player):
         # Call with proper odds and medium+ hands
         if ActionType.CALL in valid_actions and medium_hand:
             # GTO calling requires proper pot odds
-            if call_amount <= self.state.stack and call_amount <= game.state.pot:
+            if call_amount <= snapshot.state.stack and call_amount <= game.state.pot:
                 return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Check in balanced way

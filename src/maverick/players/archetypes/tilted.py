@@ -36,8 +36,9 @@ class TiltedBot(Player):
         **_,
     ) -> PlayerAction:
         """Make irrational, emotionally-driven decisions using hand strength poorly."""
+        snapshot = game.get_player_snapshot(self.uid)
         # Evaluate hand strength but use it irrationally
-        private_cards = self.state.holding.cards
+        private_cards = snapshot.state.holding.cards
         community_cards = game.state.community_cards
 
         # Get hand equity but overvalue everything on tilt
@@ -63,26 +64,26 @@ class TiltedBot(Player):
         # Often goes all-in on tilt, even with marginal equity
         if (
             ActionType.ALL_IN in valid_actions
-            and self.state.stack < game.state.pot * 2
+            and snapshot.state.stack < game.state.pot * 2
             and tilted_mindset
         ):
             return PlayerAction(
                 player_uid=self.uid,
                 action_type=ActionType.ALL_IN,
-                amount=self.state.stack,
+                amount=snapshot.state.stack,
             )
 
         # Raise aggressively without much thought
         if ActionType.RAISE in valid_actions:
             # Tilt raises are often oversized
-            raise_amount = min(min_raise_amount * 3, self.state.stack)
+            raise_amount = min(min_raise_amount * 3, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_amount
             )
 
         # Bet aggressively
         if ActionType.BET in valid_actions:
-            bet_amount = min(min_bet_amount * 4, self.state.stack)
+            bet_amount = min(min_bet_amount * 4, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )

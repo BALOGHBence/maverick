@@ -18,6 +18,7 @@ class TestAggressiveBotEdgeCases(unittest.TestCase):
         game = Mock()
         game.state.pot = 20
         game.state.big_blind = 10
+        game.get_player_snapshot.return_value.state.stack = 100
 
         # Test with just BET available
         action = bot.decide_action(
@@ -134,6 +135,7 @@ class TestManiacBotPaths(unittest.TestCase):
         game.state.big_blind = 10
         game.state.community_cards = []
         game.state.get_players_in_hand.return_value = [Mock(), Mock()]
+        game.get_player_snapshot.return_value.state.stack = 800
 
         action = bot.decide_action(
             game=game,

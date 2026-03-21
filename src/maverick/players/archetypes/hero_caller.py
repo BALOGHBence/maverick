@@ -37,8 +37,9 @@ class HeroCallerBot(Player):
         min_bet_amount: int,
     ) -> PlayerAction:
         """Call large bets to catch bluffs, even with marginal holdings and weak equity."""
+        snapshot = game.get_player_snapshot(self.uid)
         # Evaluate hand strength
-        private_cards = self.state.holding.cards
+        private_cards = snapshot.state.holding.cards
         community_cards = game.state.community_cards
 
         # Get hand equity but overvalue it
@@ -65,7 +66,7 @@ class HeroCallerBot(Player):
         # Will call even large bets with marginal equity (signature move)
         if ActionType.CALL in valid_actions and marginal_hand:
             # Hero caller calls even big bets (often incorrectly)
-            if call_amount <= self.state.stack * 0.6:
+            if call_amount <= snapshot.state.stack * 0.6:
                 return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Check when possible
@@ -74,14 +75,14 @@ class HeroCallerBot(Player):
 
         # Will bet sometimes but not aggressively
         if ActionType.BET in valid_actions:
-            bet_amount = min(min_bet_amount * 2, self.state.stack)
+            bet_amount = min(min_bet_amount * 2, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
 
         # Rarely raises
         if ActionType.RAISE in valid_actions:
-            raise_amount = min(min_raise_amount, self.state.stack)
+            raise_amount = min(min_raise_amount, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_amount
             )

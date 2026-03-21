@@ -36,8 +36,9 @@ class SharkBot(Player):
         min_bet_amount: int,
     ) -> PlayerAction:
         """Exploit opponent weaknesses with adaptive play based on hand strength."""
+        snapshot = game.get_player_snapshot(self.uid)
         # Evaluate hand strength
-        private_cards = self.state.holding.cards
+        private_cards = snapshot.state.holding.cards
         community_cards = game.state.community_cards
 
         # Get hand equity
@@ -67,11 +68,11 @@ class SharkBot(Player):
             # Size raises based on pot and exploitation
             # Calculate raise-to target (75% of pot above current bet), then convert to raise-by
             raise_to_target = game.state.current_bet + int(game.state.pot * 0.75)
-            raise_amount = raise_to_target - self.state.current_bet
+            raise_amount = raise_to_target - snapshot.state.current_bet
             # Ensure we meet minimum raise requirement
             raise_amount = max(raise_amount, min_raise_amount)
             # Cap at stack
-            raise_amount = min(raise_amount, self.state.stack)
+            raise_amount = min(raise_amount, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_amount
             )
@@ -80,11 +81,11 @@ class SharkBot(Player):
         if ActionType.BET in valid_actions and (strong_hand or exploitable_hand):
             # Exploitative bet sizing - larger for value, smaller for bluffs
             if strong_hand:
-                bet_amount = min(int(game.state.pot * 0.8), self.state.stack)
+                bet_amount = min(int(game.state.pot * 0.8), snapshot.state.stack)
             else:
-                bet_amount = min(int(game.state.pot * 0.5), self.state.stack)
+                bet_amount = min(int(game.state.pot * 0.5), snapshot.state.stack)
             if bet_amount < min_bet_amount:
-                bet_amount = min(min_bet_amount * 2, self.state.stack)
+                bet_amount = min(min_bet_amount * 2, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
@@ -92,7 +93,7 @@ class SharkBot(Player):
         # Call when getting good odds or to trap
         if ActionType.CALL in valid_actions and strong_hand:
             # Sharks will call lighter in position or against weaker opponents
-            if call_amount <= self.state.stack and call_amount <= game.state.pot * 0.66:
+            if call_amount <= snapshot.state.stack and call_amount <= game.state.pot * 0.66:
                 return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Check to trap or for pot control
