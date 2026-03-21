@@ -101,7 +101,7 @@ class TestMinimumRaiseTracking(unittest.TestCase):
         game._post_blinds()
 
         # End preflop immediately (simulate only one player continuing)
-        p1.state = p1.state.model_copy(update={"state_type": PlayerStateType.FOLDED})
+        game._update_player_state(p1, state_type=PlayerStateType.FOLDED)
 
         # Start flop
         game._complete_betting_round()
@@ -110,7 +110,7 @@ class TestMinimumRaiseTracking(unittest.TestCase):
         game._update_state(current_bet=0)
         game._deal_flop()
         game._update_state(current_player_index=0)
-        p1.state = p1.state.model_copy(update={"state_type": PlayerStateType.ACTIVE})
+        game._update_player_state(p1, state_type=PlayerStateType.ACTIVE)
 
         # P1 checks
         game._take_action_from_current_player()
@@ -250,13 +250,13 @@ class TestNonReopeningAllIn(unittest.TestCase):
         # P1 calls
         action = PlayerAction(player_id=p1.id, action_type=ActionType.CALL)
         game._register_player_action(p1, action)
-        self.assertTrue(p1.state.acted_this_street)
+        self.assertTrue(game.get_player_snapshot(p1.uid).state.acted_this_street)
 
         # P2 calls (completing the call to BB)
         game._update_state(current_player_index=1)
         action = PlayerAction(player_id=p2.id, action_type=ActionType.CALL)
         game._register_player_action(p2, action)
-        self.assertTrue(p2.state.acted_this_street)
+        self.assertTrue(game.get_player_snapshot(p2.uid).state.acted_this_street)
 
         # P3 (BB) goes all-in with remaining 10 chips
         # This increases bet from 20 to 30, raise_size = 10 < 20
@@ -267,10 +267,10 @@ class TestNonReopeningAllIn(unittest.TestCase):
         game._register_player_action(p3, action)
 
         self.assertTrue(
-            p1.state.acted_this_street, "P1's acted flag should not be reset"
+            game.get_player_snapshot(p1.uid).state.acted_this_street, "P1's acted flag should not be reset"
         )
         self.assertTrue(
-            p2.state.acted_this_street, "P2's acted flag should not be reset"
+            game.get_player_snapshot(p2.uid).state.acted_this_street, "P2's acted flag should not be reset"
         )
         self.assertEqual(
             game.state.last_raise_size,
@@ -301,13 +301,13 @@ class TestNonReopeningAllIn(unittest.TestCase):
         # P1 calls
         action = PlayerAction(player_id=p1.id, action_type=ActionType.CALL)
         game._register_player_action(p1, action)
-        self.assertTrue(p1.state.acted_this_street)
+        self.assertTrue(game.get_player_snapshot(p1.uid).state.acted_this_street)
 
         # P2 calls
         game._update_state(current_player_index=1)
         action = PlayerAction(player_id=p2.id, action_type=ActionType.CALL)
         game._register_player_action(p2, action)
-        self.assertTrue(p2.state.acted_this_street)
+        self.assertTrue(game.get_player_snapshot(p2.uid).state.acted_this_street)
 
         # P3 (BB) goes all-in with remaining 20 chips
         # This increases bet from 20 to 40, raise_size = 20 >= 20
@@ -316,8 +316,8 @@ class TestNonReopeningAllIn(unittest.TestCase):
         action = PlayerAction(player_id=p3.id, action_type=ActionType.ALL_IN)
         game._register_player_action(p3, action)
 
-        self.assertFalse(p1.state.acted_this_street, "P1's acted flag should be reset")
-        self.assertFalse(p2.state.acted_this_street, "P2's acted flag should be reset")
+        self.assertFalse(game.get_player_snapshot(p1.uid).state.acted_this_street, "P1's acted flag should be reset")
+        self.assertFalse(game.get_player_snapshot(p2.uid).state.acted_this_street, "P2's acted flag should be reset")
         self.assertEqual(game.state.last_raise_size, 20)
         self.assertEqual(game.state.current_bet, 40)
 
@@ -369,9 +369,8 @@ class TestShortStackCall(unittest.TestCase):
 
         game.add_player(p1)
         game._update_state(current_bet=50)
-        p1.state = p1.state.model_copy(update={"current_bet": 0})
 
-        valid_actions = game._get_valid_actions(p1)
+        valid_actions = game._get_valid_actions(game.get_player_snapshot(p1.uid))
         self.assertNotIn(ActionType.CALL, valid_actions)
 
 
@@ -449,14 +448,14 @@ class TestRaiseBySemantics(unittest.TestCase):
         game._post_blinds()
 
         # Heads-up: button (p1) posts SB
-        self.assertEqual(p1.state.current_bet, 10)
+        self.assertEqual(game.get_player_snapshot(p1.uid).state.current_bet, 10)
         self.assertEqual(game.state.current_bet, 20)
 
         # P1 raises (adds 50)
         game._take_action_from_current_player()
 
         # P1's current_bet should be 10 + 50 = 60
-        self.assertEqual(p1.state.current_bet, 60)
+        self.assertEqual(game.get_player_snapshot(p1.uid).state.current_bet, 60)
         self.assertEqual(game.state.current_bet, 60)
 
 
@@ -648,8 +647,8 @@ class TestReopenLogicWithZeroRaise(unittest.TestCase):
         game._deal_hole_cards()
         game._post_blinds()
 
-        p1.state = p1.state.model_copy(update={"state_type": PlayerStateType.FOLDED})
-        p2.state = p2.state.model_copy(update={"state_type": PlayerStateType.FOLDED})
+        game._update_player_state(p1, state_type=PlayerStateType.FOLDED)
+        game._update_player_state(p2, state_type=PlayerStateType.FOLDED)
 
         game._complete_betting_round()
         game._deal_flop()
