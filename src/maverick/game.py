@@ -401,13 +401,15 @@ class Game:
 
         All PlayerState mutations must go through this method to ensure that
         GAME_STATE_CHANGED is always emitted. A fresh PlayerSnapshot is created
-        via model_copy; no live strategy object is mutated.
+        via model_copy. The corresponding strategy object's ``state`` attribute
+        is then synchronised with the new snapshot so that ``player.state``
+        always reflects the current game state.
 
         Parameters
         ----------
         player : PlayerLike | PlayerSnapshot
             The player whose state should be updated. Only ``player.uid`` is
-            used for the lookup; the object itself is not modified.
+            used for the lookup.
         **changes
             Field names and their new values to set on the player's state.
         """
@@ -418,6 +420,11 @@ class Game:
             for s in self._state.players
         ]
         self._update_state(players=snapshots)
+        strategy = self._strategies.get(uid)
+        if strategy is not None:
+            updated = next((s for s in self._state.players if s.uid == uid), None)
+            if updated is not None:
+                strategy.state = updated.state
 
     def add_player(self, player: PlayerLike) -> None:
         """Add a player to the game.

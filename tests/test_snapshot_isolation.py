@@ -102,6 +102,21 @@ class TestPlayerSnapshotIsolation(unittest.TestCase):
         # The new snapshot has the updated stack
         self.assertEqual(state_after.players[0].state.stack, 900)
 
+    def test_player_state_synced_after_update(self):
+        """player.state must mirror the latest PlayerSnapshot after _update_player_state."""
+        game = Game(small_blind=10, big_blind=20)
+        p1 = CallBot(name="P1", state=PlayerState(stack=1000))
+        p2 = FoldBot(name="P2", state=PlayerState(stack=1000))
+        game.add_player(p1)
+        game.add_player(p2)
+
+        game._update_player_state(game.state.players[0], stack=700)
+
+        # The strategy object's state must reflect the new stack
+        self.assertEqual(p1.state.stack, 700)
+        # And must match the canonical snapshot exactly
+        self.assertEqual(p1.state, game.get_player_snapshot(p1.uid).state)
+
     def test_get_player_snapshot_returns_current_state(self):
         """get_player_snapshot returns the up-to-date frozen snapshot."""
         game = Game(small_blind=10, big_blind=20)
