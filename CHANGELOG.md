@@ -13,12 +13,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `GAME_STATE_CHANGED` event type to `GameEventType`. This event is emitted every time the game state transitions to a new instance and carries a `before`/`after` payload with the full serialized `GameState` before and after the change.
 - Added `EventBus.has_subscribers(event_type)` method that returns `True` if at least one handler is subscribed to the given event type.
 - Added `all_stacks_at_game_start` property to the `Game` class.
+- Added `PlayerSnapshot` frozen Pydantic model (fields: `uid`, `name`, `state`) that captures observable player data at a point in time, decoupled from strategy logic.
+- Added `Game.get_player_snapshot(uid)` helper method that returns the current `PlayerSnapshot` for a player by UID.
 
 ### Changed
 
 - The `is_betting_round_complete` function of the `GameState` class has been turned into a property.
 - `GameState` is now a fully immutable (frozen) Pydantic model. Direct attribute assignment raises a `ValidationError`. All state mutations are performed internally via `model_copy`.
 - `PlayerState` is now a fully immutable (frozen) Pydantic model. Direct attribute assignment raises a `ValidationError`. All player-level mutations in the game engine now go through `Game._update_player_state`, which replaces the `PlayerState` via `model_copy` and propagates the change by calling `_update_state`. This ensures `GAME_STATE_CHANGED` is emitted after every logical player state change (fold, all-in transition, stack deduction, stack gain, etc.).
+- **Breaking:** `GameState.players` type changed from `list[PlayerLike]` to `list[PlayerSnapshot]`. Each element now contains only observable data (`uid`, `name`, `state`); live strategy objects are no longer stored inside `GameState`. Code that accesses `game.state.players[i].decide_action(...)` or player-specific attributes (e.g. custom `event_counter`) must be updated to obtain the strategy object via `game._strategies[uid]` or subscribe to game events.
+- **Breaking:** `Table._seats` now stores player UIDs (`str`) instead of live player objects. `table[seat]` returns a `str` UID or `None`. `Table.seat_player` and `Table.remove_player` no longer mutate `player.state`; seat information is managed exclusively through `PlayerSnapshot` in `GameState`.
+- **Breaking:** `Table.next_occupied_seat(active=True)` replaced by `Table.next_occupied_seat(active_uids=...)`. Callers must explicitly pass the set of active player UIDs obtained from `{s.uid for s in game.state.get_active_players()}`.
+- `Game._strategies` dict holds all live strategy objects keyed by player UID; `Game.add_player` populates it, `Game.remove_player` clears the entry.
+- `Game._update_player_state` now creates fresh `PlayerSnapshot` instances via `model_copy` without mutating any live strategy object. Old and new `GameState` instances produced by consecutive `_update_state` calls share no mutable player references.
+- All built-in player strategies (`FoldBot`, `CallBot`, `AggressiveBot`, and all archetype bots) updated to retrieve their current state via `game.get_player_snapshot(self.uid)` instead of `self.state`.
+- `GameState.get_active_players()` and `GameState.get_players_in_hand()` now return `list[PlayerSnapshot]`.
 
 ## [0.6.0] - 2026.03.20
 
