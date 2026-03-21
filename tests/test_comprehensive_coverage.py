@@ -153,6 +153,7 @@ class TestWhaleBot(unittest.TestCase):
         game = Mock()
         game.state.pot = 100
         game.state.big_blind = 10
+        game.get_player_snapshot.return_value.state.stack = 1000
 
         action = whale.decide_action(
             game=game,
@@ -175,6 +176,7 @@ class TestWhaleBot(unittest.TestCase):
         game = Mock()
         game.state.pot = 50
         game.state.big_blind = 10
+        game.get_player_snapshot.return_value.state.stack = 1000
 
         action = whale.decide_action(
             game=game,
@@ -212,6 +214,7 @@ class TestWhaleBot(unittest.TestCase):
 
         game = Mock()
 
+        game.get_player_snapshot.return_value.state.stack = 100
         action = whale.decide_action(
             game=game,
             valid_actions=[ActionType.ALL_IN],
@@ -335,6 +338,7 @@ class TestManiacBot(unittest.TestCase):
         game.state.phase = Street.PRE_FLOP
         game.state.community_cards = []
         game.state.get_players_in_hand.return_value = [Mock(), Mock(), Mock()]
+        game.get_player_snapshot.return_value.state.stack = 800
 
         action = maniac.decide_action(
             game=game,
@@ -519,6 +523,7 @@ class TestAggressiveBot(unittest.TestCase):
         game = Mock()
         game.state.pot = 50
         game.state.big_blind = 10
+        game.get_player_snapshot.return_value.state.stack = 500
 
         action = aggressive.decide_action(
             game=game,
@@ -539,6 +544,7 @@ class TestAggressiveBot(unittest.TestCase):
         game = Mock()
         game.state.pot = 30
         game.state.big_blind = 10
+        game.get_player_snapshot.return_value.state.stack = 500
 
         action = aggressive.decide_action(
             game=game,

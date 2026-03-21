@@ -246,6 +246,7 @@ class TestWhaleExtended(unittest.TestCase):
         game = Mock()
         game.state.pot = 5
         game.state.big_blind = 10
+        game.get_player_snapshot.return_value.state.stack = 1000
 
         action = whale.decide_action(
             game=game,

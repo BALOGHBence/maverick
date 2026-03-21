@@ -57,8 +57,7 @@ class TestSeatPlayer(unittest.TestCase):
         seat_index = table.seat_player(player, seat_index=3)
 
         self.assertEqual(seat_index, 3)
-        self.assertEqual(table[3], player)
-        self.assertEqual(player.state.seat, 3)
+        self.assertEqual(table[3], player.uid)
         self.assertEqual(table.get_player_seat(player), 3)
 
     def test_seat_player_at_first_free_seat(self):
@@ -69,8 +68,7 @@ class TestSeatPlayer(unittest.TestCase):
         seat_index = table.seat_player(player)
 
         self.assertEqual(seat_index, 0)
-        self.assertEqual(table[0], player)
-        self.assertEqual(player.state.seat, 0)
+        self.assertEqual(table[0], player.uid)
 
     def test_seat_multiple_players_auto_assign(self):
         """Test seating multiple players with auto seat assignment."""
@@ -83,7 +81,7 @@ class TestSeatPlayer(unittest.TestCase):
         for i, player in enumerate(players):
             seat_index = table.seat_player(player)
             self.assertEqual(seat_index, i)
-            self.assertEqual(table[i], player)
+            self.assertEqual(table[i], player.uid)
 
     def test_seat_player_at_occupied_seat_raises_error(self):
         """Test that seating a player at an occupied seat raises an error."""
@@ -138,24 +136,22 @@ class TestRemovePlayer(unittest.TestCase):
         player = SimpleTestPlayer(name="Player1", state=PlayerState(stack=1000))
 
         table.seat_player(player, seat_index=2)
-        self.assertEqual(table[2], player)
+        self.assertEqual(table[2], player.uid)
 
         table.remove_player(player)
 
         self.assertIsNone(table[2])
-        self.assertIsNone(player.state.seat)
         self.assertIsNone(table.get_player_seat(player))
         self.assertTrue(table.has_free_seat)
 
-    def test_remove_player_from_out_of_bounds_seat_raises_error(self):
-        """Test that removing a player with invalid seat raises an error."""
+    def test_remove_player_not_seated_raises_error(self):
+        """Test that removing a player who is not seated raises an error."""
         table = Table(n_seats=6)
         player = SimpleTestPlayer(name="Player1", state=PlayerState(stack=1000))
-        player.state = player.state.model_copy(update={"seat": 10})
 
         with self.assertRaises(ValueError) as context:
             table.remove_player(player)
-        self.assertIn("out of bounds", str(context.exception))
+        self.assertIn("not seated", str(context.exception))
 
 
 class TestGetPlayerSeat(unittest.TestCase):
@@ -353,7 +349,7 @@ class TestNextOccupiedSeat(unittest.TestCase):
         self.assertEqual(next_seat, 7)
 
     def test_next_occupied_seat_with_active_filter(self):
-        """Test finding next occupied seat with active filter."""
+        """Test finding next occupied seat with active_uids filter."""
         table = Table(n_seats=6)
         players = [
             SimpleTestPlayer(
@@ -367,13 +363,14 @@ class TestNextOccupiedSeat(unittest.TestCase):
         table.seat_player(players[1], seat_index=3)
         table.seat_player(players[2], seat_index=5)
 
-        players[1].state = players[1].state.model_copy(update={"state_type": PlayerStateType.FOLDED})
+        # players[1] is folded — only players[0] and players[2] are active
+        active_uids = {players[0].uid, players[2].uid}
 
-        next_seat = table.next_occupied_seat(1, active=True)
+        next_seat = table.next_occupied_seat(1, active_uids=active_uids)
         self.assertEqual(next_seat, 5)
 
     def test_next_occupied_seat_with_active_filter_returns_None(self):
-        """Test finding next occupied seat with active filter."""
+        """Test finding next occupied seat with active_uids filter returns None when none active."""
         table = Table(n_seats=6)
         players = [
             SimpleTestPlayer(
@@ -387,13 +384,16 @@ class TestNextOccupiedSeat(unittest.TestCase):
         table.seat_player(players[1], seat_index=3)
         table.seat_player(players[2], seat_index=5)
 
-        players[1].state = players[1].state.model_copy(update={"state_type": PlayerStateType.FOLDED})
+        # Only players[1] is "active", but we start search from seat 1 so it won't
+        # find any seat wrapping around (there's only seat 3 which is in active_uids
+        # but we need to test the None case)
+        active_uids: set = set()
 
-        next_seat = table.next_occupied_seat(1, active=True)
-        self.assertEqual(next_seat, None)
+        next_seat = table.next_occupied_seat(1, active_uids=active_uids)
+        self.assertIsNone(next_seat)
 
     def test_next_occupied_seat_with_active_filter_all_folded(self):
-        """Test next occupied seat when all players are folded."""
+        """Test next occupied seat when no active_uids supplied returns None."""
         table = Table(n_seats=6)
         players = [
             SimpleTestPlayer(name=f"Player{i}", state=PlayerState(stack=1000))
@@ -404,14 +404,12 @@ class TestNextOccupiedSeat(unittest.TestCase):
         table.seat_player(players[1], seat_index=3)
         table.seat_player(players[2], seat_index=5)
 
-        for player in players:
-            player.state = player.state.model_copy(update={"state_type": PlayerStateType.FOLDED})
-
-        next_seat = table.next_occupied_seat(1, active=True)
+        # Empty active_uids means no player is considered active
+        next_seat = table.next_occupied_seat(1, active_uids=set())
         self.assertIsNone(next_seat)
 
     def test_next_occupied_seat_with_active_filter_wraps(self):
-        """Test next occupied seat with active filter wraps around."""
+        """Test next occupied seat with active_uids filter wraps around."""
         table = Table(n_seats=6)
         players = [
             SimpleTestPlayer(name=f"Player{i}", state=PlayerState(stack=1000))
@@ -422,11 +420,10 @@ class TestNextOccupiedSeat(unittest.TestCase):
         table.seat_player(players[1], seat_index=3)
         table.seat_player(players[2], seat_index=5)
 
-        players[0].state = players[0].state.model_copy(update={"state_type": PlayerStateType.ACTIVE})
-        players[1].state = players[1].state.model_copy(update={"state_type": PlayerStateType.FOLDED})
-        players[2].state = players[2].state.model_copy(update={"state_type": PlayerStateType.FOLDED})
+        # Only players[0] is active; starting from seat 3 should wrap to seat 1
+        active_uids = {players[0].uid}
 
-        next_seat = table.next_occupied_seat(3, active=True)
+        next_seat = table.next_occupied_seat(3, active_uids=active_uids)
         self.assertEqual(next_seat, 1)
 
 
@@ -434,13 +431,13 @@ class TestTableIndexing(unittest.TestCase):
     """Test table indexing."""
 
     def test_getitem_returns_correct_player(self):
-        """Test that __getitem__ returns the correct player."""
+        """Test that __getitem__ returns the correct player UID."""
         table = Table(n_seats=6)
         player = SimpleTestPlayer(name="Player1", state=PlayerState(stack=1000))
 
         table.seat_player(player, seat_index=3)
 
-        self.assertEqual(table[3], player)
+        self.assertEqual(table[3], player.uid)
 
     def test_getitem_returns_none_for_empty_seat(self):
         """Test that __getitem__ returns None for empty seat."""

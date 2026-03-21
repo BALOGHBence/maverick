@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from .enums import PlayerStateType
 from .holding import Holding
 
-__all__ = ["PlayerState"]
+__all__ = ["PlayerState", "PlayerSnapshot"]
 
 
 class PlayerState(BaseModel):
@@ -45,3 +45,29 @@ class PlayerState(BaseModel):
     )  # contribution in the current betting round
     total_contributed: int = Field(default=0, ge=0)  # total contribution this hand
     acted_this_street: bool = False
+
+
+class PlayerSnapshot(BaseModel):
+    """An immutable snapshot of observable player data at a point in time.
+
+    Separates observable state from strategy logic. ``GameState.players`` holds
+    a list of these snapshots; the live strategy objects are stored separately
+    inside ``Game._strategies``.
+
+    Fields
+    ------
+    uid : str
+        Unique identifier for the player instance.
+    name : str
+        Display name of the player.
+    state : PlayerState
+        Frozen player state (seat, stack, holding, bets, etc.).
+
+    .. versionadded:: 0.8.0
+    """
+
+    model_config = {"frozen": True}
+
+    uid: str
+    name: str
+    state: PlayerState

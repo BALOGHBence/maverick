@@ -43,7 +43,7 @@ def _make_bot(cls, stack=500):
     return bot
 
 
-def _make_game(pot=100, big_blind=10, community_cards=None, current_bet=20, n_players=3):
+def _make_game(pot=100, big_blind=10, community_cards=None, current_bet=20, n_players=3, stack=500):
     game = Mock()
     game.state.pot = pot
     game.state.big_blind = big_blind
@@ -51,6 +51,11 @@ def _make_game(pot=100, big_blind=10, community_cards=None, current_bet=20, n_pl
     game.state.community_cards = community_cards if community_cards is not None else []
     game.state.get_players_in_hand.return_value = [Mock() for _ in range(n_players)]
     game.rules.showdown.hole_cards_required = 0
+    snapshot = Mock()
+    snapshot.uid = "test"
+    snapshot.state.stack = stack
+    snapshot.state.current_bet = current_bet
+    game.get_player_snapshot.return_value = snapshot
     return game
 
 
@@ -443,7 +448,7 @@ class TestLoosePassiveBotDecisions(unittest.TestCase):
 
     def test_bets_amount_capped_at_stack(self):
         bot = _make_bot(LoosePassiveBot, stack=5)
-        game = _make_game()
+        game = _make_game(stack=5)
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.BET],
@@ -494,7 +499,7 @@ class TestManiacBotDecisions(unittest.TestCase):
     def test_goes_all_in_when_stack_small_relative_to_pot(self):
         # stack <= pot * 2: 50 <= 100 * 2 = 200 ✓
         bot = _make_bot(ManiacBot, stack=50)
-        game = _make_game(pot=100)
+        game = _make_game(pot=100, stack=50)
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.ALL_IN, ActionType.CALL],
@@ -506,7 +511,7 @@ class TestManiacBotDecisions(unittest.TestCase):
     def test_does_not_go_all_in_when_stack_too_large(self):
         # stack > pot * 2: 1000 > 100 * 2 = 200
         bot = _make_bot(ManiacBot, stack=1000)
-        game = _make_game(pot=100)
+        game = _make_game(pot=100, stack=1000)
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.ALL_IN, ActionType.CALL],
@@ -1372,7 +1377,7 @@ class TestWhaleBotDecisions(unittest.TestCase):
 
     def test_goes_all_in_when_available(self):
         bot = _make_bot(WhaleBot, stack=50)
-        game = _make_game()
+        game = _make_game(stack=50)
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.ALL_IN],
@@ -1414,7 +1419,7 @@ class TestTiltedBotDecisions(unittest.TestCase):
     def test_goes_all_in_when_tilted_and_stack_small(self, _mock):
         # stack < pot * 2: 50 < 100 * 2 = 200, tilted_mindset = True (0.30 > 0.20)
         bot = _make_bot(TiltedBot, stack=50)
-        game = _make_game(pot=100)
+        game = _make_game(pot=100, stack=50)
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.ALL_IN, ActionType.CALL],
@@ -1427,7 +1432,7 @@ class TestTiltedBotDecisions(unittest.TestCase):
     def test_does_not_go_all_in_when_equity_too_low(self, _mock):
         # tilted_mindset = False (0.10 <= 0.20)
         bot = _make_bot(TiltedBot, stack=50)
-        game = _make_game(pot=100)
+        game = _make_game(pot=100, stack=50)
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.ALL_IN, ActionType.RAISE],
