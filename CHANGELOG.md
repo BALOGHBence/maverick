@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking:** `GameState.community_cards` type changed from `list[Card]` to `tuple[Card, ...]`. This makes the immutability intent explicit and prevents in-place mutation at the type level. Code that relies on `community_cards` being a `list` (e.g. calling `.append()` or `.extend()` on it) must be updated.
+- `GAME_STATE_CHANGED` is now emitted when community cards are dealt (flop, turn, and river). Previously, the deal methods mutated the card list in-place, bypassing `_update_state` and suppressing the event.
 - The `is_betting_round_complete` function of the `GameState` class has been turned into a property.
 - `GameState` is now a fully immutable (frozen) Pydantic model. Direct attribute assignment raises a `ValidationError`. All state mutations are performed internally via `model_copy`.
 - `PlayerState` is now a fully immutable (frozen) Pydantic model. Direct attribute assignment raises a `ValidationError`. All player-level mutations in the game engine now go through `Game._update_player_state`, which replaces the `PlayerState` via `model_copy` and propagates the change by calling `_update_state`. This ensures `GAME_STATE_CHANGED` is emitted after every logical player state change (fold, all-in transition, stack deduction, stack gain, etc.).

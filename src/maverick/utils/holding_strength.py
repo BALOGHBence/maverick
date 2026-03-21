@@ -56,7 +56,7 @@ def estimate_holding_strength(
     """
     from maverick import Deck
 
-    community_cards = community_cards or []
+    community_cards = list(community_cards) if community_cards else []
 
     n_opponents = n_players - 1
     n_holding_cards = len(holding)

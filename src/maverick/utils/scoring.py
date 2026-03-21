@@ -227,7 +227,7 @@ def find_highest_scoring_hand(
         A tuple containing the best 5-card hand, its hand type, and its score.
     """
 
-    all_cards = private_cards + community_cards
+    all_cards = list(private_cards) + list(community_cards)
 
     # If we have 5 or fewer cards total, return all of them
     if len(all_cards) <= 5:

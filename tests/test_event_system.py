@@ -762,5 +762,120 @@ class TestPlayerStateChangedEvents(unittest.TestCase):
             ps.stack = 200
 
 
+class TestCommunityCardStateChangedEvents(unittest.TestCase):
+    """Test that GAME_STATE_CHANGED is emitted when community cards are dealt."""
+
+    def _make_game_with_players(self, p1_actions, p2_actions):
+        game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
+        p1 = MockPlayer(
+            id="p1",
+            name="P1",
+            state=PlayerState(stack=500),
+            actions=p1_actions,
+        )
+        p2 = MockPlayer(
+            id="p2",
+            name="P2",
+            state=PlayerState(stack=500),
+            actions=p2_actions,
+        )
+        game.add_player(p1)
+        game.add_player(p2)
+        return game
+
+    def _community_card_counts(self, payload):
+        """Return (before_count, after_count) of community_cards in a payload."""
+        before = len(payload.get("before", {}).get("community_cards", []))
+        after = len(payload.get("after", {}).get("community_cards", []))
+        return before, after
+
+    def test_game_state_changed_emitted_on_flop(self):
+        """GAME_STATE_CHANGED must be emitted when the flop is dealt (0 → 3 cards)."""
+        game = self._make_game_with_players(
+            p1_actions=[
+                (ActionType.CALL, None),   # pre-flop call
+                (ActionType.CHECK, None),  # flop
+                (ActionType.CHECK, None),  # turn
+                (ActionType.CHECK, None),  # river
+            ],
+            p2_actions=[
+                (ActionType.CHECK, None),  # pre-flop check
+                (ActionType.CHECK, None),  # flop
+                (ActionType.CHECK, None),  # turn
+                (ActionType.CHECK, None),  # river
+            ],
+        )
+        events = []
+        game.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: events.append(e))
+        game.start()
+
+        flop_events = [
+            e for e in events
+            if self._community_card_counts(e.payload) == (0, 3)
+        ]
+        self.assertTrue(
+            len(flop_events) > 0,
+            "No GAME_STATE_CHANGED event captured the flop deal (0 → 3 community cards)",
+        )
+
+    def test_game_state_changed_emitted_on_turn(self):
+        """GAME_STATE_CHANGED must be emitted when the turn is dealt (3 → 4 cards)."""
+        game = self._make_game_with_players(
+            p1_actions=[
+                (ActionType.CALL, None),   # pre-flop call
+                (ActionType.CHECK, None),  # flop
+                (ActionType.CHECK, None),  # turn
+                (ActionType.CHECK, None),  # river
+            ],
+            p2_actions=[
+                (ActionType.CHECK, None),  # pre-flop check
+                (ActionType.CHECK, None),  # flop
+                (ActionType.CHECK, None),  # turn
+                (ActionType.CHECK, None),  # river
+            ],
+        )
+        events = []
+        game.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: events.append(e))
+        game.start()
+
+        turn_events = [
+            e for e in events
+            if self._community_card_counts(e.payload) == (3, 4)
+        ]
+        self.assertTrue(
+            len(turn_events) > 0,
+            "No GAME_STATE_CHANGED event captured the turn deal (3 → 4 community cards)",
+        )
+
+    def test_game_state_changed_emitted_on_river(self):
+        """GAME_STATE_CHANGED must be emitted when the river is dealt (4 → 5 cards)."""
+        game = self._make_game_with_players(
+            p1_actions=[
+                (ActionType.CALL, None),   # pre-flop call
+                (ActionType.CHECK, None),  # flop
+                (ActionType.CHECK, None),  # turn
+                (ActionType.CHECK, None),  # river
+            ],
+            p2_actions=[
+                (ActionType.CHECK, None),  # pre-flop check
+                (ActionType.CHECK, None),  # flop
+                (ActionType.CHECK, None),  # turn
+                (ActionType.CHECK, None),  # river
+            ],
+        )
+        events = []
+        game.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: events.append(e))
+        game.start()
+
+        river_events = [
+            e for e in events
+            if self._community_card_counts(e.payload) == (4, 5)
+        ]
+        self.assertTrue(
+            len(river_events) > 0,
+            "No GAME_STATE_CHANGED event captured the river deal (4 → 5 community cards)",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
