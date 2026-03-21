@@ -150,6 +150,9 @@ class Game:
         # Strategy objects - keyed by player UID; separate from GameState snapshots
         self._strategies: dict[str, PlayerLike] = {}
 
+        # Active deck - held here, not in GameState
+        self._deck: Optional[Deck] = None
+
     @property
     def game_uid(self) -> Optional[str]:
         """Returns the unique identifier for the current game session.
@@ -192,6 +195,11 @@ class Game:
     def state(self) -> GameState:
         """Returns the current game state."""
         return self._state
+
+    @property
+    def deck(self) -> Optional[Deck]:
+        """The current deck. Exposes live engine state — not a historical snapshot."""
+        return self._deck
 
     @property
     def history(self) -> list[GameEvent]:
@@ -769,8 +777,8 @@ class Game:
         if len(self.state.players) < self.rules.dealing.min_players:
             raise ValueError("Not enough players to start hand")
 
+        self._deck = Deck.standard_deck(shuffle=True)
         self._update_state(
-            deck=Deck.standard_deck(shuffle=True),
             community_cards=(),
             pot=0,
             current_bet=0,
@@ -890,7 +898,7 @@ class Game:
         self._log(f"Dealing hole cards. Button: {button_name}", logging.INFO)
         for player in self.state.players:
             if player.state.state_type == PlayerStateType.ACTIVE:
-                cards = self.state.deck.deal(self.rules.dealing.hole_cards)
+                cards = self._deck.deal(self.rules.dealing.hole_cards)
                 self._update_player_state(player, holding=Holding(cards=cards))
 
     def _post_blinds(self) -> None:
@@ -1323,8 +1331,8 @@ class Game:
         )
 
     def _deal_flop(self) -> None:
-        self.state.deck.deal(1)
-        flop_cards = self.state.deck.deal(3)
+        self._deck.deal(1)
+        flop_cards = self._deck.deal(3)
         self._update_state(community_cards=(*self.state.community_cards, *flop_cards))
         self._log(
             f"Dealt flop. Community cards: {[card.utf8() for card in self.state.community_cards]}",
@@ -1332,8 +1340,8 @@ class Game:
         )
 
     def _deal_turn(self) -> None:
-        self.state.deck.deal(1)
-        turn_card = self.state.deck.deal(1)[0]
+        self._deck.deal(1)
+        turn_card = self._deck.deal(1)[0]
         self._update_state(community_cards=(*self.state.community_cards, turn_card))
         self._log(
             f"Dealt turn. Community cards: {[card.utf8() for card in self.state.community_cards]}",
@@ -1341,8 +1349,8 @@ class Game:
         )
 
     def _deal_river(self) -> None:
-        self.state.deck.deal(1)
-        river_card = self.state.deck.deal(1)[0]
+        self._deck.deal(1)
+        river_card = self._deck.deal(1)[0]
         self._update_state(community_cards=(*self.state.community_cards, river_card))
         self._log(
             f"Dealt river. Community cards: {[card.utf8() for card in self.state.community_cards]}",

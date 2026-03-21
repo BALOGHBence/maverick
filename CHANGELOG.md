@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Game._update_player_state` now creates fresh `PlayerSnapshot` instances via `model_copy` without mutating any live strategy object. Old and new `GameState` instances produced by consecutive `_update_state` calls share no mutable player references.
 - All built-in player strategies (`FoldBot`, `CallBot`, `AggressiveBot`, and all archetype bots) updated to retrieve their current state via `game.get_player_snapshot(self.uid)` instead of `self.state`.
 - `GameState.get_active_players()` and `GameState.get_players_in_hand()` now return `list[PlayerSnapshot]`.
+- **Breaking:** `deck` has been removed from `GameState`. The active deck is now held by `Game._deck` and exposed via the read-only `game.deck` property. Code that previously accessed `game.state.deck` must be updated to use `game.deck`.
 
 ## [0.6.0] - 2026.03.20
 
