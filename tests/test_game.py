@@ -103,12 +103,12 @@ class TestGamePositionProperties(unittest.TestCase):
         p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100, seat=3))
         game.add_player(p1)
 
-        game.state.button_position = 3
+        game._update_state(button_position=3)
         self.assertIs(game.button, p1)
 
     def test_button_returns_none_when_seat_empty(self):
         game = create_game(max_players=6)
-        game.state.button_position = 5
+        game._update_state(button_position=5)
         self.assertIsNone(game.button)
 
     def test_small_blind_returns_none_when_unassigned(self):
@@ -121,12 +121,12 @@ class TestGamePositionProperties(unittest.TestCase):
         p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100, seat=1))
         game.add_player(p1)
 
-        game.state.small_blind_position = 1
+        game._update_state(small_blind_position=1)
         self.assertIs(game.small_blind, p1)
 
     def test_small_blind_returns_none_when_seat_empty(self):
         game = create_game(max_players=6)
-        game.state.small_blind_position = 4
+        game._update_state(small_blind_position=4)
         self.assertIsNone(game.small_blind)
 
     def test_big_blind_returns_none_when_unassigned(self):
@@ -139,12 +139,12 @@ class TestGamePositionProperties(unittest.TestCase):
         p1 = SimpleTestPlayer(id="p1", name="P1", state=PlayerState(stack=100, seat=2))
         game.add_player(p1)
 
-        game.state.big_blind_position = 2
+        game._update_state(big_blind_position=2)
         self.assertIs(game.big_blind, p1)
 
     def test_big_blind_returns_none_when_seat_empty(self):
         game = create_game(max_players=6)
-        game.state.big_blind_position = 0
+        game._update_state(big_blind_position=0)
         self.assertIsNone(game.big_blind)
 
 
@@ -322,7 +322,7 @@ class TestRemovePlayer(unittest.TestCase):
 
         # Simulate hand in progress
         game._initialize_game()
-        game.state.stage = GameStage.STARTED
+        game._update_state(stage=GameStage.STARTED)
 
         with self.assertRaises(ValueError) as context:
             game.remove_player(player)
@@ -431,7 +431,7 @@ class TestStepAndHasEvents(unittest.TestCase):
         game.add_player(p2)
 
         game._initialize_game()
-        game.state.stage = GameStage.READY
+        game._update_state(stage=GameStage.READY)
 
         game._event_queue.append(GameEventType.GAME_STARTED)
 
@@ -506,7 +506,7 @@ class TestCreateEvent(unittest.TestCase):
     def test_create_event_basic(self):
         """Test creating a basic event."""
         game = create_game()
-        game.state.hand_number = 5
+        game._update_state(hand_number=5)
 
         event = game._create_event(GameEventType.GAME_STARTED)
 
@@ -592,7 +592,7 @@ class TestInitializeGame(unittest.TestCase):
         game.add_player(p1)
         game.add_player(p2)
 
-        game.state.hand_number = 5
+        game._update_state(hand_number=5)
 
         game._initialize_game()
 
@@ -612,7 +612,7 @@ class TestGameEdgeCases(unittest.TestCase):
 
         # Start the game (changes state from WAITING/READY)
         game._initialize_game()
-        game.state.stage = GameStage.STARTED
+        game._update_state(stage=GameStage.STARTED)
 
         p3 = SimpleTestPlayer(id="p3", name="P3", state=PlayerState(stack=100))
         with self.assertRaises(ValueError) as context:

@@ -107,9 +107,9 @@ class TestMinimumRaiseTracking(unittest.TestCase):
         game._complete_betting_round()
         self.assertEqual(game.state.last_raise_size, 0)  # Reset after betting round
 
-        game.state.current_bet = 0
+        game._update_state(current_bet=0)
         game._deal_flop()
-        game.state.current_player_index = 0
+        game._update_state(current_player_index=0)
         p1.state.state_type = PlayerStateType.ACTIVE
 
         # P1 checks
@@ -117,7 +117,7 @@ class TestMinimumRaiseTracking(unittest.TestCase):
         self.assertEqual(game.state.last_raise_size, 0)
 
         # P2 bets 50
-        game.state.current_player_index = 1
+        game._update_state(current_player_index=1)
         game._take_action_from_current_player()
         self.assertEqual(game.state.last_raise_size, 50)
         self.assertEqual(game.state.current_bet, 50)
@@ -253,7 +253,7 @@ class TestNonReopeningAllIn(unittest.TestCase):
         self.assertTrue(p1.state.acted_this_street)
 
         # P2 calls (completing the call to BB)
-        game.state.current_player_index = 1
+        game._update_state(current_player_index=1)
         action = PlayerAction(player_id=p2.id, action_type=ActionType.CALL)
         game._register_player_action(p2, action)
         self.assertTrue(p2.state.acted_this_street)
@@ -261,7 +261,7 @@ class TestNonReopeningAllIn(unittest.TestCase):
         # P3 (BB) goes all-in with remaining 10 chips
         # This increases bet from 20 to 30, raise_size = 10 < 20
         # Should NOT reopen betting
-        game.state.current_player_index = 2
+        game._update_state(current_player_index=2)
         old_last_raise = game.state.last_raise_size
         action = PlayerAction(player_id=p3.id, action_type=ActionType.ALL_IN)
         game._register_player_action(p3, action)
@@ -304,7 +304,7 @@ class TestNonReopeningAllIn(unittest.TestCase):
         self.assertTrue(p1.state.acted_this_street)
 
         # P2 calls
-        game.state.current_player_index = 1
+        game._update_state(current_player_index=1)
         action = PlayerAction(player_id=p2.id, action_type=ActionType.CALL)
         game._register_player_action(p2, action)
         self.assertTrue(p2.state.acted_this_street)
@@ -312,7 +312,7 @@ class TestNonReopeningAllIn(unittest.TestCase):
         # P3 (BB) goes all-in with remaining 20 chips
         # This increases bet from 20 to 40, raise_size = 20 >= 20
         # SHOULD reopen betting
-        game.state.current_player_index = 2
+        game._update_state(current_player_index=2)
         action = PlayerAction(player_id=p3.id, action_type=ActionType.ALL_IN)
         game._register_player_action(p3, action)
 
@@ -368,7 +368,7 @@ class TestShortStackCall(unittest.TestCase):
         p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=0), actions=[])
 
         game.add_player(p1)
-        game.state.current_bet = 50
+        game._update_state(current_bet=50)
         p1.state.current_bet = 0
 
         valid_actions = game._get_valid_actions(p1)
@@ -493,7 +493,7 @@ class TestBettingRoundCompletion(unittest.TestCase):
         game._take_action_from_current_player()
 
         # P2 checks (BB can check after call)
-        game.state.current_player_index = 1
+        game._update_state(current_player_index=1)
         game._take_action_from_current_player()
 
         self.assertTrue(game.state.is_betting_round_complete)

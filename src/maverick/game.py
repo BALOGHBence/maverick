@@ -366,6 +366,17 @@ class Game:
             payload=payload or {},
         )
 
+    def _update_state(self, **changes) -> None:
+        before = self.state.model_dump(mode="json")
+        self._state = self.state.model_copy(update=changes)
+        after = self.state.model_dump(mode="json")
+        self._emit(
+            self._create_event(
+                GameEventType.GAME_STATE_CHANGED,
+                payload={"before": before, "after": after},
+            )
+        )
+
     def add_player(self, player: PlayerLike) -> None:
         """Add a player to the game.
 
@@ -398,7 +409,7 @@ class Game:
             self.table.seat_player(player, seat_index=player.state.seat)
         player.state.state_type = PlayerStateType.ACTIVE
 
-        self.state.players.append(player)
+        self._update_state(players=[*self.state.players, player])
 
         self._handle_event(GameEventType.PLAYER_JOINED)
         self._emit(
@@ -434,7 +445,7 @@ class Game:
             raise ValueError(f"Player with uid {player_uid} not found")
 
         self.table.remove_player(player)
-        self.state.players = [p for p in self.state.players if p.uid != player_uid]
+        self._update_state(players=[p for p in self.state.players if p.uid != player_uid])
 
         if flush:
             self._handle_event(GameEventType.PLAYER_LEFT)
@@ -491,7 +502,7 @@ class Game:
         match event:
             case GameEventType.GAME_STARTED:
                 assert self.state.stage == GameStage.READY
-                self.state.stage = GameStage.STARTED
+                self._update_state(stage=GameStage.STARTED)
                 self._game_uid = uuid.uuid4().hex
                 self._emit(self._create_event(GameEventType.GAME_STARTED))
                 self._start_new_hand()
@@ -502,7 +513,7 @@ class Game:
                     GameStage.STARTED,
                     GameStage.HAND_COMPLETE,
                 ]
-                self.state.stage = GameStage.DEALING
+                self._update_state(stage=GameStage.DEALING)
                 self._emit(self._create_event(GameEventType.HAND_STARTED))
                 self._deal_hole_cards()
                 self._emit(self._create_event(GameEventType.HOLE_CARDS_DEALT))
@@ -522,7 +533,7 @@ class Game:
 
             case GameEventType.ANTES_POSTED:
                 assert self.state.stage == GameStage.DEALING
-                self.state.stage = GameStage.PRE_FLOP
+                self._update_state(stage=GameStage.PRE_FLOP)
                 self._emit(self._create_event(GameEventType.BETTING_ROUND_STARTED))
                 self._take_action_from_current_player()
                 self._event_queue.append(GameEventType.PLAYER_ACTION_TAKEN)
@@ -542,8 +553,7 @@ class Game:
             case GameEventType.BETTING_ROUND_COMPLETED:
                 if len(self.state.get_players_in_hand()) == 1:
                     # There is no or only one active player left, so we skip to showdown
-                    self.state.stage = GameStage.SHOWDOWN
-                    self.state.street = None
+                    self._update_state(stage=GameStage.SHOWDOWN, street=None)
                     self._emit(self._create_event(GameEventType.SHOWDOWN_STARTED))
                     self._handle_showdown()
                     self._emit(self._create_event(GameEventType.SHOWDOWN_COMPLETED))
@@ -551,29 +561,25 @@ class Game:
                 else:
                     # There is at least 2 active players, so we continue to next street
                     if self.state.stage == GameStage.PRE_FLOP:
-                        self.state.stage = GameStage.FLOP
-                        self.state.street = Street.FLOP
+                        self._update_state(stage=GameStage.FLOP, street=Street.FLOP)
                         self._deal_flop()
                         self._emit(self._create_event(GameEventType.FLOP_DEALT))
                         self._event_queue.append(GameEventType.FLOP_DEALT)
                         self._advance_to_first_active_player()
                     elif self.state.stage == GameStage.FLOP:
-                        self.state.stage = GameStage.TURN
-                        self.state.street = Street.TURN
+                        self._update_state(stage=GameStage.TURN, street=Street.TURN)
                         self._deal_turn()
                         self._emit(self._create_event(GameEventType.TURN_DEALT))
                         self._event_queue.append(GameEventType.TURN_DEALT)
                         self._advance_to_first_active_player()
                     elif self.state.stage == GameStage.TURN:
-                        self.state.stage = GameStage.RIVER
-                        self.state.street = Street.RIVER
+                        self._update_state(stage=GameStage.RIVER, street=Street.RIVER)
                         self._deal_river()
                         self._emit(self._create_event(GameEventType.RIVER_DEALT))
                         self._event_queue.append(GameEventType.RIVER_DEALT)
                         self._advance_to_first_active_player()
                     elif self.state.stage == GameStage.RIVER:
-                        self.state.stage = GameStage.SHOWDOWN
-                        self.state.street = None
+                        self._update_state(stage=GameStage.SHOWDOWN, street=None)
                         self._emit(self._create_event(GameEventType.SHOWDOWN_STARTED))
                         self._handle_showdown()
                         self._emit(self._create_event(GameEventType.SHOWDOWN_COMPLETED))
@@ -600,7 +606,7 @@ class Game:
                     self._event_queue.append(GameEventType.PLAYER_ACTION_TAKEN)
 
             case GameEventType.SHOWDOWN_COMPLETED:
-                self.state.stage = GameStage.HAND_COMPLETE
+                self._update_state(stage=GameStage.HAND_COMPLETE)
                 self._emit(self._create_event(GameEventType.HAND_ENDED))
                 self._event_queue.append(GameEventType.HAND_ENDED)
 
@@ -631,7 +637,7 @@ class Game:
                     self._log(
                         "Not enough players to continue, ending game.", logging.INFO
                     )
-                    self.state.stage = GameStage.GAME_OVER
+                    self._update_state(stage=GameStage.GAME_OVER)
                     self._event_queue.append(GameEventType.GAME_ENDED)
                 else:
                     # Move button and start next hand
@@ -641,7 +647,7 @@ class Game:
                             logging.INFO,
                             stage_prefix=False,
                         )
-                        self.state.stage = GameStage.GAME_OVER
+                        self._update_state(stage=GameStage.GAME_OVER)
                         self._event_queue.append(GameEventType.GAME_ENDED)
                     else:
                         self._move_button()
@@ -655,11 +661,11 @@ class Game:
             case GameEventType.PLAYER_JOINED:
                 if self.state.stage == GameStage.WAITING_FOR_PLAYERS:
                     if len(self.state.players) >= self.rules.dealing.min_players:
-                        self.state.stage = GameStage.READY
+                        self._update_state(stage=GameStage.READY)
 
             case GameEventType.PLAYER_LEFT:
                 if len(self.state.players) < self.rules.dealing.min_players:
-                    self.state.stage = GameStage.WAITING_FOR_PLAYERS
+                    self._update_state(stage=GameStage.WAITING_FOR_PLAYERS)
 
             case GameEventType.PLAYER_ELIMINATED:
                 pass
@@ -684,14 +690,16 @@ class Game:
         return len(self._event_queue) > 0
 
     def _initialize_game(self) -> None:
-        self.state.hand_number = 0
-        self.state.button_position = self._find_first_button_position()
+        self._update_state(
+            hand_number=0,
+            button_position=self._find_first_button_position(),
+        )
 
         for p in self.state.players:
             self._all_stacks_at_game_start += p.state.stack
 
     def _start_new_hand(self) -> None:
-        self.state.hand_number += 1
+        self._update_state(hand_number=self.state.hand_number + 1)
 
         self._log(
             "=" * 30 + f" Hand {self.state.hand_number} " + "=" * 30 + "\n",
@@ -702,11 +710,13 @@ class Game:
         if len(self.state.players) < self.rules.dealing.min_players:
             raise ValueError("Not enough players to start hand")
 
-        self.state.deck = Deck.standard_deck(shuffle=True)
-        self.state.community_cards = []
-        self.state.pot = 0
-        self.state.current_bet = 0
-        self.state.last_raise_size = 0
+        self._update_state(
+            deck=Deck.standard_deck(shuffle=True),
+            community_cards=[],
+            pot=0,
+            current_bet=0,
+            last_raise_size=0,
+        )
 
         for player in self.state.players:
             player.state.current_bet = 0
@@ -716,7 +726,7 @@ class Game:
             if player.state.stack > 0:
                 player.state.state_type = PlayerStateType.ACTIVE
 
-        self.state.street = Street.PRE_FLOP
+        self._update_state(street=Street.PRE_FLOP)
 
         self._assign_blind_positions()
 
@@ -814,7 +824,7 @@ class Game:
         sb_player.state.current_bet = sb_amount
         sb_player.state.total_contributed = sb_amount
         sb_player.state.stack -= sb_amount
-        self.state.pot += sb_amount
+        self._update_state(pot=self.state.pot + sb_amount)
         if sb_player.state.stack == 0:
             sb_player.state.state_type = PlayerStateType.ALL_IN
 
@@ -830,7 +840,7 @@ class Game:
         bb_player.state.current_bet = bb_amount
         bb_player.state.total_contributed = bb_amount
         bb_player.state.stack -= bb_amount
-        self.state.pot += bb_amount
+        self._update_state(pot=self.state.pot + bb_amount)
         if bb_player.state.stack == 0:
             bb_player.state.state_type = PlayerStateType.ALL_IN
 
@@ -842,21 +852,21 @@ class Game:
 
         # Table betting state
         # IMPORTANT: current_bet should reflect the actual posted BB amount if BB is short-stacked.
-        self.state.current_bet = bb_amount
-        self.state.min_bet = self.state.big_blind
-        self.state.last_raise_size = (
-            self.state.big_blind
-        )  # preflop min raise increment is BB size
-
         # Next to act preflop:
         # - Heads-up: button (SB) acts first
         # - Multi-way: player left of BB acts first
         if num_players == 2:
-            self.state.current_player_index = sb_player.state.seat
+            next_player_index = sb_player.state.seat
         else:
-            self.state.current_player_index = self.table.next_occupied_seat(
+            next_player_index = self.table.next_occupied_seat(
                 bb_player.state.seat, active=True
             )
+        self._update_state(
+            current_bet=bb_amount,
+            min_bet=self.state.big_blind,
+            last_raise_size=self.state.big_blind,  # preflop min raise increment is BB size
+            current_player_index=next_player_index,
+        )
 
         assert isinstance(
             self.state.current_player_index, int
@@ -874,7 +884,7 @@ class Game:
                 player.state.current_bet += ante_amount
                 player.state.total_contributed += ante_amount
                 player.state.stack -= ante_amount
-                self.state.pot += ante_amount
+                self._update_state(pot=self.state.pot + ante_amount)
                 if player.state.stack == 0:
                     player.state.state_type = PlayerStateType.ALL_IN
 
@@ -958,7 +968,7 @@ class Game:
             current_player.state.current_bet += actual_amount
             current_player.state.total_contributed += actual_amount
             current_player.state.stack -= actual_amount
-            self.state.pot += actual_amount
+            self._update_state(pot=self.state.pot + actual_amount)
 
             if current_player.state.stack == 0:
                 current_player.state.state_type = PlayerStateType.ALL_IN
@@ -978,10 +988,11 @@ class Game:
             current_player.state.current_bet = actual_amount
             current_player.state.total_contributed += actual_amount
             current_player.state.stack -= actual_amount
-            self.state.pot += actual_amount
-
-            self.state.current_bet = actual_amount
-            self.state.last_raise_size = actual_amount
+            self._update_state(
+                pot=self.state.pot + actual_amount,
+                current_bet=actual_amount,
+                last_raise_size=actual_amount,
+            )
 
             if current_player.state.stack == 0:
                 current_player.state.state_type = PlayerStateType.ALL_IN
@@ -1019,8 +1030,6 @@ class Game:
             current_player.state.current_bet = player_bet_after
             current_player.state.total_contributed += player_add
             current_player.state.stack -= player_add
-            self.state.pot += player_add
-            self.state.current_bet = new_table_bet
 
             if is_all_in:
                 current_player.state.state_type = PlayerStateType.ALL_IN
@@ -1029,8 +1038,17 @@ class Game:
             reopens_betting = raise_size >= old_last_raise_size
 
             if reopens_betting:
-                self.state.last_raise_size = raise_size
+                self._update_state(
+                    pot=self.state.pot + player_add,
+                    current_bet=new_table_bet,
+                    last_raise_size=raise_size,
+                )
                 self._reset_acted_flags_for_reopen(raiser_id=current_player.uid)
+            else:
+                self._update_state(
+                    pot=self.state.pot + player_add,
+                    current_bet=new_table_bet,
+                )
             # else: short all-in raise does NOT reopen betting and must NOT reset flags
 
             self._log(
@@ -1056,19 +1074,27 @@ class Game:
             current_player.state.current_bet = player_bet_after
             current_player.state.total_contributed += player_add
             current_player.state.stack = 0
-            self.state.pot += player_add
             current_player.state.state_type = PlayerStateType.ALL_IN
 
             # If the all-in increases the table bet, update it
             if new_table_bet > old_table_bet:
-                self.state.current_bet = new_table_bet
-
                 # Reopen betting ONLY if raise_size meets minimum
                 reopens_betting = raise_size >= old_last_raise_size
                 if reopens_betting:
-                    self.state.last_raise_size = raise_size
+                    self._update_state(
+                        pot=self.state.pot + player_add,
+                        current_bet=new_table_bet,
+                        last_raise_size=raise_size,
+                    )
                     self._reset_acted_flags_for_reopen(raiser_id=current_player.uid)
+                else:
+                    self._update_state(
+                        pot=self.state.pot + player_add,
+                        current_bet=new_table_bet,
+                    )
                 # else: SHORT all-in -> DOES NOT reopen betting -> DO NOT reset acted flags
+            else:
+                self._update_state(pot=self.state.pot + player_add)
 
             self._log(
                 f"Player {current_player.name} goes all-in with {player_add} chips.",
@@ -1151,21 +1177,22 @@ class Game:
                         "Cannot advance to next player: same player would act again"
                     )
                 # we've found the next player who needs to act
-                self.state.current_player_index = idx
+                self._update_state(current_player_index=idx)
                 return
 
     def _complete_betting_round(self) -> None:
         for player in self.state.players:
             player.state.current_bet = 0
             player.state.acted_this_street = False
-        self.state.current_bet = 0
-        self.state.last_raise_size = 0
+        self._update_state(current_bet=0, last_raise_size=0)
         self._log("Betting round complete\n", logging.INFO)
 
     def _advance_to_first_active_player(self) -> None:
-        self.state.current_player_index = self.table.next_occupied_seat(
-            self.state.button_position,
-            active=True,
+        self._update_state(
+            current_player_index=self.table.next_occupied_seat(
+                self.state.button_position,
+                active=True,
+            )
         )
 
     def _deal_flop(self) -> None:
@@ -1197,7 +1224,7 @@ class Game:
 
     def _move_button(self) -> None:
         self.table.move_button()
-        self.state.button_position = self.table.button_seat
+        self._update_state(button_position=self.table.button_seat)
 
     def _assign_blind_positions(self) -> None:
         num_players = len(self.state.players)
@@ -1224,8 +1251,10 @@ class Game:
         assert sb_index != bb_index, "SB and BB cannot be the same player"
 
         # Store blind positions in state for easy access by event handlers and player logic
-        self.state.small_blind_position = sb_index
-        self.state.big_blind_position = bb_index
+        self._update_state(
+            small_blind_position=sb_index,
+            big_blind_position=bb_index,
+        )
 
     def _winners_in_button_order(self, winners: list[PlayerLike]) -> list[PlayerLike]:
         n_players = len(self.state.players)
@@ -1254,7 +1283,7 @@ class Game:
                     payload={"amount": self.state.pot},
                 )
             )
-            self.state.pot = 0
+            self._update_state(pot=0)
         else:
             assert (
                 len(self.state.community_cards) == self.rules.dealing.board_cards_total
@@ -1341,7 +1370,7 @@ class Game:
                     raise RuntimeError("No eligible players for a pot segment.")
 
                 # Deduct distributed segment from pot
-                self.state.pot -= segment_amount
+                self._update_state(pot=self.state.pot - segment_amount)
 
                 if len(segment_contributors) == 1:
                     # uncalled top layer -> refund to that one contributor
