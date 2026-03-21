@@ -48,6 +48,8 @@ class GameEvent(BaseModel):
         .. versionadded:: 0.2.0
     uid : str
         Unique identifier for the event. Replaces deprecated ``id``.
+    ts: float
+        Timestamp of when the event was created, in seconds since the epoch.
     player_uid : Optional[str]
         UID of the player involved in the event, if applicable. Replaces deprecated ``player_id``.
     action : Optional[PlayerAction]

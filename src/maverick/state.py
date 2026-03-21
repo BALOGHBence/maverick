@@ -1,4 +1,6 @@
+from time import time
 from typing import Optional, Any
+import uuid
 import warnings
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
@@ -25,6 +27,15 @@ class GameState(BaseModel):
 
     Fields
     ------
+    uid : str
+        Unique identifier for the event. This is automatically set to a new UUID by default.
+        
+        .. versionadded:: 0.7.0
+    ts: float
+        Timestamp of when the event was created, in seconds since the epoch.
+        This is automatically set to the current time when the class is instantiated.
+        
+        .. versionadded:: 0.7.0
     stage : GameStage
         The current state of the game (e.g., WAITING_FOR_PLAYERS, IN_PROGRESS).
 
@@ -66,6 +77,9 @@ class GameState(BaseModel):
 
         .. versionadded:: 0.3.0
     """
+    
+    uid: str = Field(default_factory=lambda: uuid.uuid4().hex, alias="id")
+    ts: float = Field(default_factory=time.time)
 
     stage: GameStage = GameStage.WAITING_FOR_PLAYERS
     street: Optional[Street] = None
