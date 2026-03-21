@@ -29,6 +29,8 @@ class PlayerState(BaseModel):
         Whether the player has acted in the current betting round.
     """
 
+    model_config = {"frozen": True}
+
     # Identity / seating
     seat: Optional[int] = Field(default=None, ge=0)
     state_type: Optional[PlayerStateType] = None

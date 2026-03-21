@@ -80,7 +80,7 @@ class Table:
                 raise ValueError("No available seats at the table.")
 
         self.seats[seat_index] = player
-        player.state.seat = seat_index
+        player.state = player.state.model_copy(update={"seat": seat_index})
         self._id_to_seat[player.uid] = seat_index
 
         return seat_index
@@ -93,7 +93,7 @@ class Table:
             raise ValueError(f"Seat index {seat_index} is out of bounds.")
 
         self.seats[seat_index] = None
-        player.state.seat = None
+        player.state = player.state.model_copy(update={"seat": None})
         del self._id_to_seat[player.uid]
 
     def get_player_seat(self, player: PlayerLike) -> Optional[int]:

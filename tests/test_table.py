@@ -151,7 +151,7 @@ class TestRemovePlayer(unittest.TestCase):
         """Test that removing a player with invalid seat raises an error."""
         table = Table(n_seats=6)
         player = SimpleTestPlayer(name="Player1", state=PlayerState(stack=1000))
-        player.state.seat = 10
+        player.state = player.state.model_copy(update={"seat": 10})
 
         with self.assertRaises(ValueError) as context:
             table.remove_player(player)
@@ -367,7 +367,7 @@ class TestNextOccupiedSeat(unittest.TestCase):
         table.seat_player(players[1], seat_index=3)
         table.seat_player(players[2], seat_index=5)
 
-        players[1].state.state_type = PlayerStateType.FOLDED
+        players[1].state = players[1].state.model_copy(update={"state_type": PlayerStateType.FOLDED})
 
         next_seat = table.next_occupied_seat(1, active=True)
         self.assertEqual(next_seat, 5)
@@ -387,7 +387,7 @@ class TestNextOccupiedSeat(unittest.TestCase):
         table.seat_player(players[1], seat_index=3)
         table.seat_player(players[2], seat_index=5)
 
-        players[1].state.state_type = PlayerStateType.FOLDED
+        players[1].state = players[1].state.model_copy(update={"state_type": PlayerStateType.FOLDED})
 
         next_seat = table.next_occupied_seat(1, active=True)
         self.assertEqual(next_seat, None)
@@ -405,7 +405,7 @@ class TestNextOccupiedSeat(unittest.TestCase):
         table.seat_player(players[2], seat_index=5)
 
         for player in players:
-            player.state.state_type = PlayerStateType.FOLDED
+            player.state = player.state.model_copy(update={"state_type": PlayerStateType.FOLDED})
 
         next_seat = table.next_occupied_seat(1, active=True)
         self.assertIsNone(next_seat)
@@ -422,9 +422,9 @@ class TestNextOccupiedSeat(unittest.TestCase):
         table.seat_player(players[1], seat_index=3)
         table.seat_player(players[2], seat_index=5)
 
-        players[0].state.state_type = PlayerStateType.ACTIVE
-        players[1].state.state_type = PlayerStateType.FOLDED
-        players[2].state.state_type = PlayerStateType.FOLDED
+        players[0].state = players[0].state.model_copy(update={"state_type": PlayerStateType.ACTIVE})
+        players[1].state = players[1].state.model_copy(update={"state_type": PlayerStateType.FOLDED})
+        players[2].state = players[2].state.model_copy(update={"state_type": PlayerStateType.FOLDED})
 
         next_seat = table.next_occupied_seat(3, active=True)
         self.assertEqual(next_seat, 1)

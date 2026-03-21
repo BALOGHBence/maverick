@@ -315,13 +315,18 @@ class TestManiacBot(unittest.TestCase):
     def test_maniac_raises_frequently(self):
         """ManiacBot should raise frequently."""
         maniac = ManiacBot(
-            id="man1", name="Maniac", state=PlayerState(stack=800, seat=0)
-        )
-        maniac.state.holding = Holding(
-            cards=[
-                Card(suit=Suit.HEARTS, rank=Rank.THREE),
-                Card(suit=Suit.CLUBS, rank=Rank.NINE),
-            ]
+            id="man1",
+            name="Maniac",
+            state=PlayerState(
+                stack=800,
+                seat=0,
+                holding=Holding(
+                    cards=[
+                        Card(suit=Suit.HEARTS, rank=Rank.THREE),
+                        Card(suit=Suit.CLUBS, rank=Rank.NINE),
+                    ]
+                ),
+            ),
         )
 
         game = Mock()
@@ -387,13 +392,18 @@ class TestLoosePassiveBot(unittest.TestCase):
     def test_loose_passive_calls_often(self):
         """LoosePassiveBot should call often but rarely raise."""
         lp = LoosePassiveBot(
-            id="lp1", name="Station", state=PlayerState(stack=700, seat=0)
-        )
-        lp.state.holding = Holding(
-            cards=[
-                Card(suit=Suit.HEARTS, rank=Rank.SIX),
-                Card(suit=Suit.CLUBS, rank=Rank.FOUR),
-            ]
+            id="lp1",
+            name="Station",
+            state=PlayerState(
+                stack=700,
+                seat=0,
+                holding=Holding(
+                    cards=[
+                        Card(suit=Suit.HEARTS, rank=Rank.SIX),
+                        Card(suit=Suit.CLUBS, rank=Rank.FOUR),
+                    ]
+                ),
+            ),
         )
 
         game = Mock()

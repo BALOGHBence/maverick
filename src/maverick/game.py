@@ -387,6 +387,23 @@ class Game:
                 )
             )
 
+    def _update_player_state(self, player: PlayerLike, **changes) -> None:
+        """Mutate a player's state and propagate the change to the game state.
+
+        All PlayerState mutations must go through this method to ensure that
+        GAME_STATE_CHANGED is always emitted. Note that the PlayerState object is
+        replaced via model_copy; the player instance itself is reused.
+
+        Parameters
+        ----------
+        player : PlayerLike
+            The player whose state should be updated.
+        **changes
+            Field names and their new values to set on player.state.
+        """
+        player.state = player.state.model_copy(update=changes)
+        self._update_state(players=list(self._state.players))
+
     def add_player(self, player: PlayerLike) -> None:
         """Add a player to the game.
 
@@ -417,7 +434,7 @@ class Game:
             self.table.seat_player(player)
         else:
             self.table.seat_player(player, seat_index=player.state.seat)
-        player.state.state_type = PlayerStateType.ACTIVE
+        player.state = player.state.model_copy(update={"state_type": PlayerStateType.ACTIVE})
 
         self._update_state(players=[*self.state.players, player])
 
@@ -628,7 +645,7 @@ class Game:
                     p for p in self.state.players if p.state.stack == 0
                 ]
                 for player in eliminated_players:
-                    player.state.state_type = PlayerStateType.ELIMINATED
+                    self._update_player_state(player, state_type=PlayerStateType.ELIMINATED)
                     self._emit(
                         self._create_event(
                             GameEventType.PLAYER_ELIMINATED, player_uid=player.uid
@@ -729,12 +746,15 @@ class Game:
         )
 
         for player in self.state.players:
-            player.state.current_bet = 0
-            player.state.total_contributed = 0
-            player.state.acted_this_street = False
-            player.state.holding = None
+            changes = dict(
+                current_bet=0,
+                total_contributed=0,
+                acted_this_street=False,
+                holding=None,
+            )
             if player.state.stack > 0:
-                player.state.state_type = PlayerStateType.ACTIVE
+                changes["state_type"] = PlayerStateType.ACTIVE
+            self._update_player_state(player, **changes)
 
         self._update_state(street=Street.PRE_FLOP)
 
@@ -811,7 +831,7 @@ class Game:
         for player in self.state.players:
             if player.state.state_type == PlayerStateType.ACTIVE:
                 cards = self.state.deck.deal(self.rules.dealing.hole_cards)
-                player.state.holding = Holding(cards=cards)
+                self._update_player_state(player, holding=Holding(cards=cards))
 
     def _post_blinds(self) -> None:
         """Post blinds with correct heads-up semantics (button posts SB in HU)."""
@@ -831,12 +851,12 @@ class Game:
         # --- Small blind ---
         sb_player = self.small_blind
         sb_amount = min(self.state.small_blind, sb_player.state.stack)
-        sb_player.state.current_bet = sb_amount
-        sb_player.state.total_contributed = sb_amount
-        sb_player.state.stack -= sb_amount
+        sb_new_stack = sb_player.state.stack - sb_amount
+        sb_changes = dict(current_bet=sb_amount, total_contributed=sb_amount, stack=sb_new_stack)
+        if sb_new_stack == 0:
+            sb_changes["state_type"] = PlayerStateType.ALL_IN
+        self._update_player_state(sb_player, **sb_changes)
         self._update_state(pot=self.state.pot + sb_amount)
-        if sb_player.state.stack == 0:
-            sb_player.state.state_type = PlayerStateType.ALL_IN
 
         self._log(
             f"Posting small blind of {sb_amount} by player {sb_player.name}. "
@@ -847,12 +867,12 @@ class Game:
         # --- Big blind ---
         bb_player = self.big_blind
         bb_amount = min(self.state.big_blind, bb_player.state.stack)
-        bb_player.state.current_bet = bb_amount
-        bb_player.state.total_contributed = bb_amount
-        bb_player.state.stack -= bb_amount
+        bb_new_stack = bb_player.state.stack - bb_amount
+        bb_changes = dict(current_bet=bb_amount, total_contributed=bb_amount, stack=bb_new_stack)
+        if bb_new_stack == 0:
+            bb_changes["state_type"] = PlayerStateType.ALL_IN
+        self._update_player_state(bb_player, **bb_changes)
         self._update_state(pot=self.state.pot + bb_amount)
-        if bb_player.state.stack == 0:
-            bb_player.state.state_type = PlayerStateType.ALL_IN
 
         self._log(
             f"Posting big blind of {bb_amount} by player {bb_player.name}. "
@@ -891,12 +911,18 @@ class Game:
         for player in self.state.players:
             if player.state.state_type == PlayerStateType.ACTIVE:
                 ante_amount = min(self.state.ante, player.state.stack)
-                player.state.current_bet += ante_amount
-                player.state.total_contributed += ante_amount
-                player.state.stack -= ante_amount
+                ante_new_current_bet = player.state.current_bet + ante_amount
+                ante_new_total_contributed = player.state.total_contributed + ante_amount
+                ante_new_stack = player.state.stack - ante_amount
+                ante_changes = dict(
+                    current_bet=ante_new_current_bet,
+                    total_contributed=ante_new_total_contributed,
+                    stack=ante_new_stack,
+                )
+                if ante_new_stack == 0:
+                    ante_changes["state_type"] = PlayerStateType.ALL_IN
+                self._update_player_state(player, **ante_changes)
                 self._update_state(pot=self.state.pot + ante_amount)
-                if player.state.stack == 0:
-                    player.state.state_type = PlayerStateType.ALL_IN
 
                 self._log(
                     f"Player {player.name} posts ante of {ante_amount}. "
@@ -946,7 +972,7 @@ class Game:
         """
         for p in self.state.players:
             if p.uid != raiser_id and p.state.state_type == PlayerStateType.ACTIVE:
-                p.state.acted_this_street = False
+                self._update_player_state(p, acted_this_street=False)
 
     def _register_player_action(self, player: PlayerLike, action: PlayerAction) -> None:
         action_type = action.action_type
@@ -964,24 +990,35 @@ class Game:
             raise ValueError(f"Invalid action: {action_type}")
 
         if action_type == ActionType.FOLD:
-            current_player.state.state_type = PlayerStateType.FOLDED
+            self._update_player_state(
+                current_player,
+                state_type=PlayerStateType.FOLDED,
+                acted_this_street=True,
+            )
             self._log(f"Player {current_player.name} folds.", logging.INFO)
 
         elif action_type == ActionType.CHECK:
             if current_player.state.current_bet != self.state.current_bet:
                 raise ValueError("Cannot check when there is a bet to call")
+            self._update_player_state(current_player, acted_this_street=True)
             self._log(f"Player {current_player.name} checks.", logging.INFO)
 
         elif action_type == ActionType.CALL:
             call_amount = self.state.current_bet - current_player.state.current_bet
             actual_amount = min(call_amount, current_player.state.stack)
-            current_player.state.current_bet += actual_amount
-            current_player.state.total_contributed += actual_amount
-            current_player.state.stack -= actual_amount
+            call_new_current_bet = current_player.state.current_bet + actual_amount
+            call_new_total_contributed = current_player.state.total_contributed + actual_amount
+            call_new_stack = current_player.state.stack - actual_amount
+            call_changes = dict(
+                current_bet=call_new_current_bet,
+                total_contributed=call_new_total_contributed,
+                stack=call_new_stack,
+                acted_this_street=True,
+            )
+            if call_new_stack == 0:
+                call_changes["state_type"] = PlayerStateType.ALL_IN
+            self._update_player_state(current_player, **call_changes)
             self._update_state(pot=self.state.pot + actual_amount)
-
-            if current_player.state.stack == 0:
-                current_player.state.state_type = PlayerStateType.ALL_IN
 
             self._log(
                 f"Player {current_player.name} calls with amount {actual_amount}. Remaining stack: {current_player.state.stack}.",
@@ -995,17 +1032,22 @@ class Game:
                 raise ValueError(f"Bet must be at least {self.state.min_bet}")
 
             actual_amount = min(amount, current_player.state.stack)
-            current_player.state.current_bet = actual_amount
-            current_player.state.total_contributed += actual_amount
-            current_player.state.stack -= actual_amount
+            bet_new_total_contributed = current_player.state.total_contributed + actual_amount
+            bet_new_stack = current_player.state.stack - actual_amount
+            bet_changes = dict(
+                current_bet=actual_amount,
+                total_contributed=bet_new_total_contributed,
+                stack=bet_new_stack,
+                acted_this_street=True,
+            )
+            if bet_new_stack == 0:
+                bet_changes["state_type"] = PlayerStateType.ALL_IN
+            self._update_player_state(current_player, **bet_changes)
             self._update_state(
                 pot=self.state.pot + actual_amount,
                 current_bet=actual_amount,
                 last_raise_size=actual_amount,
             )
-
-            if current_player.state.stack == 0:
-                current_player.state.state_type = PlayerStateType.ALL_IN
 
             # A bet opens action for others (everyone else must respond)
             self._reset_acted_flags_for_reopen(raiser_id=current_player.uid)
@@ -1037,12 +1079,17 @@ class Game:
                     f"Raise size must be at least {old_last_raise_size} (attempted {raise_size})"
                 )
 
-            current_player.state.current_bet = player_bet_after
-            current_player.state.total_contributed += player_add
-            current_player.state.stack -= player_add
-
+            raise_new_total_contributed = current_player.state.total_contributed + player_add
+            raise_new_stack = current_player.state.stack - player_add
+            raise_changes = dict(
+                current_bet=player_bet_after,
+                total_contributed=raise_new_total_contributed,
+                stack=raise_new_stack,
+                acted_this_street=True,
+            )
             if is_all_in:
-                current_player.state.state_type = PlayerStateType.ALL_IN
+                raise_changes["state_type"] = PlayerStateType.ALL_IN
+            self._update_player_state(current_player, **raise_changes)
 
             # Reopen betting ONLY on a full raise (>= old_last_raise_size)
             reopens_betting = raise_size >= old_last_raise_size
@@ -1081,10 +1128,15 @@ class Game:
                 _,
             ) = self._calculate_raise_components(current_player, chips_to_add)
 
-            current_player.state.current_bet = player_bet_after
-            current_player.state.total_contributed += player_add
-            current_player.state.stack = 0
-            current_player.state.state_type = PlayerStateType.ALL_IN
+            allin_new_total_contributed = current_player.state.total_contributed + player_add
+            self._update_player_state(
+                current_player,
+                current_bet=player_bet_after,
+                total_contributed=allin_new_total_contributed,
+                stack=0,
+                state_type=PlayerStateType.ALL_IN,
+                acted_this_street=True,
+            )
 
             # If the all-in increases the table bet, update it
             if new_table_bet > old_table_bet:
@@ -1111,8 +1163,6 @@ class Game:
                 logging.INFO,
             )
 
-        # Mark actor as having acted
-        current_player.state.acted_this_street = True
         self._log(
             f"Current pot: {self.state.pot} | Current bet: {self.state.current_bet}",
             logging.INFO,
@@ -1192,8 +1242,7 @@ class Game:
 
     def _complete_betting_round(self) -> None:
         for player in self.state.players:
-            player.state.current_bet = 0
-            player.state.acted_this_street = False
+            self._update_player_state(player, current_bet=0, acted_this_street=False)
         self._update_state(current_bet=0, last_raise_size=0)
         self._log("Betting round complete\n", logging.INFO)
 
@@ -1281,16 +1330,17 @@ class Game:
 
         if len(players_in_hand) == 1:
             winner = players_in_hand[0]
-            winner.state.stack += self.state.pot
+            pot_amount = self.state.pot
+            self._update_player_state(winner, stack=winner.state.stack + pot_amount)
             self._log(
-                f"Player {winner.name} wins {self.state.pot} from the pot.",
+                f"Player {winner.name} wins {pot_amount} from the pot.",
                 logging.INFO,
             )
             self._emit(
                 self._create_event(
                     GameEventType.POT_WON,
                     player_uid=winner.uid,
-                    payload={"amount": self.state.pot},
+                    payload={"amount": pot_amount},
                 )
             )
             self._update_state(pot=0)
@@ -1417,7 +1467,7 @@ class Game:
                 if amount == 0:
                     continue
                 player = id_to_player[p_id]
-                player.state.stack += amount
+                self._update_player_state(player, stack=player.state.stack + amount)
                 pot_distributed += amount
                 self._log(
                     f"Player {player.name} wins {amount} from the pot.", logging.INFO

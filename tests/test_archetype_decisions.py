@@ -26,12 +26,19 @@ from maverick.players import (
 
 
 def _make_bot(cls, stack=500):
-    bot = cls(uid="test", name="Test", state=PlayerState(stack=stack, seat=0))
-    bot.state.holding = Holding(
-        cards=[
-            Card(suit=Suit.HEARTS, rank=Rank.ACE),
-            Card(suit=Suit.SPADES, rank=Rank.KING),
-        ]
+    bot = cls(
+        uid="test",
+        name="Test",
+        state=PlayerState(
+            stack=stack,
+            seat=0,
+            holding=Holding(
+                cards=[
+                    Card(suit=Suit.HEARTS, rank=Rank.ACE),
+                    Card(suit=Suit.SPADES, rank=Rank.KING),
+                ]
+            ),
+        ),
     )
     return bot
 
@@ -784,7 +791,7 @@ class TestGTOBotDecisions(unittest.TestCase):
     def test_raises_with_strong_hand_when_no_bet(self, _mock):
         bot = _make_bot(GTOBot)
         game = _make_game(pot=100, current_bet=20)
-        bot.state.current_bet = 0
+        bot.state = bot.state.model_copy(update={"current_bet": 0})
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.RAISE, ActionType.CALL],
@@ -874,7 +881,7 @@ class TestSharkBotDecisions(unittest.TestCase):
     def test_raises_with_strong_hand(self, _mock):
         bot = _make_bot(SharkBot)
         game = _make_game(pot=100, current_bet=20)
-        bot.state.current_bet = 0
+        bot.state = bot.state.model_copy(update={"current_bet": 0})
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.RAISE, ActionType.CALL],

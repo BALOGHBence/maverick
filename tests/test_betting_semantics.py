@@ -101,7 +101,7 @@ class TestMinimumRaiseTracking(unittest.TestCase):
         game._post_blinds()
 
         # End preflop immediately (simulate only one player continuing)
-        p1.state.state_type = PlayerStateType.FOLDED
+        p1.state = p1.state.model_copy(update={"state_type": PlayerStateType.FOLDED})
 
         # Start flop
         game._complete_betting_round()
@@ -110,7 +110,7 @@ class TestMinimumRaiseTracking(unittest.TestCase):
         game._update_state(current_bet=0)
         game._deal_flop()
         game._update_state(current_player_index=0)
-        p1.state.state_type = PlayerStateType.ACTIVE
+        p1.state = p1.state.model_copy(update={"state_type": PlayerStateType.ACTIVE})
 
         # P1 checks
         game._take_action_from_current_player()
@@ -369,7 +369,7 @@ class TestShortStackCall(unittest.TestCase):
 
         game.add_player(p1)
         game._update_state(current_bet=50)
-        p1.state.current_bet = 0
+        p1.state = p1.state.model_copy(update={"current_bet": 0})
 
         valid_actions = game._get_valid_actions(p1)
         self.assertNotIn(ActionType.CALL, valid_actions)
@@ -648,8 +648,8 @@ class TestReopenLogicWithZeroRaise(unittest.TestCase):
         game._deal_hole_cards()
         game._post_blinds()
 
-        p1.state.state_type = PlayerStateType.FOLDED
-        p2.state.state_type = PlayerStateType.FOLDED
+        p1.state = p1.state.model_copy(update={"state_type": PlayerStateType.FOLDED})
+        p2.state = p2.state.model_copy(update={"state_type": PlayerStateType.FOLDED})
 
         game._complete_betting_round()
         game._deal_flop()
