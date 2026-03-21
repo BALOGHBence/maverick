@@ -771,7 +771,7 @@ class Game:
 
         self._update_state(
             deck=Deck.standard_deck(shuffle=True),
-            community_cards=[],
+            community_cards=(),
             pot=0,
             current_bet=0,
             last_raise_size=0,
@@ -1325,7 +1325,7 @@ class Game:
     def _deal_flop(self) -> None:
         self.state.deck.deal(1)
         flop_cards = self.state.deck.deal(3)
-        self.state.community_cards.extend(flop_cards)
+        self._update_state(community_cards=(*self.state.community_cards, *flop_cards))
         self._log(
             f"Dealt flop. Community cards: {[card.utf8() for card in self.state.community_cards]}",
             logging.INFO,
@@ -1334,7 +1334,7 @@ class Game:
     def _deal_turn(self) -> None:
         self.state.deck.deal(1)
         turn_card = self.state.deck.deal(1)[0]
-        self.state.community_cards.append(turn_card)
+        self._update_state(community_cards=(*self.state.community_cards, turn_card))
         self._log(
             f"Dealt turn. Community cards: {[card.utf8() for card in self.state.community_cards]}",
             logging.INFO,
@@ -1343,7 +1343,7 @@ class Game:
     def _deal_river(self) -> None:
         self.state.deck.deal(1)
         river_card = self.state.deck.deal(1)[0]
-        self.state.community_cards.append(river_card)
+        self._update_state(community_cards=(*self.state.community_cards, river_card))
         self._log(
             f"Dealt river. Community cards: {[card.utf8() for card in self.state.community_cards]}",
             logging.INFO,

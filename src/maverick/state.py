@@ -53,7 +53,7 @@ class GameState(BaseModel):
         The index of the player whose turn it is to act.
     deck : Optional[Deck]
         The deck of cards used in the game.
-    community_cards : list[Card]
+    community_cards : tuple[Card, ...]
         The community cards on the table.
     pot : int
         The total amount of chips in the pot.
@@ -93,7 +93,7 @@ class GameState(BaseModel):
 
     # Cards
     deck: Optional[Deck] = None
-    community_cards: list[Card] = Field(default_factory=list)
+    community_cards: tuple[Card, ...] = Field(default_factory=tuple)
 
     # Betting
     pot: int = 0
