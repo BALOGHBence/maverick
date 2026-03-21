@@ -50,7 +50,7 @@ class TestGameStateSerialization(unittest.TestCase):
         payload_ = GameState.model_validate_json(payload).model_dump_json()
         self.assertEqual(payload, payload_)
 
-    def test_player_state_serialization(self):
+    def test_player_snapshot_serialization(self):
         """Test PlayerSnapshot serialization and deserialization."""
 
         game = Game(small_blind=10, big_blind=20, max_hands=2)
