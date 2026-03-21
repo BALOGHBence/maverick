@@ -238,6 +238,14 @@ class Game:
         if self.state.big_blind_position is not None:
             return self.table[self.state.big_blind_position]
         return None
+    
+    @property
+    def all_stacks_at_game_start(self) -> int:
+        """Returns the total of all player stacks at the start of the game.
+        
+        .. versionadded:: 0.7.0
+        """
+        return self._all_stacks_at_game_start
 
     def _log(
         self,
