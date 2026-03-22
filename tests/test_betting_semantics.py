@@ -55,18 +55,16 @@ class TestMinimumRaiseTracking(unittest.TestCase):
         p1 = MockPlayer(
             id="p1",
             name="P1",
-            state=PlayerState(stack=1000),
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
             id="p2",
             name="P2",
-            state=PlayerState(stack=1000),
             actions=[(ActionType.FOLD, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
 
         game._initialize_game()
         game._start_new_hand()
@@ -82,18 +80,16 @@ class TestMinimumRaiseTracking(unittest.TestCase):
         p1 = MockPlayer(
             id="p1",
             name="P1",
-            state=PlayerState(stack=1000),
             actions=[(ActionType.CHECK, None)],
         )
         p2 = MockPlayer(
             id="p2",
             name="P2",
-            state=PlayerState(stack=1000),
             actions=[(ActionType.BET, 50)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
 
         game._initialize_game()
         game._start_new_hand()
@@ -136,18 +132,16 @@ class TestMinimumRaiseTracking(unittest.TestCase):
         p1 = MockPlayer(
             id="p1",
             name="P1",
-            state=PlayerState(stack=1000),
             actions=[(ActionType.RAISE, 50)],  # 10 call + 40 raise
         )
         p2 = MockPlayer(
             id="p2",
             name="P2",
-            state=PlayerState(stack=1000),
             actions=[(ActionType.FOLD, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
 
         game._initialize_game()
         game._start_new_hand()
@@ -170,13 +164,13 @@ class TestNLHERaiseValidation(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         # 3-player game
-        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
-        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", actions=[])
+        p2 = MockPlayer(id="p2", name="P2", actions=[])
+        p3 = MockPlayer(id="p3", name="P3", actions=[])
 
-        game.add_player(p1)
-        game.add_player(p2)
-        game.add_player(p3)
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
+        game.add_player(p3, state=PlayerState(stack=1000))
 
         game._initialize_game()
         game._start_new_hand()
@@ -199,13 +193,13 @@ class TestNLHERaiseValidation(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         # 3-player game
-        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
-        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", actions=[])
+        p2 = MockPlayer(id="p2", name="P2", actions=[])
+        p3 = MockPlayer(id="p3", name="P3", actions=[])
 
-        game.add_player(p1)
-        game.add_player(p2)
-        game.add_player(p3)
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
+        game.add_player(p3, state=PlayerState(stack=1000))
 
         game._initialize_game()
         game._start_new_hand()
@@ -229,14 +223,14 @@ class TestNonReopeningAllIn(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         # 3-player game
-        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", actions=[])
+        p2 = MockPlayer(id="p2", name="P2", actions=[])
         # P3 has only 30 chips total
-        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=30), actions=[])
+        p3 = MockPlayer(id="p3", name="P3", actions=[])
 
-        game.add_player(p1)
-        game.add_player(p2)
-        game.add_player(p3)
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
+        game.add_player(p3, state=PlayerState(stack=30))
 
         game._initialize_game()
         game._start_new_hand()
@@ -284,14 +278,14 @@ class TestNonReopeningAllIn(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         # 3-player game
-        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", actions=[])
+        p2 = MockPlayer(id="p2", name="P2", actions=[])
         # P3 has 40 chips total (enough for call + min raise when BB=20 already posted)
-        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=40), actions=[])
+        p3 = MockPlayer(id="p3", name="P3", actions=[])
 
-        game.add_player(p1)
-        game.add_player(p2)
-        game.add_player(p3)
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
+        game.add_player(p3, state=PlayerState(stack=40))
 
         game._initialize_game()
         game._start_new_hand()
@@ -333,25 +327,22 @@ class TestShortStackCall(unittest.TestCase):
         p1 = MockPlayer(
             id="p1",
             name="P1",
-            state=PlayerState(stack=25),
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
             id="p2",
             name="P2",
-            state=PlayerState(stack=1000),
             actions=[(ActionType.CALL, None)],
         )
         p3 = MockPlayer(
             id="p3",
             name="P3",
-            state=PlayerState(stack=1000),
             actions=[(ActionType.CALL, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
-        game.add_player(p3)
+        game.add_player(p1, state=PlayerState(stack=25))
+        game.add_player(p2, state=PlayerState(stack=1000))
+        game.add_player(p3, state=PlayerState(stack=1000))
 
         game._initialize_game()
         game._start_new_hand()
@@ -365,9 +356,9 @@ class TestShortStackCall(unittest.TestCase):
         """Test that CALL is not valid when player has zero chips."""
         game = Game(small_blind=10, big_blind=20)
 
-        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=0), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", actions=[])
 
-        game.add_player(p1)
+        game.add_player(p1, state=PlayerState(stack=0))
         game._update_state(current_bet=50)
 
         valid_actions = game._get_valid_actions(game.get_player_snapshot(p1.uid))
@@ -396,16 +387,15 @@ class TestRaiseBySemantics(unittest.TestCase):
                 received_min_raise.append(min_raise_amount)
                 return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
 
-        p1 = MinRaiseBot(id="p1", name="P1", state=PlayerState(stack=1000))
+        p1 = MinRaiseBot(id="p1", name="P1")
         p2 = MockPlayer(
             id="p2",
             name="P2",
-            state=PlayerState(stack=1000),
             actions=[(ActionType.FOLD, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
 
         game._initialize_game()
         game._start_new_hand()
@@ -429,18 +419,16 @@ class TestRaiseBySemantics(unittest.TestCase):
         p1 = MockPlayer(
             id="p1",
             name="P1",
-            state=PlayerState(stack=1000),
             actions=[(ActionType.RAISE, 50)],  # 10 call + 40 raise
         )
         p2 = MockPlayer(
             id="p2",
             name="P2",
-            state=PlayerState(stack=1000),
             actions=[(ActionType.FOLD, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
 
         game._initialize_game()
         game._start_new_hand()
@@ -470,18 +458,16 @@ class TestBettingRoundCompletion(unittest.TestCase):
         p1 = MockPlayer(
             id="p1",
             name="P1",
-            state=PlayerState(stack=100),
             actions=[(ActionType.CALL, None)],
         )
         p2 = MockPlayer(
             id="p2",
             name="P2",
-            state=PlayerState(stack=100),
             actions=[(ActionType.CHECK, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=100))
+        game.add_player(p2, state=PlayerState(stack=100))
 
         game._initialize_game()
         game._start_new_hand()
@@ -508,18 +494,16 @@ class TestShowdownStateMachine(unittest.TestCase):
         p1 = MockPlayer(
             id="p1",
             name="P1",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
             id="p2",
             name="P2",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=100))
+        game.add_player(p2, state=PlayerState(stack=100))
 
         game.start()
 
@@ -533,11 +517,11 @@ class TestMinimumRaiseEnforcement(unittest.TestCase):
         """Test that a raise smaller than last_raise_size is rejected."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
 
-        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", actions=[])
+        p2 = MockPlayer(id="p2", name="P2", actions=[])
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
 
         game._initialize_game()
         game._start_new_hand()
@@ -554,20 +538,20 @@ class TestMinimumRaiseEnforcement(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1)
 
         # 3-player game to avoid heads-up complications
-        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=25), actions=[])
-        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
-        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", actions=[])
+        p2 = MockPlayer(id="p2", name="P2", actions=[])
+        p3 = MockPlayer(id="p3", name="P3", actions=[])
 
-        game.add_player(p1)
-        game.add_player(p2)
-        game.add_player(p3)
+        game.add_player(p1, state=PlayerState(stack=25))
+        game.add_player(p2, state=PlayerState(stack=1000))
+        game.add_player(p3, state=PlayerState(stack=1000))
 
         game._initialize_game()
         game._start_new_hand()
         game._deal_hole_cards()
         game._post_blinds()
 
-        valid = game._get_valid_actions(p1)
+        valid = game._get_valid_actions(game.get_player_snapshot(p1.uid))
         self.assertNotIn(ActionType.RAISE, valid)
         self.assertIn(ActionType.ALL_IN, valid)
 
@@ -580,13 +564,13 @@ class TestRaiseZeroIncrease(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         # 3-player game
-        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
-        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", actions=[])
+        p2 = MockPlayer(id="p2", name="P2", actions=[])
+        p3 = MockPlayer(id="p3", name="P3", actions=[])
 
-        game.add_player(p1)
-        game.add_player(p2)
-        game.add_player(p3)
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
+        game.add_player(p3, state=PlayerState(stack=1000))
 
         game._initialize_game()
         game._start_new_hand()
@@ -605,13 +589,13 @@ class TestRaiseZeroIncrease(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
 
         # 3-player game
-        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
-        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", actions=[])
+        p2 = MockPlayer(id="p2", name="P2", actions=[])
+        p3 = MockPlayer(id="p3", name="P3", actions=[])
 
-        game.add_player(p1)
-        game.add_player(p2)
-        game.add_player(p3)
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
+        game.add_player(p3, state=PlayerState(stack=1000))
 
         game._initialize_game()
         game._start_new_hand()
@@ -634,13 +618,13 @@ class TestReopenLogicWithZeroRaise(unittest.TestCase):
         game = Game(small_blind=10, big_blind=20, max_hands=1)
 
         # 3-player game
-        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
-        p3 = MockPlayer(id="p3", name="P3", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", actions=[])
+        p2 = MockPlayer(id="p2", name="P2", actions=[])
+        p3 = MockPlayer(id="p3", name="P3", actions=[])
 
-        game.add_player(p1)
-        game.add_player(p2)
-        game.add_player(p3)
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
+        game.add_player(p3, state=PlayerState(stack=1000))
 
         game._initialize_game()
         game._start_new_hand()
@@ -662,11 +646,11 @@ class TestPreflopInitialization(unittest.TestCase):
         """Test that after posting blinds, last_raise_size equals big blind."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
 
-        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=1000), actions=[])
-        p2 = MockPlayer(id="p2", name="P2", state=PlayerState(stack=1000), actions=[])
+        p1 = MockPlayer(id="p1", name="P1", actions=[])
+        p2 = MockPlayer(id="p2", name="P2", actions=[])
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
 
         game._initialize_game()
         game._start_new_hand()

@@ -24,24 +24,12 @@ from maverick.players import (
     WhaleBot,
 )
 
-
 def _make_bot(cls, stack=500):
     bot = cls(
         uid="test",
-        name="Test",
-        state=PlayerState(
-            stack=stack,
-            seat=0,
-            holding=Holding(
-                cards=[
-                    Card(suit=Suit.HEARTS, rank=Rank.ACE),
-                    Card(suit=Suit.SPADES, rank=Rank.KING),
-                ]
-            ),
-        ),
+        name="Test"
     )
     return bot
-
 
 def _make_game(pot=100, big_blind=10, community_cards=None, current_bet=20, n_players=3, stack=500):
     game = Mock()
@@ -57,7 +45,6 @@ def _make_game(pot=100, big_blind=10, community_cards=None, current_bet=20, n_pl
     snapshot.state.current_bet = current_bet
     game.get_player_snapshot.return_value = snapshot
     return game
-
 
 # ---------------------------------------------------------------------------
 # ABCBot
@@ -163,7 +150,6 @@ class TestABCBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 500)
 
-
 # ---------------------------------------------------------------------------
 # TightAggressiveBot
 # ---------------------------------------------------------------------------
@@ -251,7 +237,6 @@ class TestTightAggressiveBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 800)
 
-
 # ---------------------------------------------------------------------------
 # LooseAggressiveBot
 # ---------------------------------------------------------------------------
@@ -338,7 +323,6 @@ class TestLooseAggressiveBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 500)
 
-
 # ---------------------------------------------------------------------------
 # TightPassiveBot
 # ---------------------------------------------------------------------------
@@ -409,7 +393,6 @@ class TestTightPassiveBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 400)
 
-
 # ---------------------------------------------------------------------------
 # LoosePassiveBot
 # ---------------------------------------------------------------------------
@@ -466,7 +449,6 @@ class TestLoosePassiveBotDecisions(unittest.TestCase):
             min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.FOLD)
-
 
 # ---------------------------------------------------------------------------
 # ManiacBot
@@ -552,7 +534,6 @@ class TestManiacBotDecisions(unittest.TestCase):
             min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.FOLD)
-
 
 # ---------------------------------------------------------------------------
 # BullyBot
@@ -670,7 +651,6 @@ class TestBullyBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 400)
 
-
 # ---------------------------------------------------------------------------
 # GrinderBot
 # ---------------------------------------------------------------------------
@@ -772,7 +752,6 @@ class TestGrinderBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 600)
 
-
 # ---------------------------------------------------------------------------
 # GTOBot
 # ---------------------------------------------------------------------------
@@ -796,7 +775,7 @@ class TestGTOBotDecisions(unittest.TestCase):
     def test_raises_with_strong_hand_when_no_bet(self, _mock):
         bot = _make_bot(GTOBot)
         game = _make_game(pot=100, current_bet=20)
-        bot.state = bot.state.model_copy(update={"current_bet": 0})
+        game.get_player_snapshot.return_value.state.current_bet = 0
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.RAISE, ActionType.CALL],
@@ -875,7 +854,6 @@ class TestGTOBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 1000)
 
-
 # ---------------------------------------------------------------------------
 # SharkBot
 # ---------------------------------------------------------------------------
@@ -886,7 +864,7 @@ class TestSharkBotDecisions(unittest.TestCase):
     def test_raises_with_strong_hand(self, _mock):
         bot = _make_bot(SharkBot)
         game = _make_game(pot=100, current_bet=20)
-        bot.state = bot.state.model_copy(update={"current_bet": 0})
+        game.get_player_snapshot.return_value.state.current_bet = 0
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.RAISE, ActionType.CALL],
@@ -1007,7 +985,6 @@ class TestSharkBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 800)
 
-
 # ---------------------------------------------------------------------------
 # FishBot
 # ---------------------------------------------------------------------------
@@ -1109,7 +1086,6 @@ class TestFishBotDecisions(unittest.TestCase):
         )
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 100)
-
 
 # ---------------------------------------------------------------------------
 # HeroCallerBot
@@ -1226,7 +1202,6 @@ class TestHeroCallerBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 300)
 
-
 # ---------------------------------------------------------------------------
 # ScaredMoneyBot
 # ---------------------------------------------------------------------------
@@ -1322,7 +1297,6 @@ class TestScaredMoneyBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 300)
 
-
 # ---------------------------------------------------------------------------
 # WhaleBot
 # ---------------------------------------------------------------------------
@@ -1407,7 +1381,6 @@ class TestWhaleBotDecisions(unittest.TestCase):
             min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.FOLD)
-
 
 # ---------------------------------------------------------------------------
 # TiltedBot
@@ -1514,7 +1487,6 @@ class TestTiltedBotDecisions(unittest.TestCase):
         )
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 100)
-
 
 if __name__ == "__main__":
     unittest.main()

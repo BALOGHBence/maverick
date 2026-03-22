@@ -24,13 +24,12 @@ class TestGameFlowEdgeCases(unittest.TestCase):
         """Tests the scenario where all players go all-in pre-flop."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
 
-        p1 = CallBot(name="CallBot", state=PlayerState(stack=1000))
-        p2 = AggressiveBot(name="AggroBot", state=PlayerState(stack=1000))
-        p3 = FoldBot(name="FoldBot", state=PlayerState(stack=1000))
-        players = [p1, p2, p3]
-
-        for player in players:
-            game.add_player(player)
+        p1 = CallBot(name="CallBot")
+        p2 = AggressiveBot(name="AggroBot")
+        p3 = FoldBot(name="FoldBot")
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
+        game.add_player(p3, state=PlayerState(stack=1000))
 
         snapshots = [
             PlayerSnapshot(uid=p1.uid, name=p1.name, state=PlayerState(
@@ -81,13 +80,12 @@ class TestGameFlowEdgeCases(unittest.TestCase):
         """Tests the scenario where players are eliminated during a hand."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
 
-        p1 = CallBot(name="CallBot", state=PlayerState(stack=1000))
-        p2 = AggressiveBot(name="AggroBot", state=PlayerState(stack=1000))
-        p3 = FoldBot(name="FoldBot", state=PlayerState(stack=1000))
-        players = [p1, p2, p3]
-
-        for player in players:
-            game.add_player(player)
+        p1 = CallBot(name="CallBot")
+        p2 = AggressiveBot(name="AggroBot")
+        p3 = FoldBot(name="FoldBot")
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
+        game.add_player(p3, state=PlayerState(stack=1000))
 
         snapshots = [
             PlayerSnapshot(uid=p1.uid, name=p1.name, state=PlayerState(

@@ -16,19 +16,19 @@ class TestPlayerUidDeprecations(unittest.TestCase):
 
     def test_player_uid_is_set(self):
         """Player.uid is the canonical instance identifier."""
-        player = FoldBot(uid="my-uid", name="Bot", state=PlayerState(stack=100))
+        player = FoldBot(uid="my-uid", name="Bot")
         self.assertEqual(player.uid, "my-uid")
 
     def test_player_uid_auto_generated(self):
         """Player.uid is auto-generated as a UUID hex string when not provided."""
-        player = FoldBot(name="Bot", state=PlayerState(stack=100))
+        player = FoldBot(name="Bot")
         self.assertIsNotNone(player.uid)
         self.assertIsInstance(player.uid, str)
         self.assertEqual(len(player.uid), 32)
 
     def test_player_id_deprecated_property(self):
         """Accessing Player.id emits a DeprecationWarning and returns uid."""
-        player = FoldBot(uid="abc123", name="Bot", state=PlayerState(stack=100))
+        player = FoldBot(uid="abc123", name="Bot")
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
             value = player.id
@@ -45,7 +45,7 @@ class TestPlayerUidDeprecations(unittest.TestCase):
         """Passing id= to Player.__init__ emits a DeprecationWarning and sets uid."""
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
-            player = FoldBot(id="old-id", name="Bot", state=PlayerState(stack=100))
+            player = FoldBot(id="old-id", name="Bot")
         self.assertEqual(player.uid, "old-id")
         self.assertTrue(
             any(issubclass(w.category, DeprecationWarning) for w in caught),
@@ -59,7 +59,7 @@ class TestPlayerUidDeprecations(unittest.TestCase):
         """When both uid= and id= are provided, uid= wins without a warning for uid."""
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
-            player = FoldBot(uid="uid-wins", id="id-loses", name="Bot", state=PlayerState(stack=100))
+            player = FoldBot(uid="uid-wins", id="id-loses", name="Bot")
         self.assertEqual(player.uid, "uid-wins")
         # Should still warn about the deprecated id param
         self.assertTrue(
@@ -68,7 +68,7 @@ class TestPlayerUidDeprecations(unittest.TestCase):
 
     def test_to_dict_uses_uid_key(self):
         """Player.to_dict() uses 'uid' as the key."""
-        player = FoldBot(uid="my-uid", name="Bot", state=PlayerState(stack=100))
+        player = FoldBot(uid="my-uid", name="Bot")
         d = player.to_dict()
         self.assertIn("uid", d)
         self.assertEqual(d["uid"], "my-uid")

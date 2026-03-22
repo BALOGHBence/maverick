@@ -39,13 +39,16 @@ class TestSmokeGame(unittest.TestCase):
 
         game = Game(small_blind=1, big_blind=2, max_hands=1)
         game.add_player(
-            FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0))
+            FoldBot(id="p1", name="P1"),
+            state=PlayerState(stack=50, seat=0),
         )
         game.add_player(
-            CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1))
+            CallBot(id="p2", name="P2"),
+            state=PlayerState(stack=50, seat=1),
         )
         game.add_player(
-            AggressiveBot(id="p3", name="P3", state=PlayerState(stack=50, seat=2))
+            AggressiveBot(id="p3", name="P3"),
+            state=PlayerState(stack=50, seat=2),
         )
 
         # Should complete without raising

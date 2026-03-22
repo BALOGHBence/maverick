@@ -16,14 +16,9 @@ class TestGameStateSerialization(unittest.TestCase):
         """Test game initialization with default parameters."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
 
-        players: list[PlayerLike] = [
-            CallBot(name="CallBot", state=PlayerState(stack=1000)),
-            AggressiveBot(name="AggroBot", state=PlayerState(stack=1000)),
-            FoldBot(name="FoldBot", state=PlayerState(stack=1000)),
-        ]
-
-        for player in players:
-            game.add_player(player)
+        game.add_player(CallBot(name="CallBot"), state=PlayerState(stack=1000))
+        game.add_player(AggressiveBot(name="AggroBot"), state=PlayerState(stack=1000))
+        game.add_player(FoldBot(name="FoldBot"), state=PlayerState(stack=1000))
 
         game.start()
 
@@ -35,14 +30,9 @@ class TestGameStateSerialization(unittest.TestCase):
         """Test game initialization with default parameters."""
         game = Game(small_blind=10, big_blind=20, max_hands=1)
 
-        players: list[PlayerLike] = [
-            CallBot(name="CallBot", state=PlayerState(stack=1000)),
-            AggressiveBot(name="AggroBot", state=PlayerState(stack=1000)),
-            FoldBot(name="FoldBot", state=PlayerState(stack=1000)),
-        ]
-
-        for player in players:
-            game.add_player(player)
+        game.add_player(CallBot(name="CallBot"), state=PlayerState(stack=1000))
+        game.add_player(AggressiveBot(name="AggroBot"), state=PlayerState(stack=1000))
+        game.add_player(FoldBot(name="FoldBot"), state=PlayerState(stack=1000))
 
         game.start()
 
@@ -55,14 +45,9 @@ class TestGameStateSerialization(unittest.TestCase):
 
         game = Game(small_blind=10, big_blind=20, max_hands=2)
 
-        players: list[PlayerLike] = [
-            CallBot(name="CallBot", state=PlayerState(stack=1000)),
-            AggressiveBot(name="AggroBot", state=PlayerState(stack=1000)),
-            FoldBot(name="FoldBot", state=PlayerState(stack=1000)),
-        ]
-
-        for player in players:
-            game.add_player(player)
+        game.add_player(CallBot(name="CallBot"), state=PlayerState(stack=1000))
+        game.add_player(AggressiveBot(name="AggroBot"), state=PlayerState(stack=1000))
+        game.add_player(FoldBot(name="FoldBot"), state=PlayerState(stack=1000))
 
         game.start()
 
