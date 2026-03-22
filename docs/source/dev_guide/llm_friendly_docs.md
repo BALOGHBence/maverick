@@ -69,3 +69,25 @@ The DOM target (`.dropdown-download-buttons`) is specific enough to be stable ac
 ### Why JavaScript instead of a Jinja2 template override
 
 Sphinx-book-theme inherits its template structure from pydata-sphinx-theme, and the article header button area is generated through several layers of macro calls. Overriding a template at the right level would require coupling the implementation to internal theme internals that are not part of the public API and tend to change between minor releases. The JavaScript approach queries a stable, semantic CSS class that represents the download button group, making it resilient to theme updates.
+
+## The Claude Code Plugin
+
+Maverick ships a Claude Code plugin at `maverick-plugin/` that users can install via:
+
+```text
+/plugin marketplace add BALOGHBence/maverick
+```
+
+The plugin follows the [claude-skills-marketplace](https://github.com/mhattingpete/claude-skills-marketplace) format and is registered in `.claude-plugin/marketplace.json`. Skills are auto-discovered from `maverick-plugin/skills/`.
+
+### The symlink in `.claude/skills/`
+
+`.claude/skills/maverick/SKILL.md` is a symlink pointing to `maverick-plugin/skills/api-consulting.md`. This keeps the project-local Claude Code skill in sync with the canonical skill file in the plugin without duplication.
+
+**Windows caveat:** git on Windows does not create symlinks by default. Without symlink support, this file is checked out as a plain text file containing the path string, and the project-local skill will not work. To fix this, enable **Developer Mode** in Windows Settings or run the following before cloning:
+
+```bash
+git config --global core.symlinks true
+```
+
+Users of the plugin installed via `/plugin marketplace add` are not affected by this — the marketplace installs skills to `~/.claude/skills/` directly and does not involve the symlink.
