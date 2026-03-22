@@ -103,3 +103,32 @@ The contents of the skill file are shown below for reference:
 ```{literalinclude} ../../.claude/skills/maverick/SKILL.md
 :language: markdown
 ```
+
+## Option 5: Install the Claude Code plugin
+
+Maverick ships a Claude Code plugin that installs all available skills in one command — no file downloading or copying required. The plugin is hosted directly in the Maverick repository and follows the [claude-skills-marketplace](https://github.com/mhattingpete/claude-skills-marketplace) format.
+
+**When to use this option:**
+
+- You want all Maverick skills installed at once without manual setup.
+- You want skills to stay in sync with the library version you are using.
+
+**How to install:**
+
+Run the following command inside Claude Code:
+
+```text
+/plugin marketplace add BALOGHBence/maverick
+```
+
+This installs the `maverick-plugin`, which provides three skills:
+
+| Skill | Activates when you say… | What it does |
+| --- | --- | --- |
+| `api-consulting` | "how do I use Maverick", "what does X do", "show me an example" | Reads the locally built docs and answers from their content |
+| `bot-generating` | "create a bot", "write a player", "implement a strategy" | Generates a complete `Player` subclass scaffold |
+| `scenario-building` | "set up a game", "create a scenario", "test hand" | Produces a self-contained game setup with optional event hooks |
+
+```{note}
+The `api-consulting` skill reads `docs/build/html/llms.txt` and requires locally built documentation, just like Option 4. The `bot-generating` and `scenario-building` skills work without it.
+```

@@ -1,0 +1,13 @@
+{
+  "name": "maverick",
+  "owner": { "name": "BALOGHBence" },
+  "plugins": [
+    {
+      "name": "maverick-plugin",
+      "source": "maverick-plugin",
+      "description": "Skills for consulting the Maverick API, building poker bots, and constructing game scenarios",
+      "version": "1.0.0",
+      "author": { "name": "BALOGHBence" }
+    }
+  ]
+}
