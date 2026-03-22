@@ -142,6 +142,19 @@ class GameState(BaseModel):
             if p.state.state_type in [PlayerStateType.ACTIVE, PlayerStateType.ALL_IN]
         ]
 
+    def get_non_eliminated_players(self) -> list[PlayerSnapshot]:
+        """Return list of player snapshots who have not been eliminated.
+
+        This includes players with ``ACTIVE``, ``FOLDED``, or ``ALL_IN`` state.
+        Eliminated players (``state_type=ELIMINATED``) are excluded.
+        Useful for determining how many players remain eligible to play the next hand.
+        """
+        return [
+            p
+            for p in self.players
+            if p.state.state_type != PlayerStateType.ELIMINATED
+        ]
+
     @property
     def is_betting_round_complete(self) -> bool:
         """Betting round is complete when no further action is possible/required."""

@@ -128,7 +128,38 @@ This is a **breaking change** to the public API:
 
 ---
 
-## GAME_STATE_CHANGED event and lazy serialization
+## Retaining Eliminated Players in GameState
+
+### Decision
+
+When a player's stack reaches zero at `HAND_ENDED`, their table seat and strategy object
+are freed (so they no longer participate in future betting rounds), but their
+`PlayerSnapshot` is kept in `game.state.players` with `state_type=ELIMINATED` for the
+remainder of the game.
+
+### Rationale
+
+- **Post-game analysis** — Removing players from `game.state.players` on elimination made
+  the final game state incomplete: the last known stack, holding, and outcome of busted
+  players were discarded. Retaining them allows full replay, statistics, and debugging
+  without any additional bookkeeping by callers.
+- **Minimal API surface change** — Code that already uses `get_active_players()` or
+  `get_players_in_hand()` is unaffected. Only callers that relied on eliminated players
+  *disappearing* from `game.state.players` need to switch to the filtered helpers.
+- **Separation of seat management from player history** — Freeing the table seat is an
+  engine-internal concern (it controls the dealing order for subsequent hands). Whether the
+  player's historical snapshot is retained is an observable-state concern. Splitting these
+  two actions makes each responsibility explicit.
+
+### Trade-offs
+
+- `game.state.players` now grows monotonically during a game (eliminated players accumulate).
+  Code that counts players for game-logic purposes (e.g. "enough to start a hand") must use
+  `get_active_players()` or filter by `state_type != ELIMINATED`.
+- `PLAYER_LEFT` is no longer emitted on elimination; eliminations are exclusively signalled
+  by `PLAYER_ELIMINATED`.
+
+---
 
 ### Decision
 

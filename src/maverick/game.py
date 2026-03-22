@@ -685,6 +685,7 @@ class Game:
                 # Eliminate players with zero stack
                 eliminated_players = [
                     p for p in self.state.players if p.state.stack == 0
+                    and p.state.state_type != PlayerStateType.ELIMINATED
                 ]
                 for player in eliminated_players:
                     self._update_player_state(player, state_type=PlayerStateType.ELIMINATED)
@@ -699,10 +700,12 @@ class Game:
                         stage_prefix=False,
                     )
                     self._event_queue.append(GameEventType.PLAYER_ELIMINATED)
-                    self.remove_player(player, flush=False)
+                    # Free the table seat and strategy but keep snapshot in state.players
+                    self.table.remove_player(player)
+                    self._strategies.pop(player.uid, None)
 
                 # Check if we have enough players to continue
-                if len(self.state.players) < self.rules.dealing.min_players:
+                if len(self.state.get_non_eliminated_players()) < self.rules.dealing.min_players:
                     self._log(
                         "Not enough players to continue, ending game.", logging.INFO
                     )
@@ -733,7 +736,7 @@ class Game:
                         self._update_state(stage=GameStage.READY)
 
             case GameEventType.PLAYER_LEFT:
-                if len(self.state.players) < self.rules.dealing.min_players:
+                if len(self.state.get_non_eliminated_players()) < self.rules.dealing.min_players:
                     self._update_state(stage=GameStage.WAITING_FOR_PLAYERS)
 
             case GameEventType.PLAYER_ELIMINATED:
@@ -776,7 +779,7 @@ class Game:
             stage_prefix=False,
         )
 
-        if len(self.state.players) < self.rules.dealing.min_players:
+        if len(self.state.get_non_eliminated_players()) < self.rules.dealing.min_players:
             raise ValueError("Not enough players to start hand")
 
         self._deck = Deck.standard_deck(shuffle=True)
@@ -909,7 +912,7 @@ class Game:
 
     def _post_blinds(self) -> None:
         """Post blinds with correct heads-up semantics (button posts SB in HU)."""
-        num_players = len(self.state.players)
+        num_players = len(self.state.get_non_eliminated_players())
         min_num_players = self.rules.dealing.min_players
 
         # Sanity check: ensure we have enough players to post blinds
@@ -1368,7 +1371,7 @@ class Game:
         self._update_state(button_position=self.table.button_seat)
 
     def _assign_blind_positions(self) -> None:
-        num_players = len(self.state.players)
+        num_players = len(self.state.get_non_eliminated_players())
         min_num_players = self.rules.dealing.min_players
         if num_players < min_num_players:  # pragma: no cover
             raise ValueError(f"Need at least {min_num_players} players to post blinds")
@@ -1399,7 +1402,7 @@ class Game:
         )
 
     def _winners_in_button_order(self, winners) -> list:
-        n_players = len(self.state.players)
+        n_players = len(self.state.get_non_eliminated_players())
         idx = self.state.button_position  # seat index of the button player
         rel_btn_idx = {}
         for i in range(n_players):

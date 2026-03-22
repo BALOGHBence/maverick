@@ -84,9 +84,13 @@ for player in players:
 
 game.start()
 
-# Inspect results
+# Inspect results — all players (including eliminated) are retained
 for snapshot in game.state.players:
-    print(f"{snapshot.name} - Stack: {snapshot.state.stack}")
+    print(f"{snapshot.name} - Stack: {snapshot.state.stack} ({snapshot.state.state_type})")
+
+# Active players only (excludes eliminated)
+for snapshot in game.state.get_active_players():
+    print(f"{snapshot.name} is still in the game with {snapshot.state.stack} chips")
 ```
 
 (See the documentation for more examples and APIs.)
