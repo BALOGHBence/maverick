@@ -252,11 +252,11 @@ class Game:
             uid = self.table[self.state.big_blind_position]
             return self._strategies.get(uid) if uid else None
         return None
-    
+
     @property
     def all_stacks_at_game_start(self) -> int:
         """Returns the total of all player stacks at the start of the game.
-        
+
         .. versionadded:: 0.7.0
         """
         return self._all_stacks_at_game_start
@@ -421,13 +421,18 @@ class Game:
         """
         uid = player.uid
         snapshots = [
-            s.model_copy(update={"state": s.state.model_copy(update=changes)})
-            if s.uid == uid else s
+            (
+                s.model_copy(update={"state": s.state.model_copy(update=changes)})
+                if s.uid == uid
+                else s
+            )
             for s in self._state.players
         ]
         self._update_state(players=snapshots)
 
-    def add_player(self, player: PlayerLike, *, state: Optional[PlayerState | dict] = None) -> None:
+    def add_player(
+        self, player: PlayerLike, *, state: Optional[PlayerState | dict] = None
+    ) -> None:
         """Add a player to the game.
 
         Parameters
@@ -486,7 +491,6 @@ class Game:
             f"Player {player.name} joined the game.", logging.INFO, stage_prefix=False
         )
 
-
     def remove_player(self, player: PlayerLike, flush: bool = True) -> None:
         """Remove a player from the game.
 
@@ -514,7 +518,9 @@ class Game:
 
         self.table.remove_player(snapshot)
         self._strategies.pop(player_uid, None)
-        self._update_state(players=[p for p in self.state.players if p.uid != player_uid])
+        self._update_state(
+            players=[p for p in self.state.players if p.uid != player_uid]
+        )
 
         if flush:
             self._handle_event(GameEventType.PLAYER_LEFT)
@@ -523,7 +529,9 @@ class Game:
 
         self._emit(self._create_event(GameEventType.PLAYER_LEFT, player_uid=player_uid))
         self._log(
-            f"Player {snapshot.name} has left the game.", logging.INFO, stage_prefix=False
+            f"Player {snapshot.name} has left the game.",
+            logging.INFO,
+            stage_prefix=False,
         )
 
     def start(self) -> None:
@@ -684,11 +692,15 @@ class Game:
 
                 # Eliminate players with zero stack
                 eliminated_players = [
-                    p for p in self.state.players if p.state.stack == 0
+                    p
+                    for p in self.state.players
+                    if p.state.stack == 0
                     and p.state.state_type != PlayerStateType.ELIMINATED
                 ]
                 for player in eliminated_players:
-                    self._update_player_state(player, state_type=PlayerStateType.ELIMINATED)
+                    self._update_player_state(
+                        player, state_type=PlayerStateType.ELIMINATED
+                    )
                     self._emit(
                         self._create_event(
                             GameEventType.PLAYER_ELIMINATED, player_uid=player.uid
@@ -705,7 +717,10 @@ class Game:
                     self._strategies.pop(player.uid, None)
 
                 # Check if we have enough players to continue
-                if len(self.state.get_non_eliminated_players()) < self.rules.dealing.min_players:
+                if (
+                    len(self.state.get_non_eliminated_players())
+                    < self.rules.dealing.min_players
+                ):
                     self._log(
                         "Not enough players to continue, ending game.", logging.INFO
                     )
@@ -736,7 +751,10 @@ class Game:
                         self._update_state(stage=GameStage.READY)
 
             case GameEventType.PLAYER_LEFT:
-                if len(self.state.get_non_eliminated_players()) < self.rules.dealing.min_players:
+                if (
+                    len(self.state.get_non_eliminated_players())
+                    < self.rules.dealing.min_players
+                ):
                     self._update_state(stage=GameStage.WAITING_FOR_PLAYERS)
 
             case GameEventType.PLAYER_ELIMINATED:
@@ -779,7 +797,10 @@ class Game:
             stage_prefix=False,
         )
 
-        if len(self.state.get_non_eliminated_players()) < self.rules.dealing.min_players:
+        if (
+            len(self.state.get_non_eliminated_players())
+            < self.rules.dealing.min_players
+        ):
             raise ValueError("Not enough players to start hand")
 
         self._deck = Deck.standard_deck(shuffle=True)
@@ -815,7 +836,9 @@ class Game:
             return None
         return self._strategies.get(uid)
 
-    def get_player_snapshot(self, player: "PlayerLike | str") -> Optional[PlayerSnapshot]:
+    def get_player_snapshot(
+        self, player: "PlayerLike | str"
+    ) -> Optional[PlayerSnapshot]:
         """Return the current ``PlayerSnapshot`` for a player by UID or player object.
 
         Parameters
@@ -919,9 +942,14 @@ class Game:
             raise ValueError(f"Need at least {min_num_players} players to post blinds")
 
         # Sanity check: ensure small_blind and big_blind positions are assigned correctly
-        if self.state.small_blind_position is None or self.state.big_blind_position is None:  # pragma: no cover
+        if (
+            self.state.small_blind_position is None
+            or self.state.big_blind_position is None
+        ):  # pragma: no cover
             raise ValueError("Small blind or big blind position not assigned")
-        if self.state.small_blind_position == self.state.big_blind_position:  # pragma: no cover
+        if (
+            self.state.small_blind_position == self.state.big_blind_position
+        ):  # pragma: no cover
             raise ValueError("Small blind and big blind cannot be the same player")
 
         # --- Small blind ---
@@ -929,7 +957,9 @@ class Game:
         sb_snapshot = self._get_snapshot(sb_player)
         sb_amount = min(self.state.small_blind, sb_snapshot.state.stack)
         sb_new_stack = sb_snapshot.state.stack - sb_amount
-        sb_changes = dict(current_bet=sb_amount, total_contributed=sb_amount, stack=sb_new_stack)
+        sb_changes = dict(
+            current_bet=sb_amount, total_contributed=sb_amount, stack=sb_new_stack
+        )
         if sb_new_stack == 0:
             sb_changes["state_type"] = PlayerStateType.ALL_IN
         self._update_player_state(sb_player, **sb_changes)
@@ -946,7 +976,9 @@ class Game:
         bb_snapshot = self._get_snapshot(bb_player)
         bb_amount = min(self.state.big_blind, bb_snapshot.state.stack)
         bb_new_stack = bb_snapshot.state.stack - bb_amount
-        bb_changes = dict(current_bet=bb_amount, total_contributed=bb_amount, stack=bb_new_stack)
+        bb_changes = dict(
+            current_bet=bb_amount, total_contributed=bb_amount, stack=bb_new_stack
+        )
         if bb_new_stack == 0:
             bb_changes["state_type"] = PlayerStateType.ALL_IN
         self._update_player_state(bb_player, **bb_changes)
@@ -991,7 +1023,9 @@ class Game:
             if player.state.state_type == PlayerStateType.ACTIVE:
                 ante_amount = min(self.state.ante, player.state.stack)
                 ante_new_current_bet = player.state.current_bet + ante_amount
-                ante_new_total_contributed = player.state.total_contributed + ante_amount
+                ante_new_total_contributed = (
+                    player.state.total_contributed + ante_amount
+                )
                 ante_new_stack = player.state.stack - ante_amount
                 ante_changes = dict(
                     current_bet=ante_new_current_bet,
@@ -1087,7 +1121,9 @@ class Game:
             call_amount = self.state.current_bet - current_snapshot.state.current_bet
             actual_amount = min(call_amount, current_snapshot.state.stack)
             call_new_current_bet = current_snapshot.state.current_bet + actual_amount
-            call_new_total_contributed = current_snapshot.state.total_contributed + actual_amount
+            call_new_total_contributed = (
+                current_snapshot.state.total_contributed + actual_amount
+            )
             call_new_stack = current_snapshot.state.stack - actual_amount
             call_changes = dict(
                 current_bet=call_new_current_bet,
@@ -1112,7 +1148,9 @@ class Game:
                 raise ValueError(f"Bet must be at least {self.state.min_bet}")
 
             actual_amount = min(amount, current_snapshot.state.stack)
-            bet_new_total_contributed = current_snapshot.state.total_contributed + actual_amount
+            bet_new_total_contributed = (
+                current_snapshot.state.total_contributed + actual_amount
+            )
             bet_new_stack = current_snapshot.state.stack - actual_amount
             bet_changes = dict(
                 current_bet=actual_amount,
@@ -1159,7 +1197,9 @@ class Game:
                     f"Raise size must be at least {old_last_raise_size} (attempted {raise_size})"
                 )
 
-            raise_new_total_contributed = current_snapshot.state.total_contributed + player_add
+            raise_new_total_contributed = (
+                current_snapshot.state.total_contributed + player_add
+            )
             raise_new_stack = current_snapshot.state.stack - player_add
             raise_changes = dict(
                 current_bet=player_bet_after,
@@ -1208,7 +1248,9 @@ class Game:
                 _,
             ) = self._calculate_raise_components(current_snapshot, chips_to_add)
 
-            allin_new_total_contributed = current_snapshot.state.total_contributed + player_add
+            allin_new_total_contributed = (
+                current_snapshot.state.total_contributed + player_add
+            )
             self._update_player_state(
                 current_player,
                 current_bet=player_bet_after,

@@ -111,7 +111,9 @@ class Table:
             raise ValueError(f"Player '{player.uid}' is not seated at this table.")
 
         if not (0 <= seat_index < self._n_seats):
-            raise ValueError(f"Seat index {seat_index} is out of bounds.")  # pragma: no cover
+            raise ValueError(
+                f"Seat index {seat_index} is out of bounds."
+            )  # pragma: no cover
 
         self.seats[seat_index] = None
         del self._id_to_seat[player.uid]

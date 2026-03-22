@@ -93,7 +93,10 @@ class SharkBot(Player):
         # Call when getting good odds or to trap
         if ActionType.CALL in valid_actions and strong_hand:
             # Sharks will call lighter in position or against weaker opponents
-            if call_amount <= snapshot.state.stack and call_amount <= game.state.pot * 0.66:
+            if (
+                call_amount <= snapshot.state.stack
+                and call_amount <= game.state.pot * 0.66
+            ):
                 return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Check to trap or for pot control

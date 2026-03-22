@@ -27,12 +27,12 @@ class GameState(BaseModel):
     ------
     uid : str
         Unique identifier for the event. This is automatically set to a new UUID by default.
-        
+
         .. versionadded:: 0.7.0
     ts: float
         Timestamp of when the event was created, in seconds since the epoch.
         This is automatically set to the current time when the class is instantiated.
-        
+
         .. versionadded:: 0.7.0
     stage : GameStage
         The current state of the game (e.g., WAITING_FOR_PLAYERS, IN_PROGRESS).
@@ -79,7 +79,7 @@ class GameState(BaseModel):
 
         .. versionadded:: 0.3.0
     """
-    
+
     uid: str = Field(default_factory=lambda: uuid.uuid4().hex, alias="id")
     ts: float = Field(default_factory=time.time)
 
@@ -150,9 +150,7 @@ class GameState(BaseModel):
         Useful for determining how many players remain eligible to play the next hand.
         """
         return [
-            p
-            for p in self.players
-            if p.state.state_type != PlayerStateType.ELIMINATED
+            p for p in self.players if p.state.state_type != PlayerStateType.ELIMINATED
         ]
 
     @property
