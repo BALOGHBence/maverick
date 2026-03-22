@@ -42,10 +42,12 @@ class TestStepExecution(unittest.TestCase):
         """Test that step processes exactly one event."""
         game = Game(small_blind=1, big_blind=2, max_hands=1)
         game.add_player(
-            FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0))
+            FoldBot(id="p1", name="P1"),
+            state=PlayerState(stack=50, seat=0),
         )
         game.add_player(
-            CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1))
+            CallBot(id="p2", name="P2"),
+            state=PlayerState(stack=50, seat=1),
         )
 
         # Initialize game and add initial event
@@ -74,10 +76,12 @@ class TestStepExecution(unittest.TestCase):
         """Test that stepping through all events completes a game."""
         game = Game(small_blind=1, big_blind=2, max_hands=1)
         game.add_player(
-            FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0))
+            FoldBot(id="p1", name="P1"),
+            state=PlayerState(stack=50, seat=0),
         )
         game.add_player(
-            CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1))
+            CallBot(id="p2", name="P2"),
+            state=PlayerState(stack=50, seat=1),
         )
 
         # Initialize game and add initial event
@@ -101,20 +105,24 @@ class TestStepExecution(unittest.TestCase):
         # Game 1: using start()
         game1 = Game(small_blind=1, big_blind=2, max_hands=1)
         game1.add_player(
-            FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0))
+            FoldBot(id="p1", name="P1"),
+            state=PlayerState(stack=50, seat=0),
         )
         game1.add_player(
-            CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1))
+            CallBot(id="p2", name="P2"),
+            state=PlayerState(stack=50, seat=1),
         )
         game1.start()
 
         # Game 2: using step()
         game2 = Game(small_blind=1, big_blind=2, max_hands=1)
         game2.add_player(
-            FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0))
+            FoldBot(id="p1", name="P1"),
+            state=PlayerState(stack=50, seat=0),
         )
         game2.add_player(
-            CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1))
+            CallBot(id="p2", name="P2"),
+            state=PlayerState(stack=50, seat=1),
         )
         game2._initialize_game()
         game2._event_queue.append(GameEventType.GAME_STARTED)
@@ -130,10 +138,12 @@ class TestStepExecution(unittest.TestCase):
         """Test that step-by-step execution works for multiple hands."""
         game = Game(small_blind=1, big_blind=2, max_hands=2)
         game.add_player(
-            FoldBot(id="p1", name="P1", state=PlayerState(stack=50, seat=0))
+            FoldBot(id="p1", name="P1"),
+            state=PlayerState(stack=50, seat=0),
         )
         game.add_player(
-            CallBot(id="p2", name="P2", state=PlayerState(stack=50, seat=1))
+            CallBot(id="p2", name="P2"),
+            state=PlayerState(stack=50, seat=1),
         )
 
         # Initialize and start

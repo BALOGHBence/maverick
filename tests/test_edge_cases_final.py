@@ -8,13 +8,12 @@ from maverick.playerstate import PlayerState
 from maverick.players import AggressiveBot, CallBot
 from maverick.players.archetypes import LoosePassiveBot, ManiacBot
 
-
 class TestAggressiveBotEdgeCases(unittest.TestCase):
     """Edge cases for AggressiveBot."""
 
     def test_aggressive_with_no_raise(self):
         """Test when raise is not available."""
-        bot = AggressiveBot(id="agg", name="Agg", state=PlayerState(stack=100, seat=0))
+        bot = AggressiveBot(id="agg", name="Agg")
         game = Mock()
         game.state.pot = 20
         game.state.big_blind = 10
@@ -40,13 +39,12 @@ class TestAggressiveBotEdgeCases(unittest.TestCase):
         )
         self.assertEqual(action.action_type, ActionType.CALL)
 
-
 class TestCallBotEdgeCases(unittest.TestCase):
     """Edge cases for CallBot."""
 
     def test_callbot_with_all_in(self):
         """Test CallBot with ALL_IN available."""
-        bot = CallBot(id="call", name="Call", state=PlayerState(stack=50, seat=0))
+        bot = CallBot(id="call", name="Call")
         game = Mock()
 
         action = bot.decide_action(
@@ -60,7 +58,7 @@ class TestCallBotEdgeCases(unittest.TestCase):
 
     def test_callbot_with_fold_only(self):
         """Test CallBot forced to fold."""
-        bot = CallBot(id="call", name="Call", state=PlayerState(stack=50, seat=0))
+        bot = CallBot(id="call", name="Call")
         game = Mock()
 
         action = bot.decide_action(
@@ -72,7 +70,6 @@ class TestCallBotEdgeCases(unittest.TestCase):
         )
         self.assertEqual(action.action_type, ActionType.FOLD)
 
-
 class TestLoosePassiveBotPaths(unittest.TestCase):
     """Test LoosePassiveBot decision paths."""
 
@@ -80,17 +77,7 @@ class TestLoosePassiveBotPaths(unittest.TestCase):
         """Test LoosePassiveBot checking."""
         bot = LoosePassiveBot(
             id="lp",
-            name="LP",
-            state=PlayerState(
-                stack=500,
-                seat=0,
-                holding=Holding(
-                    cards=[
-                        Card(suit=Suit.HEARTS, rank=Rank.SIX),
-                        Card(suit=Suit.CLUBS, rank=Rank.FOUR),
-                    ]
-                ),
-            ),
+            name="LP"
         )
 
         game = Mock()
@@ -109,7 +96,6 @@ class TestLoosePassiveBotPaths(unittest.TestCase):
         )
         self.assertIn(action.action_type, [ActionType.CHECK, ActionType.BET])
 
-
 class TestManiacBotPaths(unittest.TestCase):
     """Test ManiacBot decision paths."""
 
@@ -117,17 +103,7 @@ class TestManiacBotPaths(unittest.TestCase):
         """Test ManiacBot betting."""
         bot = ManiacBot(
             id="maniac",
-            name="Maniac",
-            state=PlayerState(
-                stack=800,
-                seat=0,
-                holding=Holding(
-                    cards=[
-                        Card(suit=Suit.HEARTS, rank=Rank.THREE),
-                        Card(suit=Suit.CLUBS, rank=Rank.NINE),
-                    ]
-                ),
-            ),
+            name="Maniac"
         )
 
         game = Mock()
@@ -150,17 +126,7 @@ class TestManiacBotPaths(unittest.TestCase):
         """Test ManiacBot calling."""
         bot = ManiacBot(
             id="maniac",
-            name="Maniac",
-            state=PlayerState(
-                stack=800,
-                seat=0,
-                holding=Holding(
-                    cards=[
-                        Card(suit=Suit.HEARTS, rank=Rank.THREE),
-                        Card(suit=Suit.CLUBS, rank=Rank.NINE),
-                    ]
-                ),
-            ),
+            name="Maniac"
         )
 
         game = Mock()
@@ -177,7 +143,6 @@ class TestManiacBotPaths(unittest.TestCase):
             min_bet_amount=10,
         )
         self.assertIn(action.action_type, [ActionType.CALL, ActionType.FOLD])
-
 
 class TestDeckEdgeCases(unittest.TestCase):
     """Test Deck edge cases."""
@@ -196,7 +161,6 @@ class TestDeckEdgeCases(unittest.TestCase):
         missing = deck.missing_cards()
         self.assertEqual(len(missing), 10)
 
-
 class TestHoldingEstimateStrength(unittest.TestCase):
     """Test Holding.estimate_strength method."""
 
@@ -213,7 +177,6 @@ class TestHoldingEstimateStrength(unittest.TestCase):
         self.assertIsInstance(strength, float)
         self.assertGreaterEqual(strength, 0.0)
         self.assertLessEqual(strength, 1.0)
-
 
 if __name__ == "__main__":
     unittest.main()

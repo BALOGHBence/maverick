@@ -14,10 +14,10 @@ class TestPlayerSnapshotIsolation(unittest.TestCase):
     def test_game_state_players_type(self):
         """GameState.players must be a list of PlayerSnapshot objects."""
         game = Game(small_blind=10, big_blind=20)
-        p1 = CallBot(name="P1", state=PlayerState(stack=500))
-        p2 = FoldBot(name="P2", state=PlayerState(stack=500))
-        game.add_player(p1)
-        game.add_player(p2)
+        p1 = CallBot(name="P1")
+        p2 = FoldBot(name="P2")
+        game.add_player(p1, state=PlayerState(stack=500))
+        game.add_player(p2, state=PlayerState(stack=500))
 
         for snapshot in game.state.players:
             self.assertIsInstance(snapshot, PlayerSnapshot)
@@ -25,10 +25,10 @@ class TestPlayerSnapshotIsolation(unittest.TestCase):
     def test_strategies_dict_populated(self):
         """Game._strategies must contain all added PlayerLike strategy objects."""
         game = Game(small_blind=10, big_blind=20)
-        p1 = CallBot(name="P1", state=PlayerState(stack=500))
-        p2 = FoldBot(name="P2", state=PlayerState(stack=500))
-        game.add_player(p1)
-        game.add_player(p2)
+        p1 = CallBot(name="P1")
+        p2 = FoldBot(name="P2")
+        game.add_player(p1, state=PlayerState(stack=500))
+        game.add_player(p2, state=PlayerState(stack=500))
 
         self.assertIn(p1.uid, game._strategies)
         self.assertIn(p2.uid, game._strategies)
@@ -38,10 +38,10 @@ class TestPlayerSnapshotIsolation(unittest.TestCase):
     def test_strategies_removed_on_remove_player(self):
         """Removing a player clears it from _strategies."""
         game = Game(small_blind=10, big_blind=20)
-        p1 = CallBot(name="P1", state=PlayerState(stack=500))
-        p2 = FoldBot(name="P2", state=PlayerState(stack=500))
-        game.add_player(p1)
-        game.add_player(p2)
+        p1 = CallBot(name="P1")
+        p2 = FoldBot(name="P2")
+        game.add_player(p1, state=PlayerState(stack=500))
+        game.add_player(p2, state=PlayerState(stack=500))
         game.remove_player(p1)
 
         self.assertNotIn(p1.uid, game._strategies)
@@ -54,10 +54,10 @@ class TestPlayerSnapshotIsolation(unittest.TestCase):
         triggering further mutations must not alter the captured dict.
         """
         game = Game(small_blind=10, big_blind=20, max_hands=1)
-        p1 = CallBot(name="P1", state=PlayerState(stack=1000))
-        p2 = FoldBot(name="P2", state=PlayerState(stack=1000))
-        game.add_player(p1)
-        game.add_player(p2)
+        p1 = CallBot(name="P1")
+        p2 = FoldBot(name="P2")
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
 
         captured_befores: list[dict] = []
 
@@ -81,10 +81,10 @@ class TestPlayerSnapshotIsolation(unittest.TestCase):
     def test_consecutive_game_states_independent(self):
         """Two consecutive GameState instances must not share player references."""
         game = Game(small_blind=10, big_blind=20)
-        p1 = CallBot(name="P1", state=PlayerState(stack=1000))
-        p2 = FoldBot(name="P2", state=PlayerState(stack=1000))
-        game.add_player(p1)
-        game.add_player(p2)
+        p1 = CallBot(name="P1")
+        p2 = FoldBot(name="P2")
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
 
         state_before = game.state
         # Trigger a state update
@@ -102,28 +102,27 @@ class TestPlayerSnapshotIsolation(unittest.TestCase):
         # The new snapshot has the updated stack
         self.assertEqual(state_after.players[0].state.stack, 900)
 
-    def test_player_state_synced_after_update(self):
-        """player.state must mirror the latest PlayerSnapshot after _update_player_state."""
+    def test_player_state_not_on_strategy(self):
+        """Player strategy objects no longer carry a state attribute."""
         game = Game(small_blind=10, big_blind=20)
-        p1 = CallBot(name="P1", state=PlayerState(stack=1000))
-        p2 = FoldBot(name="P2", state=PlayerState(stack=1000))
-        game.add_player(p1)
-        game.add_player(p2)
+        p1 = CallBot(name="P1")
+        p2 = FoldBot(name="P2")
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
 
         game._update_player_state(game.state.players[0], stack=700)
 
-        # The strategy object's state must reflect the new stack
-        self.assertEqual(p1.state.stack, 700)
-        # And must match the canonical snapshot exactly
-        self.assertEqual(p1.state, game.get_player_snapshot(p1.uid).state)
+        # State lives in the snapshot, not on the strategy object
+        self.assertFalse(hasattr(p1, "state"))
+        self.assertEqual(game.get_player_snapshot(p1.uid).state.stack, 700)
 
     def test_get_player_snapshot_returns_current_state(self):
         """get_player_snapshot returns the up-to-date frozen snapshot."""
         game = Game(small_blind=10, big_blind=20)
-        p1 = CallBot(name="P1", state=PlayerState(stack=1000))
-        p2 = FoldBot(name="P2", state=PlayerState(stack=1000))
-        game.add_player(p1)
-        game.add_player(p2)
+        p1 = CallBot(name="P1")
+        p2 = FoldBot(name="P2")
+        game.add_player(p1, state=PlayerState(stack=1000))
+        game.add_player(p2, state=PlayerState(stack=1000))
 
         snapshot_before = game.get_player_snapshot(p1.uid)
         self.assertEqual(snapshot_before.state.stack, 1000)

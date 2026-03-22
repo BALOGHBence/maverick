@@ -152,13 +152,16 @@ class TestGameWithCallBots(unittest.TestCase):
         """Test game with three CallBots."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            CallBot(id="c1", name="C1", state=PlayerState(stack=200, seat=0))
+            CallBot(id="c1", name="C1"),
+            state=PlayerState(stack=200, seat=0),
         )
         game.add_player(
-            CallBot(id="c2", name="C2", state=PlayerState(stack=200, seat=1))
+            CallBot(id="c2", name="C2"),
+            state=PlayerState(stack=200, seat=1),
         )
         game.add_player(
-            CallBot(id="c3", name="C3", state=PlayerState(stack=200, seat=2))
+            CallBot(id="c3", name="C3"),
+            state=PlayerState(stack=200, seat=2),
         )
         game.start()
         # Game should complete

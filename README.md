@@ -74,19 +74,19 @@ game = Game(small_blind=10, big_blind=20, max_hands=10)
 
 # Create players
 players: list[PlayerLike] = [
-    CallBot(name="CallBot", state=PlayerState(stack=1000)),
-    AggressiveBot(name="AggroBot", state=PlayerState(stack=1000)),
-    FoldBot(name="FoldBot", state=PlayerState(stack=1000)),
+    CallBot(name="CallBot"),
+    AggressiveBot(name="AggroBot"),
+    FoldBot(name="FoldBot"),
 ]
 
 for player in players:
-    game.add_player(player)
+    game.add_player(player, state=PlayerState(stack=1000))
 
 game.start()
 
 # Inspect results
-for player in players:
-    print(f"{player.name} - Stack: {player.state.stack}")
+for snapshot in game.state.players:
+    print(f"{snapshot.name} - Stack: {snapshot.state.stack}")
 ```
 
 (See the documentation for more examples and APIs.)
