@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Eliminated players are now **retained** in `game.state.players` with `state_type=PlayerStateType.ELIMINATED` for the full game duration. Previously, players whose stack reached zero were immediately removed from `game.state.players` after each hand. Code that needs only active or eligible players should use `game.state.get_active_players()` or `game.state.get_players_in_hand()`.
+- **Breaking (minor):** `PLAYER_LEFT` is no longer emitted when a player is eliminated. Elimination is exclusively signalled by the `PLAYER_ELIMINATED` event. Code that listened to `PLAYER_LEFT` to detect eliminations should switch to `PLAYER_ELIMINATED`.
 - **Breaking:** `GameState.community_cards` type changed from `list[Card]` to `tuple[Card, ...]`. This makes the immutability intent explicit and prevents in-place mutation at the type level. Code that relies on `community_cards` being a `list` (e.g. calling `.append()` or `.extend()` on it) must be updated.
 - `GAME_STATE_CHANGED` is now emitted when community cards are dealt (flop, turn, and river). Previously, the deal methods mutated the card list in-place, bypassing `_update_state` and suppressing the event.
 - The `is_betting_round_complete` function of the `GameState` class has been turned into a property.
