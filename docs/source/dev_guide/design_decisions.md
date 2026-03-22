@@ -44,8 +44,6 @@ The following steps are planned, each as a separate PR:
 | 3 | Replace `community_cards` in-place mutations with `_update_state` calls | No |
 | 4 | ✅ Move `Deck` out of `GameState` into `Game._deck` | **Yes** |
 
-See [SPEC.md](../../../../SPEC.md) at the repository root for the full specification.
-
 ---
 
 ## Deck is not part of GameState
