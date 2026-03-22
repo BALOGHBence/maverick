@@ -6,7 +6,6 @@ import warnings
 from pydantic import BaseModel, Field
 
 from .card import Card
-from .deck import Deck
 from .enums import (
     GameStage,
     PlayerStateType,
@@ -51,8 +50,6 @@ class GameState(BaseModel):
             Type changed from ``list[PlayerLike]`` to ``list[PlayerSnapshot]``.
     current_player_index : Optional[int]
         The index of the player whose turn it is to act.
-    deck : Optional[Deck]
-        The deck of cards used in the game.
     community_cards : tuple[Card, ...]
         The community cards on the table.
     pot : int
@@ -92,7 +89,6 @@ class GameState(BaseModel):
     current_player_index: Optional[int] = None
 
     # Cards
-    deck: Optional[Deck] = None
     community_cards: tuple[Card, ...] = Field(default_factory=tuple)
 
     # Betting

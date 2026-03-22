@@ -47,12 +47,12 @@ class TestGameFlowEdgeCases(unittest.TestCase):
             )),
         ]
 
+        game._deck = Deck.standard_deck()
         game._state = GameState(
             stage=GameStage.PRE_FLOP,
             street=Street.PRE_FLOP,
             players=snapshots,
             current_player_index=2,
-            deck=Deck.standard_deck(),
             community_cards=(),
             pot=3000,
             current_bet=1000,
@@ -104,12 +104,12 @@ class TestGameFlowEdgeCases(unittest.TestCase):
             )),
         ]
 
+        game._deck = Deck.standard_deck()
         game._state = GameState(
             stage=GameStage.SHOWDOWN,
             street=None,
             players=snapshots,
             current_player_index=2,
-            deck=Deck.standard_deck(),
             community_cards=(),
             pot=0,
             current_bet=0,

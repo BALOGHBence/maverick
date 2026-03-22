@@ -42,7 +42,7 @@ The following steps are planned, each as a separate PR:
 | 1 | Freeze `PlayerState` + introduce `_update_player_state` helper | No |
 | 2 | ✅ Introduce `PlayerSnapshot`; decouple strategy objects from `GameState` | **Yes** |
 | 3 | Replace `community_cards` in-place mutations with `_update_state` calls | No |
-| 4 | Move `Deck` out of `GameState` into `Game._deck` | No |
+| 4 | ✅ Move `Deck` out of `GameState` into `Game._deck` | **Yes** |
 
 See [SPEC.md](../../../../SPEC.md) at the repository root for the full specification.
 
@@ -50,7 +50,7 @@ See [SPEC.md](../../../../SPEC.md) at the repository root for the full specifica
 
 ## Deck is not part of GameState
 
-*(Planned — see roadmap Step 4 above)*
+*(Implemented — see roadmap Step 4 above)*
 
 ### Decision
 
