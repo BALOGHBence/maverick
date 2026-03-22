@@ -409,9 +409,7 @@ class Game:
 
         All PlayerState mutations must go through this method to ensure that
         GAME_STATE_CHANGED is always emitted. A fresh PlayerSnapshot is created
-        via model_copy. The corresponding strategy object's ``state`` attribute
-        is then synchronised with the new snapshot so that ``player.state``
-        always reflects the current game state.
+        via model_copy.
 
         Parameters
         ----------
@@ -428,19 +426,17 @@ class Game:
             for s in self._state.players
         ]
         self._update_state(players=snapshots)
-        strategy = self._strategies.get(uid)
-        if strategy is not None:
-            updated = next((s for s in self._state.players if s.uid == uid), None)
-            if updated is not None:
-                strategy.state = updated.state
 
-    def add_player(self, player: PlayerLike) -> None:
+    def add_player(self, player: PlayerLike, *, state: Optional[PlayerState | dict] = None) -> None:
         """Add a player to the game.
 
         Parameters
         ----------
         player : PlayerLike
             The player to add to the game.
+        state : PlayerState | dict | None, optional
+            Initial player state (stack, seat, etc.). If not provided, a default
+            ``PlayerState`` with zero chips is used.
         """
         if not self.table.has_free_seat:
             raise ValueError("Table is full")
@@ -459,12 +455,17 @@ class Game:
         if player.uid in existing_ids:
             raise ValueError(f"Player uid '{player.uid}' is already taken")
 
-        # Determine the seat and initial state
-        preferred_seat = player.state.seat if player.state is not None else None
+        # Normalise state argument
+        if isinstance(state, dict):
+            initial_player_state = PlayerState.model_validate(state)
+        elif isinstance(state, PlayerState):
+            initial_player_state = state
+        else:
+            initial_player_state = PlayerState()
+
+        # Determine the seat
+        preferred_seat = initial_player_state.seat
         seat_index = self.table.seat_player(player, seat_index=preferred_seat)
-        initial_player_state = (
-            player.state if player.state is not None else PlayerState()
-        )
         initial_player_state = initial_player_state.model_copy(
             update={"seat": seat_index, "state_type": PlayerStateType.ACTIVE}
         )
@@ -484,6 +485,7 @@ class Game:
         self._log(
             f"Player {player.name} joined the game.", logging.INFO, stage_prefix=False
         )
+
 
     def remove_player(self, player: PlayerLike, flush: bool = True) -> None:
         """Remove a player from the game.
@@ -810,13 +812,14 @@ class Game:
             return None
         return self._strategies.get(uid)
 
-    def get_player_snapshot(self, uid: str) -> Optional[PlayerSnapshot]:
-        """Return the current ``PlayerSnapshot`` for a player by UID.
+    def get_player_snapshot(self, player: "PlayerLike | str") -> Optional[PlayerSnapshot]:
+        """Return the current ``PlayerSnapshot`` for a player by UID or player object.
 
         Parameters
         ----------
-        uid : str
-            The unique identifier of the player.
+        player : PlayerLike | str
+            A player object (any object with a ``uid`` attribute) or a plain
+            UID string.
 
         Returns
         -------
@@ -825,7 +828,10 @@ class Game:
             currently in the game.
 
         .. versionadded:: 0.8.0
+        .. versionchanged:: 0.9.0
+            Now accepts a ``PlayerLike`` object in addition to a plain UID string.
         """
+        uid = player if isinstance(player, str) else player.uid
         return next((s for s in self._state.players if s.uid == uid), None)
 
     def _get_snapshot(self, player) -> PlayerSnapshot:

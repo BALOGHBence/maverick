@@ -12,7 +12,6 @@ from .playeraction import PlayerAction
 
 if TYPE_CHECKING:  # pragma: no cover
     from .game import Game
-    from .playerstate import PlayerState
     from .events import GameEvent
 
 __all__ = ["PlayerLike", "EventHandler"]
@@ -41,13 +40,10 @@ class PlayerLike(Protocol):
         Unique identifier for the player. Replaces deprecated ``id``.
     name : Optional[str]
         Display name for the player.
-    state : Optional[PlayerState]
-        Current player state containing seat, stack, holding, bets, etc.
     """
 
     uid: Optional[str]
     name: Optional[str]
-    state: Optional["PlayerState"]
 
     def decide_action(
         self,
