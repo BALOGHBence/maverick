@@ -4,6 +4,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import os
+import shutil
 import sys
 from datetime import date
 
@@ -21,8 +22,15 @@ project_copyright = "2026-%s, Bence Balogh" % date.today().year
 author = "Bence Balogh"
 
 
+def _copy_skill_md(app: Config) -> None:
+    src = os.path.join(app.confdir, "../../.claude/skills/maverick/SKILL.md")
+    dst = os.path.join(app.confdir, "_static", "SKILL.md")
+    shutil.copy2(src, dst)
+
+
 def setup(app: Config):
     app.add_config_value("project_name", project, "html")
+    app.connect("builder-inited", _copy_skill_md)
 
 
 # The short X.Y version.

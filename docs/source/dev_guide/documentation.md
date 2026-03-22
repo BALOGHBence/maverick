@@ -7,7 +7,7 @@ The documentation for the project is generated using Sphinx. Writing documentati
 
 ## Writing Docstrings
 
-Every user facing class and function should have a docstring written in NumPy-style, according to the [NumPyDoc conventions](https://numpydoc.readthedocs.io/en/latest/format.html). A good ocstring
+Every user facing class and function should have a docstring written in NumPy-style, according to the [NumPyDoc conventions](https://numpydoc.readthedocs.io/en/latest/format.html). A good docstring
 
 - Has a short first line, summarizing what the class or method does.
 - Has more detailed description if the complexity of the class or method requires.
@@ -18,25 +18,95 @@ Every user facing class and function should have a docstring written in NumPy-st
 
 ## Writing Source Files for Sphinx
 
+Documentation source files live in `docs/source/`. The project supports three file types:
+
+| Extension | Format | When to use |
+| --- | --- | --- |
+| `.md` | MyST Markdown | All narrative pages, user guide, examples |
+| `.ipynb` | Jupyter notebook | Interactive examples with code output |
+| `.rst` | reStructuredText | `index.rst` TOC files only |
+
+### Adding a new page
+
+1. Create the file in the appropriate subdirectory of `docs/source/`.
+2. Add the filename (without extension) to the `toctree` in the nearest `index.rst`.
+
+### MyST directives used in this project
+
+**Admonitions:**
+
+````markdown
 ```{note}
-This section is under construction.
+This is a note.
 ```
 
+```{warning}
+This is a warning.
+```
+````
+
+**Cross-references between pages** (path relative to `docs/source/`, no extension):
+
+```markdown
+See {doc}`Documenting <dev_guide/documentation>` for details.
+```
+
+**Cross-references to API symbols:**
+
+```markdown
+{class}`maverick.Game`
+{meth}`~maverick.Game.start`   ← ~ shows only the short name
+{func}`maverick.utils.score_hand`
+```
+
+**Code blocks:**
+
+````markdown
+```python
+from maverick import Game
+```
+````
+
+**Literal file include** (path relative to the source file):
+
+````markdown
+```{literalinclude} ../../path/to/file.py
+:language: python
+```
+````
+
+**Raw HTML** (used for download buttons):
+
+````markdown
+```{raw} html
+<a href="...">Download</a>
+```
+````
+
+(building-the-documentation)=
 ## Building the Documentation
 
-The project uses Sphinx for documentation. Documentation source files are in `docs/source/` and built files go to `docs/build/`.
+### Install documentation dependencies
 
-**Building the documentation:**
+The Sphinx toolchain is in the `docs` dependency group. Install it before building:
 
 ```bash
-# Navigate to the docs directory
-cd docs
-
-# Build HTML documentation
-uv run sphinx-build -b html source build
-
-# Or use make (if available)
-uv run make html
-
-# View the documentation by opening docs/build/index.html in a browser
+uv sync --group docs
 ```
+
+### Build the HTML documentation
+
+Run the following command from the **project root**:
+
+```bash
+uv run sphinx-build docs/source docs/build/html
+```
+
+Or use `make` from the `docs/` directory:
+
+```bash
+cd docs
+uv run make html
+```
+
+The built output is written to `docs/build/html/`. Open `docs/build/html/index.html` in a browser to preview it.
