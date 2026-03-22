@@ -831,7 +831,6 @@ class Game:
             currently in the game.
 
         .. versionadded:: 0.7.0
-        .. versionchanged:: 0.7.0
             Now accepts a ``PlayerLike`` object in addition to a plain UID string.
         """
         uid = player if isinstance(player, str) else player.uid
