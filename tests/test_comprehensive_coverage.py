@@ -17,6 +17,7 @@ from maverick.players import (
     AggressiveBot,
 )
 
+
 class TestCardMethods(unittest.TestCase):
     """Test all Card class methods."""
 
@@ -85,6 +86,7 @@ class TestCardMethods(unittest.TestCase):
         self.assertEqual(len(cards), 5)
         self.assertTrue(all(isinstance(c, Card) for c in cards))
 
+
 class TestHoldingMethods(unittest.TestCase):
     """Test all Holding class methods."""
 
@@ -137,14 +139,13 @@ class TestHoldingMethods(unittest.TestCase):
         self.assertIn("A♥", repr_str)
         self.assertIn("K♠", repr_str)
 
+
 class TestWhaleBot(unittest.TestCase):
     """Test WhaleBot decision making."""
 
     def test_whale_prefers_raise(self):
         """WhaleBot should prefer raising with huge amounts."""
-        whale = WhaleBot(
-            id="whale1", name="Whale"
-        )
+        whale = WhaleBot(id="whale1", name="Whale")
 
         # Mock game
         game = Mock()
@@ -166,9 +167,7 @@ class TestWhaleBot(unittest.TestCase):
 
     def test_whale_bets_big(self):
         """WhaleBot should make big bets."""
-        whale = WhaleBot(
-            id="whale1", name="Whale"
-        )
+        whale = WhaleBot(id="whale1", name="Whale")
 
         game = Mock()
         game.state.pot = 50
@@ -187,9 +186,7 @@ class TestWhaleBot(unittest.TestCase):
 
     def test_whale_calls_everything(self):
         """WhaleBot should call when raising is not available."""
-        whale = WhaleBot(
-            id="whale1", name="Whale"
-        )
+        whale = WhaleBot(id="whale1", name="Whale")
 
         game = Mock()
         game.state.pot = 50
@@ -205,9 +202,7 @@ class TestWhaleBot(unittest.TestCase):
 
     def test_whale_all_in(self):
         """WhaleBot should go all-in when available."""
-        whale = WhaleBot(
-            id="whale1", name="Whale"
-        )
+        whale = WhaleBot(id="whale1", name="Whale")
 
         game = Mock()
 
@@ -224,9 +219,7 @@ class TestWhaleBot(unittest.TestCase):
 
     def test_whale_checks(self):
         """WhaleBot should check when necessary."""
-        whale = WhaleBot(
-            id="whale1", name="Whale"
-        )
+        whale = WhaleBot(id="whale1", name="Whale")
 
         game = Mock()
 
@@ -241,9 +234,7 @@ class TestWhaleBot(unittest.TestCase):
 
     def test_whale_folds_rarely(self):
         """WhaleBot should fold only when no other options."""
-        whale = WhaleBot(
-            id="whale1", name="Whale"
-        )
+        whale = WhaleBot(id="whale1", name="Whale")
 
         game = Mock()
 
@@ -256,20 +247,20 @@ class TestWhaleBot(unittest.TestCase):
         )
         self.assertEqual(action.action_type, ActionType.FOLD)
 
+
 class TestSharkBot(unittest.TestCase):
     """Test SharkBot decision making."""
 
     def test_shark_instantiation(self):
         """SharkBot should instantiate correctly."""
-        shark = SharkBot(
-            id="shark1", name="Shark"
-        )
+        shark = SharkBot(id="shark1", name="Shark")
         self.assertIsNotNone(shark)
         self.assertEqual(shark.name, "Shark")
 
     def test_shark_decision_with_valid_actions(self):
         """Simplified test - just check instantiation."""
         pass  # Covered by instantiation tests
+
 
 class TestFishBot(unittest.TestCase):
     """Test FishBot decision making."""
@@ -278,16 +269,16 @@ class TestFishBot(unittest.TestCase):
         """Simplified test - just check instantiation."""
         pass  # Covered by instantiation tests
 
+
 class TestHeroCallerBot(unittest.TestCase):
     """Test HeroCallerBot decision making."""
 
     def test_hero_caller_instantiation(self):
         """HeroCallerBot should instantiate correctly."""
-        hero = HeroCallerBot(
-            id="hero1", name="Hero"
-        )
+        hero = HeroCallerBot(id="hero1", name="Hero")
         self.assertIsNotNone(hero)
         self.assertEqual(hero.name, "Hero")
+
 
 class TestTiltedBot(unittest.TestCase):
     """Test TiltedBot decision making."""
@@ -296,6 +287,7 @@ class TestTiltedBot(unittest.TestCase):
         """Simplified test - just check instantiation."""
         pass  # Covered by instantiation tests
 
+
 class TestLooseAggressiveBot(unittest.TestCase):
     """Test LooseAggressiveBot decision making."""
 
@@ -303,15 +295,13 @@ class TestLooseAggressiveBot(unittest.TestCase):
         """Simplified test - just check instantiation."""
         pass  # Covered by instantiation tests
 
+
 class TestManiacBot(unittest.TestCase):
     """Test ManiacBot decision making."""
 
     def test_maniac_raises_frequently(self):
         """ManiacBot should raise frequently."""
-        maniac = ManiacBot(
-            id="man1",
-            name="Maniac"
-        )
+        maniac = ManiacBot(id="man1", name="Maniac")
 
         game = Mock()
         game.state.pot = 50
@@ -330,12 +320,14 @@ class TestManiacBot(unittest.TestCase):
         )
         self.assertIsNotNone(action)
 
+
 class TestGTOBot(unittest.TestCase):
     """Test GTOBot decision making."""
 
     def test_gto_balanced_strategy(self):
         """Simplified test - just check instantiation."""
         pass  # Covered by instantiation tests
+
 
 class TestBullyBot(unittest.TestCase):
     """Test BullyBot decision making."""
@@ -344,12 +336,14 @@ class TestBullyBot(unittest.TestCase):
         """Simplified test - just check instantiation."""
         pass  # Covered by instantiation tests
 
+
 class TestGrinderBot(unittest.TestCase):
     """Test GrinderBot decision making."""
 
     def test_grinder_patient_strategy(self):
         """Simplified test - just check instantiation."""
         pass  # Covered by instantiation tests
+
 
 class TestScaredMoneyBot(unittest.TestCase):
     """Test ScaredMoneyBot decision making."""
@@ -358,6 +352,7 @@ class TestScaredMoneyBot(unittest.TestCase):
         """Simplified test - just check instantiation."""
         pass  # Covered by instantiation tests
 
+
 class TestTightPassiveBot(unittest.TestCase):
     """Test TightPassiveBot decision making."""
 
@@ -365,15 +360,13 @@ class TestTightPassiveBot(unittest.TestCase):
         """Simplified test - just check instantiation."""
         pass  # Covered by instantiation tests
 
+
 class TestLoosePassiveBot(unittest.TestCase):
     """Test LoosePassiveBot decision making."""
 
     def test_loose_passive_calls_often(self):
         """LoosePassiveBot should call often but rarely raise."""
-        lp = LoosePassiveBot(
-            id="lp1",
-            name="Station"
-        )
+        lp = LoosePassiveBot(id="lp1", name="Station")
 
         game = Mock()
         game.state.pot = 25
@@ -391,6 +384,7 @@ class TestLoosePassiveBot(unittest.TestCase):
         )
         self.assertIsNotNone(action)
 
+
 class TestABCBot(unittest.TestCase):
     """Test ABCBot decision making."""
 
@@ -398,12 +392,14 @@ class TestABCBot(unittest.TestCase):
         """Simplified test - just check instantiation."""
         pass  # Covered by instantiation tests
 
+
 class TestTightAggressiveBot(unittest.TestCase):
     """Test TightAggressiveBot decision making."""
 
     def test_tag_plays_premium_hands_aggressively(self):
         """Simplified test - just check instantiation."""
         pass  # Covered by instantiation tests
+
 
 class TestFoldBot(unittest.TestCase):
     """Test FoldBot behavior."""
@@ -438,6 +434,7 @@ class TestFoldBot(unittest.TestCase):
         )
         self.assertEqual(action.action_type, ActionType.CHECK)
 
+
 class TestCallBot(unittest.TestCase):
     """Test CallBot behavior."""
 
@@ -471,14 +468,13 @@ class TestCallBot(unittest.TestCase):
         )
         self.assertEqual(action.action_type, ActionType.CHECK)
 
+
 class TestAggressiveBot(unittest.TestCase):
     """Test AggressiveBot behavior."""
 
     def test_aggressivebot_prefers_aggressive_actions(self):
         """AggressiveBot should prefer raising and betting."""
-        aggressive = AggressiveBot(
-            id="agg1", name="Aggressive"
-        )
+        aggressive = AggressiveBot(id="agg1", name="Aggressive")
 
         game = Mock()
         game.state.pot = 50
@@ -497,9 +493,7 @@ class TestAggressiveBot(unittest.TestCase):
 
     def test_aggressivebot_bets_when_available(self):
         """AggressiveBot should bet when possible."""
-        aggressive = AggressiveBot(
-            id="agg1", name="Aggressive"
-        )
+        aggressive = AggressiveBot(id="agg1", name="Aggressive")
 
         game = Mock()
         game.state.pot = 30
@@ -514,6 +508,7 @@ class TestAggressiveBot(unittest.TestCase):
             min_bet_amount=10,
         )
         self.assertIn(action.action_type, [ActionType.BET, ActionType.CHECK])
+
 
 if __name__ == "__main__":
     unittest.main()

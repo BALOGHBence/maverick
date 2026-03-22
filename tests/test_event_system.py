@@ -681,10 +681,18 @@ class TestPlayerStateChangedEvents(unittest.TestCase):
     def test_game_state_changed_emitted_when_player_loses_chips(self):
         """GAME_STATE_CHANGED must be emitted when a player loses chips (call)."""
         game, p1, p2 = self._make_game_with_players(
-            p1_actions=[(ActionType.CALL, None), (ActionType.CHECK, None),
-                        (ActionType.CHECK, None), (ActionType.CHECK, None)],
-            p2_actions=[(ActionType.CHECK, None), (ActionType.CHECK, None),
-                        (ActionType.CHECK, None), (ActionType.CHECK, None)],
+            p1_actions=[
+                (ActionType.CALL, None),
+                (ActionType.CHECK, None),
+                (ActionType.CHECK, None),
+                (ActionType.CHECK, None),
+            ],
+            p2_actions=[
+                (ActionType.CHECK, None),
+                (ActionType.CHECK, None),
+                (ActionType.CHECK, None),
+                (ActionType.CHECK, None),
+            ],
         )
         stack_snapshots = []
 
@@ -697,7 +705,9 @@ class TestPlayerStateChangedEvents(unittest.TestCase):
 
         # Should contain various stack values (not all the same)
         unique_stacks = set(s for s in stack_snapshots if s is not None)
-        self.assertGreater(len(unique_stacks), 1, "Stack values never changed across events")
+        self.assertGreater(
+            len(unique_stacks), 1, "Stack values never changed across events"
+        )
 
     def test_game_state_changed_emitted_when_player_gains_chips(self):
         """GAME_STATE_CHANGED must be emitted when a player wins the pot."""
@@ -763,7 +773,7 @@ class TestCommunityCardStateChangedEvents(unittest.TestCase):
         """GAME_STATE_CHANGED must be emitted when the flop is dealt (0 → 3 cards)."""
         game = self._make_game_with_players(
             p1_actions=[
-                (ActionType.CALL, None),   # pre-flop call
+                (ActionType.CALL, None),  # pre-flop call
                 (ActionType.CHECK, None),  # flop
                 (ActionType.CHECK, None),  # turn
                 (ActionType.CHECK, None),  # river
@@ -780,8 +790,7 @@ class TestCommunityCardStateChangedEvents(unittest.TestCase):
         game.start()
 
         flop_events = [
-            e for e in events
-            if self._community_card_counts(e.payload) == (0, 3)
+            e for e in events if self._community_card_counts(e.payload) == (0, 3)
         ]
         self.assertTrue(
             len(flop_events) > 0,
@@ -792,7 +801,7 @@ class TestCommunityCardStateChangedEvents(unittest.TestCase):
         """GAME_STATE_CHANGED must be emitted when the turn is dealt (3 → 4 cards)."""
         game = self._make_game_with_players(
             p1_actions=[
-                (ActionType.CALL, None),   # pre-flop call
+                (ActionType.CALL, None),  # pre-flop call
                 (ActionType.CHECK, None),  # flop
                 (ActionType.CHECK, None),  # turn
                 (ActionType.CHECK, None),  # river
@@ -809,8 +818,7 @@ class TestCommunityCardStateChangedEvents(unittest.TestCase):
         game.start()
 
         turn_events = [
-            e for e in events
-            if self._community_card_counts(e.payload) == (3, 4)
+            e for e in events if self._community_card_counts(e.payload) == (3, 4)
         ]
         self.assertTrue(
             len(turn_events) > 0,
@@ -821,7 +829,7 @@ class TestCommunityCardStateChangedEvents(unittest.TestCase):
         """GAME_STATE_CHANGED must be emitted when the river is dealt (4 → 5 cards)."""
         game = self._make_game_with_players(
             p1_actions=[
-                (ActionType.CALL, None),   # pre-flop call
+                (ActionType.CALL, None),  # pre-flop call
                 (ActionType.CHECK, None),  # flop
                 (ActionType.CHECK, None),  # turn
                 (ActionType.CHECK, None),  # river
@@ -838,8 +846,7 @@ class TestCommunityCardStateChangedEvents(unittest.TestCase):
         game.start()
 
         river_events = [
-            e for e in events
-            if self._community_card_counts(e.payload) == (4, 5)
+            e for e in events if self._community_card_counts(e.payload) == (4, 5)
         ]
         self.assertTrue(
             len(river_events) > 0,

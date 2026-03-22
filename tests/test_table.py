@@ -73,10 +73,7 @@ class TestSeatPlayer(unittest.TestCase):
     def test_seat_multiple_players_auto_assign(self):
         """Test seating multiple players with auto seat assignment."""
         table = Table(n_seats=6)
-        players = [
-            SimpleTestPlayer(name=f"Player{i}")
-            for i in range(3)
-        ]
+        players = [SimpleTestPlayer(name=f"Player{i}") for i in range(3)]
 
         for i, player in enumerate(players):
             seat_index = table.seat_player(player)
@@ -111,10 +108,7 @@ class TestSeatPlayer(unittest.TestCase):
     def test_seat_player_when_table_full_raises_error(self):
         """Test that seating a player when table is full raises an error."""
         table = Table(n_seats=3)
-        players = [
-            SimpleTestPlayer(name=f"Player{i}")
-            for i in range(3)
-        ]
+        players = [SimpleTestPlayer(name=f"Player{i}") for i in range(3)]
 
         for player in players:
             table.seat_player(player)
@@ -224,10 +218,7 @@ class TestMoveButton(unittest.TestCase):
     def test_move_button_when_none_places_at_first_occupied_seat(self):
         """Test that moving button when None places it at first occupied seat."""
         table = Table(n_seats=6)
-        players = [
-            SimpleTestPlayer(name=f"Player{i}")
-            for i in range(3)
-        ]
+        players = [SimpleTestPlayer(name=f"Player{i}") for i in range(3)]
 
         table.seat_player(players[0], seat_index=1)
         table.seat_player(players[1], seat_index=3)
@@ -241,10 +232,7 @@ class TestMoveButton(unittest.TestCase):
     def test_move_button_to_next_occupied_seat(self):
         """Test moving button to next occupied seat."""
         table = Table(n_seats=6)
-        players = [
-            SimpleTestPlayer(name=f"Player{i}")
-            for i in range(3)
-        ]
+        players = [SimpleTestPlayer(name=f"Player{i}") for i in range(3)]
 
         table.seat_player(players[0], seat_index=1)
         table.seat_player(players[1], seat_index=3)
@@ -259,10 +247,7 @@ class TestMoveButton(unittest.TestCase):
     def test_move_button_wraps_around(self):
         """Test that moving button wraps around to beginning."""
         table = Table(n_seats=6)
-        players = [
-            SimpleTestPlayer(name=f"Player{i}")
-            for i in range(3)
-        ]
+        players = [SimpleTestPlayer(name=f"Player{i}") for i in range(3)]
 
         table.seat_player(players[0], seat_index=1)
         table.seat_player(players[1], seat_index=3)
@@ -277,10 +262,7 @@ class TestMoveButton(unittest.TestCase):
     def test_move_button_skips_empty_seats(self):
         """Test that moving button skips empty seats."""
         table = Table(n_seats=9)
-        players = [
-            SimpleTestPlayer(name=f"Player{i}")
-            for i in range(3)
-        ]
+        players = [SimpleTestPlayer(name=f"Player{i}") for i in range(3)]
 
         table.seat_player(players[0], seat_index=0)
         table.seat_player(players[1], seat_index=5)
@@ -304,10 +286,7 @@ class TestNextOccupiedSeat(unittest.TestCase):
     def test_next_occupied_seat_basic(self):
         """Test finding next occupied seat."""
         table = Table(n_seats=6)
-        players = [
-            SimpleTestPlayer(name=f"Player{i}")
-            for i in range(3)
-        ]
+        players = [SimpleTestPlayer(name=f"Player{i}") for i in range(3)]
 
         table.seat_player(players[0], seat_index=1)
         table.seat_player(players[1], seat_index=3)
@@ -322,10 +301,7 @@ class TestNextOccupiedSeat(unittest.TestCase):
     def test_next_occupied_seat_wraps_around(self):
         """Test that next occupied seat wraps around."""
         table = Table(n_seats=6)
-        players = [
-            SimpleTestPlayer(name=f"Player{i}")
-            for i in range(3)
-        ]
+        players = [SimpleTestPlayer(name=f"Player{i}") for i in range(3)]
 
         table.seat_player(players[0], seat_index=1)
         table.seat_player(players[1], seat_index=3)
@@ -337,10 +313,7 @@ class TestNextOccupiedSeat(unittest.TestCase):
     def test_next_occupied_seat_skips_empty_seats(self):
         """Test that next occupied seat skips empty seats."""
         table = Table(n_seats=9)
-        players = [
-            SimpleTestPlayer(name=f"Player{i}")
-            for i in range(2)
-        ]
+        players = [SimpleTestPlayer(name=f"Player{i}") for i in range(2)]
 
         table.seat_player(players[0], seat_index=0)
         table.seat_player(players[1], seat_index=7)
@@ -393,10 +366,7 @@ class TestNextOccupiedSeat(unittest.TestCase):
     def test_next_occupied_seat_with_active_filter_all_folded(self):
         """Test next occupied seat when no active_uids supplied returns None."""
         table = Table(n_seats=6)
-        players = [
-            SimpleTestPlayer(name=f"Player{i}")
-            for i in range(3)
-        ]
+        players = [SimpleTestPlayer(name=f"Player{i}") for i in range(3)]
 
         table.seat_player(players[0], seat_index=1)
         table.seat_player(players[1], seat_index=3)
@@ -409,10 +379,7 @@ class TestNextOccupiedSeat(unittest.TestCase):
     def test_next_occupied_seat_with_active_filter_wraps(self):
         """Test next occupied seat with active_uids filter wraps around."""
         table = Table(n_seats=6)
-        players = [
-            SimpleTestPlayer(name=f"Player{i}")
-            for i in range(3)
-        ]
+        players = [SimpleTestPlayer(name=f"Player{i}") for i in range(3)]
 
         table.seat_player(players[0], seat_index=1)
         table.seat_player(players[1], seat_index=3)
@@ -463,10 +430,7 @@ class TestHasFreeSeat(unittest.TestCase):
     def test_has_free_seat_when_full(self):
         """Test has_free_seat returns False when table is full."""
         table = Table(n_seats=3)
-        players = [
-            SimpleTestPlayer(name=f"Player{i}")
-            for i in range(3)
-        ]
+        players = [SimpleTestPlayer(name=f"Player{i}") for i in range(3)]
 
         for player in players:
             table.seat_player(player)

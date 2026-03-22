@@ -56,7 +56,9 @@ class TestClsUid(unittest.TestCase):
                     f"{player_class.__name__} should have a cls_uid",
                 )
                 self.assertIsInstance(
-                    player_class.cls_uid, str, f"{player_class.__name__}.cls_uid should be a string"
+                    player_class.cls_uid,
+                    str,
+                    f"{player_class.__name__}.cls_uid should be a string",
                 )
                 self.assertEqual(
                     len(player_class.cls_uid),
@@ -88,7 +90,9 @@ class TestClsUid(unittest.TestCase):
         ]
 
         uids = [cls.cls_uid for cls in player_classes]
-        self.assertEqual(len(uids), len(set(uids)), "All cls_uid values should be unique")
+        self.assertEqual(
+            len(uids), len(set(uids)), "All cls_uid values should be unique"
+        )
 
     def test_get_by_uid_returns_correct_class(self) -> None:
         """Test that Player.get_by_uid returns the correct class."""

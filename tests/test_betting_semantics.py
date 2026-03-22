@@ -261,10 +261,12 @@ class TestNonReopeningAllIn(unittest.TestCase):
         game._register_player_action(p3, action)
 
         self.assertTrue(
-            game.get_player_snapshot(p1.uid).state.acted_this_street, "P1's acted flag should not be reset"
+            game.get_player_snapshot(p1.uid).state.acted_this_street,
+            "P1's acted flag should not be reset",
         )
         self.assertTrue(
-            game.get_player_snapshot(p2.uid).state.acted_this_street, "P2's acted flag should not be reset"
+            game.get_player_snapshot(p2.uid).state.acted_this_street,
+            "P2's acted flag should not be reset",
         )
         self.assertEqual(
             game.state.last_raise_size,
@@ -310,8 +312,14 @@ class TestNonReopeningAllIn(unittest.TestCase):
         action = PlayerAction(player_id=p3.id, action_type=ActionType.ALL_IN)
         game._register_player_action(p3, action)
 
-        self.assertFalse(game.get_player_snapshot(p1.uid).state.acted_this_street, "P1's acted flag should be reset")
-        self.assertFalse(game.get_player_snapshot(p2.uid).state.acted_this_street, "P2's acted flag should be reset")
+        self.assertFalse(
+            game.get_player_snapshot(p1.uid).state.acted_this_street,
+            "P1's acted flag should be reset",
+        )
+        self.assertFalse(
+            game.get_player_snapshot(p2.uid).state.acted_this_street,
+            "P2's acted flag should be reset",
+        )
         self.assertEqual(game.state.last_raise_size, 20)
         self.assertEqual(game.state.current_bet, 40)
 

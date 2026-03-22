@@ -65,6 +65,7 @@ class TestPlayerSnapshotIsolation(unittest.TestCase):
             if event.type == GameEventType.GAME_STATE_CHANGED:
                 # Deep-copy the before dict at capture time so we can compare later
                 import copy
+
                 captured_befores.append(copy.deepcopy(event.payload["before"]))
 
         game.subscribe(GameEventType.GAME_STATE_CHANGED, capture)

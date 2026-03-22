@@ -8,6 +8,7 @@ from maverick.playerstate import PlayerState
 from maverick.players import AggressiveBot, CallBot
 from maverick.players.archetypes import LoosePassiveBot, ManiacBot
 
+
 class TestAggressiveBotEdgeCases(unittest.TestCase):
     """Edge cases for AggressiveBot."""
 
@@ -38,6 +39,7 @@ class TestAggressiveBotEdgeCases(unittest.TestCase):
             min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.CALL)
+
 
 class TestCallBotEdgeCases(unittest.TestCase):
     """Edge cases for CallBot."""
@@ -70,15 +72,13 @@ class TestCallBotEdgeCases(unittest.TestCase):
         )
         self.assertEqual(action.action_type, ActionType.FOLD)
 
+
 class TestLoosePassiveBotPaths(unittest.TestCase):
     """Test LoosePassiveBot decision paths."""
 
     def test_loose_passive_with_check(self):
         """Test LoosePassiveBot checking."""
-        bot = LoosePassiveBot(
-            id="lp",
-            name="LP"
-        )
+        bot = LoosePassiveBot(id="lp", name="LP")
 
         game = Mock()
         game.state.pot = 20
@@ -96,15 +96,13 @@ class TestLoosePassiveBotPaths(unittest.TestCase):
         )
         self.assertIn(action.action_type, [ActionType.CHECK, ActionType.BET])
 
+
 class TestManiacBotPaths(unittest.TestCase):
     """Test ManiacBot decision paths."""
 
     def test_maniac_with_bet(self):
         """Test ManiacBot betting."""
-        bot = ManiacBot(
-            id="maniac",
-            name="Maniac"
-        )
+        bot = ManiacBot(id="maniac", name="Maniac")
 
         game = Mock()
         game.state.pot = 30
@@ -124,10 +122,7 @@ class TestManiacBotPaths(unittest.TestCase):
 
     def test_maniac_with_call(self):
         """Test ManiacBot calling."""
-        bot = ManiacBot(
-            id="maniac",
-            name="Maniac"
-        )
+        bot = ManiacBot(id="maniac", name="Maniac")
 
         game = Mock()
         game.state.pot = 30
@@ -143,6 +138,7 @@ class TestManiacBotPaths(unittest.TestCase):
             min_bet_amount=10,
         )
         self.assertIn(action.action_type, [ActionType.CALL, ActionType.FOLD])
+
 
 class TestDeckEdgeCases(unittest.TestCase):
     """Test Deck edge cases."""
@@ -161,6 +157,7 @@ class TestDeckEdgeCases(unittest.TestCase):
         missing = deck.missing_cards()
         self.assertEqual(len(missing), 10)
 
+
 class TestHoldingEstimateStrength(unittest.TestCase):
     """Test Holding.estimate_strength method."""
 
@@ -177,6 +174,7 @@ class TestHoldingEstimateStrength(unittest.TestCase):
         self.assertIsInstance(strength, float)
         self.assertGreaterEqual(strength, 0.0)
         self.assertLessEqual(strength, 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,7 +2,15 @@
 
 import unittest
 
-from maverick import Game, GameEvent, GameEventType, ActionType, Player, PlayerAction, PlayerState
+from maverick import (
+    Game,
+    GameEvent,
+    GameEventType,
+    ActionType,
+    Player,
+    PlayerAction,
+    PlayerState,
+)
 
 
 class MockPlayer(Player):
@@ -88,11 +96,13 @@ class TestGameUidAfterStart(unittest.TestCase):
         game.subscribe(GameEventType.GAME_STARTED, on_game_started)
 
         p1 = MockPlayer(
-            id="p1", name="P1",
+            id="p1",
+            name="P1",
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2", name="P2",
+            id="p2",
+            name="P2",
             actions=[(ActionType.FOLD, None)],
         )
         game.add_player(p1, state=PlayerState(stack=100))

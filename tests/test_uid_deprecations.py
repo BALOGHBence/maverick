@@ -52,7 +52,10 @@ class TestPlayerUidDeprecations(unittest.TestCase):
             "Expected DeprecationWarning when using id= parameter",
         )
         self.assertTrue(
-            any("Passing id= to Player.__init__ is deprecated" in str(w.message) for w in caught)
+            any(
+                "Passing id= to Player.__init__ is deprecated" in str(w.message)
+                for w in caught
+            )
         )
 
     def test_player_uid_takes_precedence_over_id(self):
@@ -62,9 +65,7 @@ class TestPlayerUidDeprecations(unittest.TestCase):
             player = FoldBot(uid="uid-wins", id="id-loses", name="Bot")
         self.assertEqual(player.uid, "uid-wins")
         # Should still warn about the deprecated id param
-        self.assertTrue(
-            any(issubclass(w.category, DeprecationWarning) for w in caught)
-        )
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
 
     def test_to_dict_uses_uid_key(self):
         """Player.to_dict() uses 'uid' as the key."""
@@ -94,7 +95,10 @@ class TestPlayerActionUidDeprecations(unittest.TestCase):
             "Expected DeprecationWarning when using player_id=",
         )
         self.assertTrue(
-            any("PlayerAction 'player_id' parameter is deprecated" in str(w.message) for w in caught)
+            any(
+                "PlayerAction 'player_id' parameter is deprecated" in str(w.message)
+                for w in caught
+            )
         )
 
     def test_player_id_deprecated_property(self):
@@ -109,7 +113,9 @@ class TestPlayerActionUidDeprecations(unittest.TestCase):
             "Expected DeprecationWarning when accessing player_id property",
         )
         self.assertTrue(
-            any("PlayerAction.player_id is deprecated" in str(w.message) for w in caught)
+            any(
+                "PlayerAction.player_id is deprecated" in str(w.message) for w in caught
+            )
         )
 
 
@@ -144,7 +150,10 @@ class TestGameEventUidDeprecations(unittest.TestCase):
             "Expected DeprecationWarning when using player_id=",
         )
         self.assertTrue(
-            any("GameEvent 'player_id' parameter is deprecated" in str(w.message) for w in caught)
+            any(
+                "GameEvent 'player_id' parameter is deprecated" in str(w.message)
+                for w in caught
+            )
         )
 
     def test_player_id_deprecated_property(self):
@@ -182,7 +191,10 @@ class TestGameEventUidDeprecations(unittest.TestCase):
             "Expected DeprecationWarning when using id= parameter",
         )
         self.assertTrue(
-            any("GameEvent 'id' parameter is deprecated" in str(w.message) for w in caught)
+            any(
+                "GameEvent 'id' parameter is deprecated" in str(w.message)
+                for w in caught
+            )
         )
 
     def test_id_deprecated_property(self):

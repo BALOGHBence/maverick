@@ -32,18 +32,42 @@ class TestGameFlowEdgeCases(unittest.TestCase):
         game.add_player(p3, state=PlayerState(stack=1000))
 
         snapshots = [
-            PlayerSnapshot(uid=p1.uid, name=p1.name, state=PlayerState(
-                seat=0, stack=0, state_type=PlayerStateType.ALL_IN,
-                current_bet=1000, total_contributed=1000, acted_this_street=True,
-            )),
-            PlayerSnapshot(uid=p2.uid, name=p2.name, state=PlayerState(
-                seat=1, stack=0, state_type=PlayerStateType.ALL_IN,
-                current_bet=1000, total_contributed=1000, acted_this_street=True,
-            )),
-            PlayerSnapshot(uid=p3.uid, name=p3.name, state=PlayerState(
-                seat=2, stack=0, state_type=PlayerStateType.ALL_IN,
-                current_bet=1000, total_contributed=1000, acted_this_street=True,
-            )),
+            PlayerSnapshot(
+                uid=p1.uid,
+                name=p1.name,
+                state=PlayerState(
+                    seat=0,
+                    stack=0,
+                    state_type=PlayerStateType.ALL_IN,
+                    current_bet=1000,
+                    total_contributed=1000,
+                    acted_this_street=True,
+                ),
+            ),
+            PlayerSnapshot(
+                uid=p2.uid,
+                name=p2.name,
+                state=PlayerState(
+                    seat=1,
+                    stack=0,
+                    state_type=PlayerStateType.ALL_IN,
+                    current_bet=1000,
+                    total_contributed=1000,
+                    acted_this_street=True,
+                ),
+            ),
+            PlayerSnapshot(
+                uid=p3.uid,
+                name=p3.name,
+                state=PlayerState(
+                    seat=2,
+                    stack=0,
+                    state_type=PlayerStateType.ALL_IN,
+                    current_bet=1000,
+                    total_contributed=1000,
+                    acted_this_street=True,
+                ),
+            ),
         ]
 
         game._deck = Deck.standard_deck()
@@ -88,18 +112,42 @@ class TestGameFlowEdgeCases(unittest.TestCase):
         game.add_player(p3, state=PlayerState(stack=1000))
 
         snapshots = [
-            PlayerSnapshot(uid=p1.uid, name=p1.name, state=PlayerState(
-                seat=0, stack=0, state_type=PlayerStateType.ALL_IN,
-                current_bet=1000, total_contributed=1000, acted_this_street=True,
-            )),
-            PlayerSnapshot(uid=p2.uid, name=p2.name, state=PlayerState(
-                seat=1, stack=3000, state_type=PlayerStateType.ALL_IN,
-                current_bet=1000, total_contributed=1000, acted_this_street=True,
-            )),
-            PlayerSnapshot(uid=p3.uid, name=p3.name, state=PlayerState(
-                seat=2, stack=0, state_type=PlayerStateType.ALL_IN,
-                current_bet=1000, total_contributed=1000, acted_this_street=True,
-            )),
+            PlayerSnapshot(
+                uid=p1.uid,
+                name=p1.name,
+                state=PlayerState(
+                    seat=0,
+                    stack=0,
+                    state_type=PlayerStateType.ALL_IN,
+                    current_bet=1000,
+                    total_contributed=1000,
+                    acted_this_street=True,
+                ),
+            ),
+            PlayerSnapshot(
+                uid=p2.uid,
+                name=p2.name,
+                state=PlayerState(
+                    seat=1,
+                    stack=3000,
+                    state_type=PlayerStateType.ALL_IN,
+                    current_bet=1000,
+                    total_contributed=1000,
+                    acted_this_street=True,
+                ),
+            ),
+            PlayerSnapshot(
+                uid=p3.uid,
+                name=p3.name,
+                state=PlayerState(
+                    seat=2,
+                    stack=0,
+                    state_type=PlayerStateType.ALL_IN,
+                    current_bet=1000,
+                    total_contributed=1000,
+                    acted_this_street=True,
+                ),
+            ),
         ]
 
         game._deck = Deck.standard_deck()
@@ -147,18 +195,42 @@ class TestGameFlowEdgeCases(unittest.TestCase):
 
         # p2 wins everything; p1 and p3 are eliminated
         snapshots = [
-            PlayerSnapshot(uid=p1.uid, name=p1.name, state=PlayerState(
-                seat=0, stack=0, state_type=PlayerStateType.ALL_IN,
-                current_bet=1000, total_contributed=1000, acted_this_street=True,
-            )),
-            PlayerSnapshot(uid=p2.uid, name=p2.name, state=PlayerState(
-                seat=1, stack=3000, state_type=PlayerStateType.ALL_IN,
-                current_bet=1000, total_contributed=1000, acted_this_street=True,
-            )),
-            PlayerSnapshot(uid=p3.uid, name=p3.name, state=PlayerState(
-                seat=2, stack=0, state_type=PlayerStateType.ALL_IN,
-                current_bet=1000, total_contributed=1000, acted_this_street=True,
-            )),
+            PlayerSnapshot(
+                uid=p1.uid,
+                name=p1.name,
+                state=PlayerState(
+                    seat=0,
+                    stack=0,
+                    state_type=PlayerStateType.ALL_IN,
+                    current_bet=1000,
+                    total_contributed=1000,
+                    acted_this_street=True,
+                ),
+            ),
+            PlayerSnapshot(
+                uid=p2.uid,
+                name=p2.name,
+                state=PlayerState(
+                    seat=1,
+                    stack=3000,
+                    state_type=PlayerStateType.ALL_IN,
+                    current_bet=1000,
+                    total_contributed=1000,
+                    acted_this_street=True,
+                ),
+            ),
+            PlayerSnapshot(
+                uid=p3.uid,
+                name=p3.name,
+                state=PlayerState(
+                    seat=2,
+                    stack=0,
+                    state_type=PlayerStateType.ALL_IN,
+                    current_bet=1000,
+                    total_contributed=1000,
+                    acted_this_street=True,
+                ),
+            ),
         ]
 
         game._deck = Deck.standard_deck()
@@ -186,9 +258,13 @@ class TestGameFlowEdgeCases(unittest.TestCase):
         self.assertEqual(len(game.state.players), 3)
 
         player_states = {s.uid: s for s in game.state.players}
-        self.assertEqual(player_states[p1.uid].state.state_type, PlayerStateType.ELIMINATED)
+        self.assertEqual(
+            player_states[p1.uid].state.state_type, PlayerStateType.ELIMINATED
+        )
         self.assertEqual(player_states[p2.uid].state.stack, 3000)
-        self.assertEqual(player_states[p3.uid].state.state_type, PlayerStateType.ELIMINATED)
+        self.assertEqual(
+            player_states[p3.uid].state.state_type, PlayerStateType.ELIMINATED
+        )
 
         # Non-eliminated players (p2 only) are visible via get_non_eliminated_players
         non_elim = game.state.get_non_eliminated_players()
