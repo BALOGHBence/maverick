@@ -20,7 +20,7 @@ class Table:
     Seats are tracked by player UID (str). Navigation methods accept an
     optional ``active_uids`` set to restrict movement to active players.
 
-    .. versionchanged:: 0.8.0
+    .. versionchanged:: 0.7.0
         ``_seats`` now stores player UIDs (``str``) instead of live player
         objects. ``seat_player`` / ``remove_player`` no longer mutate
         ``player.state``; that responsibility belongs to ``Game``.
@@ -77,7 +77,7 @@ class Table:
     def seat_player(self, player: PlayerLike, seat_index: Optional[int] = None) -> int:
         """Seat a player at the specified seat index and return the seat index.
 
-        .. versionchanged:: 0.8.0
+        .. versionchanged:: 0.7.0
             No longer mutates ``player.state``; seat information is managed
             exclusively through ``PlayerSnapshot`` in ``GameState``.
         """
@@ -101,7 +101,7 @@ class Table:
     def remove_player(self, player: PlayerLike) -> None:
         """Remove a player from the table.
 
-        .. versionchanged:: 0.8.0
+        .. versionchanged:: 0.7.0
             No longer mutates ``player.state``; seat information is managed
             exclusively through ``PlayerSnapshot`` in ``GameState``.
         """
@@ -158,7 +158,7 @@ class Table:
             set are considered. Pass the UIDs of all currently active players
             to restrict movement to active seats.
 
-        .. versionchanged:: 0.8.0
+        .. versionchanged:: 0.7.0
             Replaced the ``active: bool`` parameter with ``active_uids: set``
             so that callers supply the active-player information explicitly
             (Table no longer holds live player-state references).

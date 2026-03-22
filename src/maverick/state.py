@@ -46,7 +46,7 @@ class GameState(BaseModel):
         ``GameState`` was created. Live strategy objects are held separately
         in ``Game._strategies``.
 
-        .. versionchanged:: 0.8.0
+        .. versionchanged:: 0.7.0
             Type changed from ``list[PlayerLike]`` to ``list[PlayerSnapshot]``.
     current_player_index : Optional[int]
         The index of the player whose turn it is to act.

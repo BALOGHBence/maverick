@@ -63,7 +63,7 @@ class PlayerSnapshot(BaseModel):
     state : PlayerState
         Frozen player state (seat, stack, holding, bets, etc.).
 
-    .. versionadded:: 0.8.0
+    .. versionadded:: 0.7.0
     """
 
     model_config = {"frozen": True}

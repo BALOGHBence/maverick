@@ -830,8 +830,8 @@ class Game:
             The frozen snapshot, or ``None`` if no player with that UID is
             currently in the game.
 
-        .. versionadded:: 0.8.0
-        .. versionchanged:: 0.9.0
+        .. versionadded:: 0.7.0
+        .. versionchanged:: 0.7.0
             Now accepts a ``PlayerLike`` object in addition to a plain UID string.
         """
         uid = player if isinstance(player, str) else player.uid
