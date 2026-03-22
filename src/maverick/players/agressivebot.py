@@ -25,10 +25,11 @@ class AggressiveBot(Player):
         **_,
     ) -> PlayerAction:
         """Bet or raise aggressively."""
+        snapshot = game.get_player_snapshot(self.uid)
         # Try to raise if possible
         if ActionType.RAISE in valid_actions:
             # Use minimum raise increment
-            if min_raise_amount <= self.state.stack:
+            if min_raise_amount <= snapshot.state.stack:
                 return PlayerAction(
                     player_uid=self.uid,
                     action_type=ActionType.RAISE,
@@ -38,7 +39,7 @@ class AggressiveBot(Player):
         # Otherwise bet if possible
         if ActionType.BET in valid_actions:
             bet_amount = max(min_bet_amount, game.state.big_blind * 2)
-            if bet_amount <= self.state.stack:
+            if bet_amount <= snapshot.state.stack:
                 return PlayerAction(
                     player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
                 )

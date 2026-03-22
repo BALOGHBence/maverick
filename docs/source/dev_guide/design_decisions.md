@@ -40,9 +40,9 @@ The following steps are planned, each as a separate PR:
 | Step | Change | Breaking? |
 | --- | --- | --- |
 | 1 | Freeze `PlayerState` + introduce `_update_player_state` helper | No |
-| 2 | Introduce `PlayerSnapshot`; decouple strategy objects from `GameState` | **Yes** |
+| 2 | ✅ Introduce `PlayerSnapshot`; decouple strategy objects from `GameState` | **Yes** |
 | 3 | Replace `community_cards` in-place mutations with `_update_state` calls | No |
-| 4 | Move `Deck` out of `GameState` into `Game._deck` | No |
+| 4 | ✅ Move `Deck` out of `GameState` into `Game._deck` | **Yes** |
 
 See [SPEC.md](../../../../SPEC.md) at the repository root for the full specification.
 
@@ -50,7 +50,7 @@ See [SPEC.md](../../../../SPEC.md) at the repository root for the full specifica
 
 ## Deck is not part of GameState
 
-*(Planned — see roadmap Step 4 above)*
+*(Implemented — see roadmap Step 4 above)*
 
 ### Decision
 
@@ -80,38 +80,86 @@ deck is never part of a snapshot that needs to be independently preserved.
 
 ## PlayerSnapshot — Decoupling strategy from observable state
 
-*(Planned — see roadmap Step 2 above)*
+*(Implemented — see roadmap Step 2 above)*
 
 ### Decision
 
-`GameState.players` will change from `list[PlayerLike]` to `list[PlayerSnapshot]`, where
-`PlayerSnapshot` is a frozen Pydantic model containing only observable data (`uid`,
-`name`, `state: PlayerState`). Strategy objects (`decide_action`, `on_event`) will be
-held separately in `Game._strategies: dict[str, PlayerLike]`.
+`GameState.players` now holds `list[PlayerSnapshot]`, where `PlayerSnapshot` is a frozen
+Pydantic model containing only observable data (`uid`, `name`, `state: PlayerState`).
+Strategy objects (`decide_action`, `on_event`) are held separately in
+`Game._strategies: dict[str, PlayerLike]`.
+
+`Table._seats` was changed from `list[Optional[PlayerLike]]` to `list[Optional[str]]`
+(player UIDs). `Table.next_occupied_seat` now accepts an explicit `active_uids: set[str]`
+parameter instead of reading `player.state.state_type` directly, so Table has no
+dependency on live state at all.
+
+`Game._update_player_state` now creates fresh `PlayerSnapshot` instances via `model_copy`;
+it never mutates any live strategy object. As a result consecutive `GameState` instances
+produced by `_update_state` share no mutable player references.
+
+Custom player strategies access their own current state via
+`game.get_player_snapshot(self.uid)` rather than `self.state`, because the engine no
+longer writes back to strategy objects.
 
 ### Rationale
 
 - **True snapshot isolation** — With live player objects in `GameState.players`, mutating
-  `player.state` retroactively changes every prior `GameState` instance that referenced
+  `player.state` retroactively changed every prior `GameState` instance that referenced
   the same player object. `PlayerSnapshot` breaks this coupling: each `GameState` holds
   independent frozen copies.
 - **Separation of concerns** — Strategy logic (how a player decides) is distinct from
   observable data (what a player's current stack is). Mixing them in a single object
   makes both harder to evolve independently.
-- **`Table` simplification** — Once player identity is UIDs, `Table` can navigate by UID
-  instead of object reference, eliminating synchronisation bugs between `Table` and
-  `GameState`.
+- **`Table` simplification** — Table now navigates by UID instead of object reference,
+  eliminating synchronisation bugs between `Table` and `GameState`.
 
 ### Trade-offs
 
-This is a **breaking change** to the public API. `GameState.players` will no longer
-return objects with `decide_action`. Code that iterates `game.state.players` to read
-state is unaffected; code that calls strategy methods must go through
-`Game._strategies`.
+This is a **breaking change** to the public API:
+- `GameState.players` no longer returns objects with `decide_action`. Code that reads
+  state (`p.state.stack`, `p.uid`, etc.) is unaffected; code that calls strategy methods
+  must go through `Game._strategies`.
+- `Table[seat]` now returns a UID string, not a `PlayerLike`.
+- `Table.next_occupied_seat(active=True)` is replaced by
+  `Table.next_occupied_seat(active_uids={...})`.
+- Custom players that relied on `self.state` inside `decide_action` must instead use
+  `game.get_player_snapshot(self.uid)`.
 
 ---
 
-## GAME_STATE_CHANGED event and lazy serialization
+## Retaining Eliminated Players in GameState
+
+### Decision
+
+When a player's stack reaches zero at `HAND_ENDED`, their table seat and strategy object
+are freed (so they no longer participate in future betting rounds), but their
+`PlayerSnapshot` is kept in `game.state.players` with `state_type=ELIMINATED` for the
+remainder of the game.
+
+### Rationale
+
+- **Post-game analysis** — Removing players from `game.state.players` on elimination made
+  the final game state incomplete: the last known stack, holding, and outcome of busted
+  players were discarded. Retaining them allows full replay, statistics, and debugging
+  without any additional bookkeeping by callers.
+- **Minimal API surface change** — Code that already uses `get_active_players()` or
+  `get_players_in_hand()` is unaffected. Only callers that relied on eliminated players
+  *disappearing* from `game.state.players` need to switch to the filtered helpers.
+- **Separation of seat management from player history** — Freeing the table seat is an
+  engine-internal concern (it controls the dealing order for subsequent hands). Whether the
+  player's historical snapshot is retained is an observable-state concern. Splitting these
+  two actions makes each responsibility explicit.
+
+### Trade-offs
+
+- `game.state.players` now grows monotonically during a game (eliminated players accumulate).
+  Code that counts players for game-logic purposes (e.g. "enough to start a hand") must use
+  `get_active_players()` or filter by `state_type != ELIMINATED`.
+- `PLAYER_LEFT` is no longer emitted on elimination; eliminations are exclusively signalled
+  by `PLAYER_ELIMINATED`.
+
+---
 
 ### Decision
 

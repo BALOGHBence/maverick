@@ -32,6 +32,8 @@
 
 </div>
 
+> **Alpha software:** Maverick is currently in early development (pre-1.0). The API may change between releases without notice. If you need a stable, production-ready library, wait for v1.0 and above.
+
 Poker is a great sandbox for decision-making systems: hidden information, imperfect opponents, probabilistic outcomes, and lots of room for experimentation.
 
 **Maverick** is a Python library for simulating poker games with custom player strategies. It gives you a complete poker game loop (dealing, betting rounds, showdown, pot distribution) plus a clean player interface so you can swap strategies in and out.
@@ -74,19 +76,23 @@ game = Game(small_blind=10, big_blind=20, max_hands=10)
 
 # Create players
 players: list[PlayerLike] = [
-    CallBot(name="CallBot", state=PlayerState(stack=1000)),
-    AggressiveBot(name="AggroBot", state=PlayerState(stack=1000)),
-    FoldBot(name="FoldBot", state=PlayerState(stack=1000)),
+    CallBot(name="CallBot"),
+    AggressiveBot(name="AggroBot"),
+    FoldBot(name="FoldBot"),
 ]
 
 for player in players:
-    game.add_player(player)
+    game.add_player(player, state=PlayerState(stack=1000))
 
 game.start()
 
-# Inspect results
-for player in players:
-    print(f"{player.name} - Stack: {player.state.stack}")
+# Inspect results — all players (including eliminated) are retained
+for snapshot in game.state.players:
+    print(f"{snapshot.name} - Stack: {snapshot.state.stack} ({snapshot.state.state_type})")
+
+# Active players only (excludes eliminated)
+for snapshot in game.state.get_active_players():
+    print(f"{snapshot.name} is still in the game with {snapshot.state.stack} chips")
 ```
 
 (See the documentation for more examples and APIs.)

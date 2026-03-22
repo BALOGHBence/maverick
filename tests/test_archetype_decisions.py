@@ -24,19 +24,14 @@ from maverick.players import (
     WhaleBot,
 )
 
-
 def _make_bot(cls, stack=500):
-    bot = cls(uid="test", name="Test", state=PlayerState(stack=stack, seat=0))
-    bot.state.holding = Holding(
-        cards=[
-            Card(suit=Suit.HEARTS, rank=Rank.ACE),
-            Card(suit=Suit.SPADES, rank=Rank.KING),
-        ]
+    bot = cls(
+        uid="test",
+        name="Test"
     )
     return bot
 
-
-def _make_game(pot=100, big_blind=10, community_cards=None, current_bet=20, n_players=3):
+def _make_game(pot=100, big_blind=10, community_cards=None, current_bet=20, n_players=3, stack=500):
     game = Mock()
     game.state.pot = pot
     game.state.big_blind = big_blind
@@ -44,8 +39,12 @@ def _make_game(pot=100, big_blind=10, community_cards=None, current_bet=20, n_pl
     game.state.community_cards = community_cards if community_cards is not None else []
     game.state.get_players_in_hand.return_value = [Mock() for _ in range(n_players)]
     game.rules.showdown.hole_cards_required = 0
+    snapshot = Mock()
+    snapshot.uid = "test"
+    snapshot.state.stack = stack
+    snapshot.state.current_bet = current_bet
+    game.get_player_snapshot.return_value = snapshot
     return game
-
 
 # ---------------------------------------------------------------------------
 # ABCBot
@@ -151,7 +150,6 @@ class TestABCBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 500)
 
-
 # ---------------------------------------------------------------------------
 # TightAggressiveBot
 # ---------------------------------------------------------------------------
@@ -239,7 +237,6 @@ class TestTightAggressiveBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 800)
 
-
 # ---------------------------------------------------------------------------
 # LooseAggressiveBot
 # ---------------------------------------------------------------------------
@@ -326,7 +323,6 @@ class TestLooseAggressiveBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 500)
 
-
 # ---------------------------------------------------------------------------
 # TightPassiveBot
 # ---------------------------------------------------------------------------
@@ -397,7 +393,6 @@ class TestTightPassiveBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 400)
 
-
 # ---------------------------------------------------------------------------
 # LoosePassiveBot
 # ---------------------------------------------------------------------------
@@ -436,7 +431,7 @@ class TestLoosePassiveBotDecisions(unittest.TestCase):
 
     def test_bets_amount_capped_at_stack(self):
         bot = _make_bot(LoosePassiveBot, stack=5)
-        game = _make_game()
+        game = _make_game(stack=5)
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.BET],
@@ -454,7 +449,6 @@ class TestLoosePassiveBotDecisions(unittest.TestCase):
             min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.FOLD)
-
 
 # ---------------------------------------------------------------------------
 # ManiacBot
@@ -487,7 +481,7 @@ class TestManiacBotDecisions(unittest.TestCase):
     def test_goes_all_in_when_stack_small_relative_to_pot(self):
         # stack <= pot * 2: 50 <= 100 * 2 = 200 ✓
         bot = _make_bot(ManiacBot, stack=50)
-        game = _make_game(pot=100)
+        game = _make_game(pot=100, stack=50)
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.ALL_IN, ActionType.CALL],
@@ -499,7 +493,7 @@ class TestManiacBotDecisions(unittest.TestCase):
     def test_does_not_go_all_in_when_stack_too_large(self):
         # stack > pot * 2: 1000 > 100 * 2 = 200
         bot = _make_bot(ManiacBot, stack=1000)
-        game = _make_game(pot=100)
+        game = _make_game(pot=100, stack=1000)
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.ALL_IN, ActionType.CALL],
@@ -540,7 +534,6 @@ class TestManiacBotDecisions(unittest.TestCase):
             min_bet_amount=10,
         )
         self.assertEqual(action.action_type, ActionType.FOLD)
-
 
 # ---------------------------------------------------------------------------
 # BullyBot
@@ -658,7 +651,6 @@ class TestBullyBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 400)
 
-
 # ---------------------------------------------------------------------------
 # GrinderBot
 # ---------------------------------------------------------------------------
@@ -760,7 +752,6 @@ class TestGrinderBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 600)
 
-
 # ---------------------------------------------------------------------------
 # GTOBot
 # ---------------------------------------------------------------------------
@@ -784,7 +775,7 @@ class TestGTOBotDecisions(unittest.TestCase):
     def test_raises_with_strong_hand_when_no_bet(self, _mock):
         bot = _make_bot(GTOBot)
         game = _make_game(pot=100, current_bet=20)
-        bot.state.current_bet = 0
+        game.get_player_snapshot.return_value.state.current_bet = 0
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.RAISE, ActionType.CALL],
@@ -863,7 +854,6 @@ class TestGTOBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 1000)
 
-
 # ---------------------------------------------------------------------------
 # SharkBot
 # ---------------------------------------------------------------------------
@@ -874,7 +864,7 @@ class TestSharkBotDecisions(unittest.TestCase):
     def test_raises_with_strong_hand(self, _mock):
         bot = _make_bot(SharkBot)
         game = _make_game(pot=100, current_bet=20)
-        bot.state.current_bet = 0
+        game.get_player_snapshot.return_value.state.current_bet = 0
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.RAISE, ActionType.CALL],
@@ -995,7 +985,6 @@ class TestSharkBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 800)
 
-
 # ---------------------------------------------------------------------------
 # FishBot
 # ---------------------------------------------------------------------------
@@ -1097,7 +1086,6 @@ class TestFishBotDecisions(unittest.TestCase):
         )
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 100)
-
 
 # ---------------------------------------------------------------------------
 # HeroCallerBot
@@ -1214,7 +1202,6 @@ class TestHeroCallerBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 300)
 
-
 # ---------------------------------------------------------------------------
 # ScaredMoneyBot
 # ---------------------------------------------------------------------------
@@ -1310,7 +1297,6 @@ class TestScaredMoneyBotDecisions(unittest.TestCase):
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 300)
 
-
 # ---------------------------------------------------------------------------
 # WhaleBot
 # ---------------------------------------------------------------------------
@@ -1365,7 +1351,7 @@ class TestWhaleBotDecisions(unittest.TestCase):
 
     def test_goes_all_in_when_available(self):
         bot = _make_bot(WhaleBot, stack=50)
-        game = _make_game()
+        game = _make_game(stack=50)
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.ALL_IN],
@@ -1396,7 +1382,6 @@ class TestWhaleBotDecisions(unittest.TestCase):
         )
         self.assertEqual(action.action_type, ActionType.FOLD)
 
-
 # ---------------------------------------------------------------------------
 # TiltedBot
 # ---------------------------------------------------------------------------
@@ -1407,7 +1392,7 @@ class TestTiltedBotDecisions(unittest.TestCase):
     def test_goes_all_in_when_tilted_and_stack_small(self, _mock):
         # stack < pot * 2: 50 < 100 * 2 = 200, tilted_mindset = True (0.30 > 0.20)
         bot = _make_bot(TiltedBot, stack=50)
-        game = _make_game(pot=100)
+        game = _make_game(pot=100, stack=50)
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.ALL_IN, ActionType.CALL],
@@ -1420,7 +1405,7 @@ class TestTiltedBotDecisions(unittest.TestCase):
     def test_does_not_go_all_in_when_equity_too_low(self, _mock):
         # tilted_mindset = False (0.10 <= 0.20)
         bot = _make_bot(TiltedBot, stack=50)
-        game = _make_game(pot=100)
+        game = _make_game(pot=100, stack=50)
         action = bot.decide_action(
             game=game,
             valid_actions=[ActionType.ALL_IN, ActionType.RAISE],
@@ -1502,7 +1487,6 @@ class TestTiltedBotDecisions(unittest.TestCase):
         )
         call_kwargs = _mock.call_args
         self.assertEqual(call_kwargs.kwargs.get("n_simulations"), 100)
-
 
 if __name__ == "__main__":
     unittest.main()

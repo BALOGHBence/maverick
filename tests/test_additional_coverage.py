@@ -102,10 +102,12 @@ class TestGameIntegration(unittest.TestCase):
         """Test game with WhaleBot."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            WhaleBot(id="whale", name="Whale", state=PlayerState(stack=1000, seat=0))
+            WhaleBot(id="whale", name="Whale"),
+            state=PlayerState(stack=1000, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold", name="Fold", state=PlayerState(stack=1000, seat=1))
+            FoldBot(id="fold", name="Fold"),
+            state=PlayerState(stack=1000, seat=1),
         )
         self.assertIsNotNone(game)
 
@@ -113,15 +115,16 @@ class TestGameIntegration(unittest.TestCase):
         """Test game with multiple archetype bots."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            TightAggressiveBot(
-                id="tag", name="TAG", state=PlayerState(stack=1000, seat=0)
-            )
+            TightAggressiveBot(id="tag", name="TAG"),
+            state=PlayerState(stack=1000, seat=0),
         )
         game.add_player(
-            LoosePassiveBot(id="lp", name="LP", state=PlayerState(stack=1000, seat=1))
+            LoosePassiveBot(id="lp", name="LP"),
+            state=PlayerState(stack=1000, seat=1),
         )
         game.add_player(
-            ManiacBot(id="maniac", name="Maniac", state=PlayerState(stack=1000, seat=2))
+            ManiacBot(id="maniac", name="Maniac"),
+            state=PlayerState(stack=1000, seat=2),
         )
         self.assertIsNotNone(game)
 
@@ -129,10 +132,12 @@ class TestGameIntegration(unittest.TestCase):
         """Test game with CallBot."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            CallBot(id="call", name="Call", state=PlayerState(stack=1000, seat=0))
+            CallBot(id="call", name="Call"),
+            state=PlayerState(stack=1000, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold", name="Fold", state=PlayerState(stack=1000, seat=1))
+            FoldBot(id="fold", name="Fold"),
+            state=PlayerState(stack=1000, seat=1),
         )
         self.assertIsNotNone(game)
 
@@ -140,10 +145,12 @@ class TestGameIntegration(unittest.TestCase):
         """Test game with AggressiveBot."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            AggressiveBot(id="agg", name="Agg", state=PlayerState(stack=1000, seat=0))
+            AggressiveBot(id="agg", name="Agg"),
+            state=PlayerState(stack=1000, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold", name="Fold", state=PlayerState(stack=1000, seat=1))
+            FoldBot(id="fold", name="Fold"),
+            state=PlayerState(stack=1000, seat=1),
         )
         self.assertIsNotNone(game)
 
@@ -153,7 +160,7 @@ class TestProtocolMethods(unittest.TestCase):
 
     def test_player_has_decide_action(self):
         """Test that players have decide_action method."""
-        bot = WhaleBot(id="test", name="Test", state=PlayerState(stack=100, seat=0))
+        bot = WhaleBot(id="test", name="Test")
         self.assertTrue(hasattr(bot, "decide_action"))
         self.assertTrue(callable(bot.decide_action))
 
@@ -238,14 +245,13 @@ class TestWhaleExtended(unittest.TestCase):
 
     def test_whale_bet_with_small_pot(self):
         """Test WhaleBot betting with small pot."""
-        whale = WhaleBot(
-            id="whale", name="Whale", state=PlayerState(stack=1000, seat=0)
-        )
+        whale = WhaleBot(id="whale", name="Whale")
         from unittest.mock import Mock
 
         game = Mock()
         game.state.pot = 5
         game.state.big_blind = 10
+        game.get_player_snapshot.return_value.state.stack = 1000
 
         action = whale.decide_action(
             game=game,

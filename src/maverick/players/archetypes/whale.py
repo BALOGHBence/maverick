@@ -36,6 +36,7 @@ class WhaleBot(Player):
         **_,
     ) -> PlayerAction:
         """Play extremely loose and gamble with large sums, using hand strength minimally."""
+        snapshot = game.get_player_snapshot(self.uid)
         # NOTE: WhaleBot doesn't rely on hand strength estimation. In fact it doesn't
         # even look at the cards at all. It loves action more than equity and plays everything.
 
@@ -43,7 +44,7 @@ class WhaleBot(Player):
         if ActionType.RAISE in valid_actions:
             # Huge raises
             raise_amount = min(
-                max(min_raise_amount * 3, game.state.pot), self.state.stack
+                max(min_raise_amount * 3, game.state.pot), snapshot.state.stack
             )
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_amount
@@ -52,9 +53,9 @@ class WhaleBot(Player):
         # Big bets
         if ActionType.BET in valid_actions:
             # Whale bets big
-            bet_amount = min(game.state.pot, self.state.stack)
+            bet_amount = min(game.state.pot, snapshot.state.stack)
             if bet_amount < min_bet_amount * 3:
-                bet_amount = min(min_bet_amount * 5, self.state.stack)
+                bet_amount = min(min_bet_amount * 5, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
@@ -68,7 +69,7 @@ class WhaleBot(Player):
             return PlayerAction(
                 player_uid=self.uid,
                 action_type=ActionType.ALL_IN,
-                amount=self.state.stack,
+                amount=snapshot.state.stack,
             )
 
         # Check if must

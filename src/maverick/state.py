@@ -1,19 +1,17 @@
 import time
-from typing import Optional, Any
+from typing import Optional
 import uuid
 import warnings
 
-from pydantic import BaseModel, Field, field_serializer, field_validator
+from pydantic import BaseModel, Field
 
 from .card import Card
-from .deck import Deck
 from .enums import (
     GameStage,
     PlayerStateType,
     Street,
 )
-from .protocol import PlayerLike
-from ._registered_players import registered_players
+from .playerstate import PlayerSnapshot
 
 __all__ = ["GameState"]
 
@@ -42,13 +40,17 @@ class GameState(BaseModel):
         .. versionadded:: 0.2.0
     street : Optional[Street]
         The current betting round (e.g., PRE_FLOP, FLOP, TURN, RIVER).
-    players : list[PlayerLike]
-        The list of players in the game.
+    players : list[PlayerSnapshot]
+        The list of player snapshots in the game. Each snapshot is an immutable
+        record of observable player data (uid, name, state) at the time the
+        ``GameState`` was created. Live strategy objects are held separately
+        in ``Game._strategies``.
+
+        .. versionchanged:: 0.7.0
+            Type changed from ``list[PlayerLike]`` to ``list[PlayerSnapshot]``.
     current_player_index : Optional[int]
         The index of the player whose turn it is to act.
-    deck : Optional[Deck]
-        The deck of cards used in the game.
-    community_cards : list[Card]
+    community_cards : tuple[Card, ...]
         The community cards on the table.
     pot : int
         The total amount of chips in the pot.
@@ -83,12 +85,11 @@ class GameState(BaseModel):
 
     stage: GameStage = GameStage.WAITING_FOR_PLAYERS
     street: Optional[Street] = None
-    players: list[PlayerLike] = Field(default_factory=list)
+    players: list[PlayerSnapshot] = Field(default_factory=list)
     current_player_index: Optional[int] = None
 
     # Cards
-    deck: Optional[Deck] = None
-    community_cards: list[Card] = Field(default_factory=list)
+    community_cards: tuple[Card, ...] = Field(default_factory=tuple)
 
     # Betting
     pot: int = 0
@@ -125,54 +126,33 @@ class GameState(BaseModel):
         )
         return self.stage
 
-    @field_serializer("players")
-    def _ser_players(self, players: list[PlayerLike]) -> list[dict]:
-        result = []
-        for p in players:
-            d = p.to_dict()
-            d["__class__.__name__"] = p.__class__.__name__
-            result.append(d)
-        return result
-
-    @field_validator("players", mode="before")
-    @classmethod
-    def _parse_players(cls, players: list[Any]) -> list[PlayerLike]:
-        result = []
-        for p in players:
-            if isinstance(p, PlayerLike):
-                # accept already-built objects
-                result.append(p)
-            else:
-                # re-instantiate from dict
-                if not "__class__.__name__" in p:
-                    raise KeyError(
-                        "Serialized player data missing '__class__.__name__' key"
-                    )
-
-                cls = registered_players[p["__class__.__name__"]]
-                if not cls:
-                    raise ValueError(
-                        f"Unrecognized player class '{p['__class__.__name__']}'"
-                    )
-
-                result.append(cls(**p))
-
-        return result
-
-    def get_active_players(self) -> list[PlayerLike]:
-        """Return list of players who haven't folded and have chips."""
+    def get_active_players(self) -> list[PlayerSnapshot]:
+        """Return list of player snapshots who haven't folded and have chips."""
         return [
             p
             for p in self.players
             if p.state.state_type == PlayerStateType.ACTIVE and p.state.stack > 0
         ]
 
-    def get_players_in_hand(self) -> list[PlayerLike]:
-        """Return list of players still in the hand (not folded)."""
+    def get_players_in_hand(self) -> list[PlayerSnapshot]:
+        """Return list of player snapshots still in the hand (not folded)."""
         return [
             p
             for p in self.players
             if p.state.state_type in [PlayerStateType.ACTIVE, PlayerStateType.ALL_IN]
+        ]
+
+    def get_non_eliminated_players(self) -> list[PlayerSnapshot]:
+        """Return list of player snapshots who have not been eliminated.
+
+        This includes players with ``ACTIVE``, ``FOLDED``, or ``ALL_IN`` state.
+        Eliminated players (``state_type=ELIMINATED``) are excluded.
+        Useful for determining how many players remain eligible to play the next hand.
+        """
+        return [
+            p
+            for p in self.players
+            if p.state.state_type != PlayerStateType.ELIMINATED
         ]
 
     @property

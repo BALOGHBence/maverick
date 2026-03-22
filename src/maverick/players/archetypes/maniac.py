@@ -35,6 +35,7 @@ class ManiacBot(Player):
         **_,
     ) -> PlayerAction:
         """Bet or raise aggressively at every opportunity, largely ignoring hand strength."""
+        snapshot = game.get_player_snapshot(self.uid)
         # NOTE: ManiacBot doesn't rely on hand strength estimation. In fact it doesn't
         # even look at the cards at all. It just plays everything aggressively.
 
@@ -43,7 +44,7 @@ class ManiacBot(Player):
             # Maniac raises big - typically 2x minimum raise or 5x BB, whichever is larger
             # min_raise_amount is the minimum raise-by increment
             raise_by_amount = max(min_raise_amount * 2, game.state.big_blind * 5)
-            raise_by_amount = min(raise_by_amount, self.state.stack)
+            raise_by_amount = min(raise_by_amount, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid,
                 action_type=ActionType.RAISE,
@@ -52,7 +53,7 @@ class ManiacBot(Player):
 
         # Bet aggressively
         if ActionType.BET in valid_actions:
-            bet_amount = min(min_bet_amount * 5, self.state.stack)
+            bet_amount = min(min_bet_amount * 5, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
@@ -60,12 +61,12 @@ class ManiacBot(Player):
         # Will even go all-in on marginal situations
         if (
             ActionType.ALL_IN in valid_actions
-            and self.state.stack <= game.state.pot * 2
+            and snapshot.state.stack <= game.state.pot * 2
         ):
             return PlayerAction(
                 player_uid=self.uid,
                 action_type=ActionType.ALL_IN,
-                amount=self.state.stack,
+                amount=snapshot.state.stack,
             )
 
         # Call if can't raise or bet

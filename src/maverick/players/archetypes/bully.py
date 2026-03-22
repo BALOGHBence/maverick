@@ -36,8 +36,9 @@ class BullyBot(Player):
         min_bet_amount: int,
     ) -> PlayerAction:
         """Use stack size and hand strength to pressure opponents with big bets."""
+        snapshot = game.get_player_snapshot(self.uid)
         # Evaluate hand strength
-        private_cards = self.state.holding.cards
+        private_cards = snapshot.state.holding.cards
         community_cards = game.state.community_cards
 
         # Get hand equity
@@ -67,7 +68,7 @@ class BullyBot(Player):
             # Overbet to intimidate - 2x minimum raise or 6x BB, whichever is larger
             # min_raise_amount is the minimum raise-by increment
             raise_by_amount = max(min_raise_amount * 2, game.state.big_blind * 6)
-            raise_by_amount = min(raise_by_amount, self.state.stack)
+            raise_by_amount = min(raise_by_amount, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid,
                 action_type=ActionType.RAISE,
@@ -77,9 +78,9 @@ class BullyBot(Player):
         # Overbets to put pressure when strong
         if ActionType.BET in valid_actions and strong_hand:
             # Bully bets big - often pot-sized or more
-            bet_amount = min(game.state.pot, self.state.stack)
+            bet_amount = min(game.state.pot, snapshot.state.stack)
             if bet_amount < min_bet_amount:
-                bet_amount = min(min_bet_amount * 2, self.state.stack)
+                bet_amount = min(min_bet_amount * 2, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
@@ -88,7 +89,7 @@ class BullyBot(Player):
         if ActionType.CALL in valid_actions:
             call_amount = call_amount
             if (
-                call_amount <= self.state.stack * 0.3
+                call_amount <= snapshot.state.stack * 0.3
             ):  # Willing to call reasonable amounts
                 return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 

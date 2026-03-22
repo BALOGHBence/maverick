@@ -5,7 +5,6 @@ import uuid
 
 from .enums import ActionType
 from .playeraction import PlayerAction
-from .playerstate import PlayerState
 from ._registered_players import registered_players
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -45,7 +44,6 @@ class Player(metaclass=PlayerMeta):
         *,
         uid: Optional[str] = None,
         name: str,
-        state: Optional[PlayerState | dict] = None,
         **kwargs,
     ):
         _id = kwargs.pop("id", None)
@@ -57,11 +55,6 @@ class Player(metaclass=PlayerMeta):
             )
         self.uid = uid or _id or uuid.uuid4().hex
         self.name = name
-        self.state = (
-            state
-            if isinstance(state, PlayerState) or state is None
-            else PlayerState.model_validate(state)
-        )
 
     @property
     def id(self) -> str:
@@ -158,5 +151,4 @@ class Player(metaclass=PlayerMeta):
         return {
             "uid": self.uid,
             "name": self.name,
-            "state": self.state.model_dump() if self.state else None,
         }

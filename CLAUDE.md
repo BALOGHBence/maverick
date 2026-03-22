@@ -122,3 +122,8 @@ Key enums used throughout: `Street`, `GameStage`, `ActionType`, `GameEventType`,
 - Tests live in `tests/`, configured in `pytest.ini` and `.coveragerc`.
 - Branch coverage is enabled. CI uploads results to Codecov.
 - CI runs on PRs to `dev` or `main` via `.github/workflows/testing_and_coverage.yml`.
+
+## Coding Style
+
+- You write PEP8 compliant, clean python code.
+- You always use type hints.

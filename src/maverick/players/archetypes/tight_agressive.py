@@ -36,8 +36,9 @@ class TightAggressiveBot(Player):
         min_bet_amount: int,
     ) -> PlayerAction:
         """Play selectively but aggressively when involved using hand strength."""
+        snapshot = game.get_player_snapshot(self.uid)
         # Evaluate hand strength
-        private_cards = self.state.holding.cards
+        private_cards = snapshot.state.holding.cards
         community_cards = game.state.community_cards
 
         # Get hand equity
@@ -67,7 +68,7 @@ class TightAggressiveBot(Player):
             # Standard 3x BB or 3x minimum raise, whichever is larger
             # min_raise_amount is the minimum raise-by increment
             raise_by_amount = max(min_raise_amount, game.state.big_blind * 3)
-            raise_by_amount = min(raise_by_amount, self.state.stack)
+            raise_by_amount = min(raise_by_amount, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid,
                 action_type=ActionType.RAISE,
@@ -79,7 +80,7 @@ class TightAggressiveBot(Player):
             # Value bet: 2/3 pot or 2-3x BB
             bet_amount = min(
                 max(int(game.state.pot * 0.66), min_bet_amount * 2),
-                self.state.stack,
+                snapshot.state.stack,
             )
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
@@ -88,7 +89,7 @@ class TightAggressiveBot(Player):
         # Call selectively with good odds and playable hands
         if ActionType.CALL in valid_actions and playable_hand:
             # TAG calls with proper odds (better than 3:1)
-            if call_amount <= self.state.stack and call_amount * 3 <= game.state.pot:
+            if call_amount <= snapshot.state.stack and call_amount * 3 <= game.state.pot:
                 return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Check when free

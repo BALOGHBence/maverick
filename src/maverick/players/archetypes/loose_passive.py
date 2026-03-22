@@ -21,9 +21,10 @@ class LoosePassiveBot(Player):
     cls_uid = "6920b2a799ba43659491a1b95e87a3ed"
 
     def decide_action(
-        self, *, valid_actions: list[ActionType], min_bet_amount: int, **_
+        self, *, game, valid_actions: list[ActionType], min_bet_amount: int, **_
     ) -> PlayerAction:
         """Call frequently with many hands using hand strength poorly, rarely raise."""
+        snapshot = game.get_player_snapshot(self.uid)
         # NOTE: Loose passive doesn't rely on hand strength estimation. In fact it doesn't
         # even look at the cards at all. It just calls a lot.
 
@@ -37,7 +38,7 @@ class LoosePassiveBot(Player):
 
         # Rarely bet, but will if no one else has
         if ActionType.BET in valid_actions:
-            bet_amount = min(min_bet_amount, self.state.stack)
+            bet_amount = min(min_bet_amount, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
