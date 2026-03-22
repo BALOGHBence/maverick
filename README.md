@@ -32,6 +32,8 @@
 
 </div>
 
+> **Alpha software:** Maverick is currently in early development (pre-1.0). The API may change between releases without notice. If you need a stable, production-ready library, wait for v1.0 and above.
+
 Poker is a great sandbox for decision-making systems: hidden information, imperfect opponents, probabilistic outcomes, and lots of room for experimentation.
 
 **Maverick** is a Python library for simulating poker games with custom player strategies. It gives you a complete poker game loop (dealing, betting rounds, showdown, pot distribution) plus a clean player interface so you can swap strategies in and out.

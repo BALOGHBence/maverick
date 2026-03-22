@@ -33,6 +33,10 @@ Maverick - A Poker Library in Python
 
       </div>
 
+.. warning::
+
+   **Alpha software:** Maverick is currently in early development (pre-1.0). The API may change between releases without notice. If you need a stable, production-ready library, wait for v1.0 and above.
+
 Maverick is a comprehensive Python library for simulating poker games. It provides
 a complete game engine with a state machine architecture, making it easy to
 create poker games, develop AI players, and analyze poker scenarios.
