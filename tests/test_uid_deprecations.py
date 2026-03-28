@@ -67,14 +67,6 @@ class TestPlayerUidDeprecations(unittest.TestCase):
         # Should still warn about the deprecated id param
         self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
 
-    def test_to_dict_uses_uid_key(self):
-        """Player.to_dict() uses 'uid' as the key."""
-        player = FoldBot(uid="my-uid", name="Bot")
-        d = player.to_dict()
-        self.assertIn("uid", d)
-        self.assertEqual(d["uid"], "my-uid")
-        self.assertNotIn("id", d)
-
 
 class TestPlayerActionUidDeprecations(unittest.TestCase):
     """Test that PlayerAction.player_uid is canonical and player_id is a deprecated alias."""

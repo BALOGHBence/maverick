@@ -76,14 +76,3 @@ class PlayerLike(Protocol):
             An instance of PlayerAction representing the chosen action.
         """
         ...
-
-    def to_dict(self) -> dict:  # pragma: no cover
-        """
-        Serialize the player to a dictionary representation.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the player's attributes.
-        """
-        ...

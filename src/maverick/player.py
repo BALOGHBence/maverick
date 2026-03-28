@@ -156,17 +156,3 @@ class Player(metaclass=PlayerMeta):
         Subclasses can override this method to observe events.
         """
         ...
-
-    def to_dict(self) -> dict:
-        """
-        Serialize the player to a dictionary.
-
-        Returns
-        -------
-        dict
-            A dictionary representation of the player.
-        """
-        return {
-            "uid": self.uid,
-            "name": self.name,
-        }
