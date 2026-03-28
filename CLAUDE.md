@@ -123,6 +123,12 @@ Key enums used throughout: `Street`, `GameStage`, `ActionType`, `GameEventType`,
 - Branch coverage is enabled. CI uploads results to Codecov.
 - CI runs on PRs to `dev` or `main` via `.github/workflows/testing_and_coverage.yml`.
 
+## Documentation
+
+Documentation for the project is written using Sphinx. The source files of the documentation can be found in the folder `docs/source` and Sphinx is configured to build the documentation into a separate build directory, which is `docs/build`. The configuration for the Sphinx project can be found in the file `docs/source/config.py`.
+
+The documentation has a user guide and a developer guide section, and the user facing classes, functions, enumerations, etc. are documented in the `api_reference.rst` file using the `autosummary` Sphinx extension.
+
 ## Coding Style
 
 - You write PEP8 compliant, clean python code.
