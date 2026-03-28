@@ -1,5 +1,5 @@
 ---
-name: doc-building
+name: build-docs
 description: This skill should be used when the user asks to "build the docs", "rebuild documentation", "generate sphinx docs", "compile the documentation", "build html docs", or mentions rebuilding/updating the Maverick documentation.
 ---
 
