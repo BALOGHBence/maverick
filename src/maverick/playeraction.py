@@ -12,18 +12,14 @@ __all__ = ["PlayerAction"]
 
 class ClosedDict(dict):
     """A dict subtype whose JSON schema includes additionalProperties: false."""
-    
+
     @classmethod
     def __get_pydantic_core_schema__(cls, source, handler):
         return core_schema.dict_schema()
-    
+
     @classmethod
     def __get_pydantic_json_schema__(cls, schema, handler) -> JsonSchemaValue:
-        return {
-            "type": "object",
-            "properties": {},
-            "additionalProperties": False
-        }
+        return {"type": "object", "properties": {}, "additionalProperties": False}
 
 
 class PlayerAction(BaseModel):
@@ -41,7 +37,7 @@ class PlayerAction(BaseModel):
         put into the pot from your stack, NOT the total bet/raise amount
         after the action is taken.
     payload : dict[str, Any]
-        Additional action-specific data passed as a dictionary. This can be used to include 
+        Additional action-specific data passed as a dictionary. This can be used to include
         any extra information needed for the action that isn't covered by the standard fields.
 
         .. versionadded:: 0.6.0

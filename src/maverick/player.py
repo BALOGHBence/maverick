@@ -67,12 +67,12 @@ class Player(metaclass=PlayerMeta):
             stacklevel=2,
         )
         return self.uid
-    
+
     @property
     def game(self) -> Optional["Game"]:
         """Get the game instance this player is currently in, or None if not in a game."""
         return self._game
-    
+
     @property
     def state(self) -> Optional["PlayerState"]:
         """Get the current state of the player."""

@@ -483,7 +483,7 @@ class Game:
         )
         self._strategies[player.uid] = player
         self._update_state(players=[*self.state.players, snapshot])
-        
+
         # register the game instance on the player object for easy access in handlers
         if isinstance(player, Player):
             player._game = self
@@ -531,7 +531,7 @@ class Game:
             self._handle_event(GameEventType.PLAYER_LEFT)
         else:
             self._event_queue.append(GameEventType.PLAYER_LEFT)
-            
+
         # delete the game reference on the player object to prevent accidental access in handlers after they've been removed from the game
         if isinstance(player, Player):
             player._game = None
