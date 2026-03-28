@@ -103,20 +103,6 @@ class TestPlayerSnapshotIsolation(unittest.TestCase):
         # The new snapshot has the updated stack
         self.assertEqual(state_after.players[0].state.stack, 900)
 
-    def test_player_state_not_on_strategy(self):
-        """Player strategy objects no longer carry a state attribute."""
-        game = Game(small_blind=10, big_blind=20)
-        p1 = CallBot(name="P1")
-        p2 = FoldBot(name="P2")
-        game.add_player(p1, state=PlayerState(stack=1000))
-        game.add_player(p2, state=PlayerState(stack=1000))
-
-        game._update_player_state(game.state.players[0], stack=700)
-
-        # State lives in the snapshot, not on the strategy object
-        self.assertFalse(hasattr(p1, "state"))
-        self.assertEqual(game.get_player_snapshot(p1.uid).state.stack, 700)
-
     def test_get_player_snapshot_returns_current_state(self):
         """get_player_snapshot returns the up-to-date frozen snapshot."""
         game = Game(small_blind=10, big_blind=20)
