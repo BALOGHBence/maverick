@@ -1,11 +1,29 @@
 import warnings
-from typing import Any, Optional
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic.json_schema import JsonSchemaValue
+from pydantic_core import core_schema
 
 from .enums import ActionType
 
 __all__ = ["PlayerAction"]
+
+
+class ClosedDict(dict):
+    """A dict subtype whose JSON schema includes additionalProperties: false."""
+    
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source, handler):
+        return core_schema.dict_schema()
+    
+    @classmethod
+    def __get_pydantic_json_schema__(cls, schema, handler) -> JsonSchemaValue:
+        return {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False
+        }
 
 
 class PlayerAction(BaseModel):
@@ -23,7 +41,8 @@ class PlayerAction(BaseModel):
         put into the pot from your stack, NOT the total bet/raise amount
         after the action is taken.
     payload : dict[str, Any]
-        Additional action-specific data.
+        Additional action-specific data passed as a dictionary. This can be used to include 
+        any extra information needed for the action that isn't covered by the standard fields.
 
         .. versionadded:: 0.6.0
     decision_time_seconds : Optional[float]
@@ -52,7 +71,7 @@ class PlayerAction(BaseModel):
         ),
     )
 
-    payload: dict[str, Any] = Field(default_factory=dict)
+    payload: ClosedDict = Field(default_factory=ClosedDict)
     decision_time_seconds: Optional[float] = Field(
         default=None,
         description="Time in seconds it took the player to make the decision.",
