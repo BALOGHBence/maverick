@@ -84,6 +84,8 @@ Events and Event Handling
    maverick.events.GameEvent
    maverick.eventbus.EventBus
 
+.. _listeners_api_reference:
+
 Listeners
 ---------
 Listeners are classes that can subscribe to game events and perform actions when those events occur. They are useful for collecting data, logging, or implementing custom behavior in response to game events.
