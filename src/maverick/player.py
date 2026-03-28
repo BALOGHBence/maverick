@@ -5,6 +5,7 @@ import uuid
 
 from .enums import ActionType
 from .playeraction import PlayerAction
+from .playerstate import PlayerState
 from ._registered_players import registered_players
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -55,6 +56,7 @@ class Player(metaclass=PlayerMeta):
             )
         self.uid = uid or _id or uuid.uuid4().hex
         self.name = name
+        self._game: "Optional[Game]" = None
 
     @property
     def id(self) -> str:
@@ -65,6 +67,22 @@ class Player(metaclass=PlayerMeta):
             stacklevel=2,
         )
         return self.uid
+    
+    @property
+    def game(self) -> Optional["Game"]:
+        """Get the game instance this player is currently in, or None if not in a game."""
+        return self._game
+    
+    @property
+    def state(self) -> Optional["PlayerState"]:
+        """Get the current state of the player."""
+        if self.game is None:
+            return None
+        # Find the player's state in the game state by matching uid
+        for snapshot in self.game.state.players:
+            if snapshot.uid == self.uid:
+                return snapshot.state
+        return None
 
     @classmethod
     def get_by_uid(cls, uid: str) -> Optional[type["Player"]]:

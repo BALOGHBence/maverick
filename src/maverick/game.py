@@ -29,6 +29,7 @@ from .events import GameEvent
 from .holding import Holding
 from .protocol import PlayerLike, EventHandler
 from .state import GameState
+from .player import Player
 from .playeraction import PlayerAction
 from .playerstate import PlayerState, PlayerSnapshot
 from .utils import find_highest_scoring_hand
@@ -482,6 +483,10 @@ class Game:
         )
         self._strategies[player.uid] = player
         self._update_state(players=[*self.state.players, snapshot])
+        
+        # register the game instance on the player object for easy access in handlers
+        if isinstance(player, Player):
+            player._game = self
 
         self._handle_event(GameEventType.PLAYER_JOINED)
         self._emit(
@@ -526,6 +531,10 @@ class Game:
             self._handle_event(GameEventType.PLAYER_LEFT)
         else:
             self._event_queue.append(GameEventType.PLAYER_LEFT)
+            
+        # delete the game reference on the player object to prevent accidental access in handlers after they've been removed from the game
+        if isinstance(player, Player):
+            player._game = None
 
         self._emit(self._create_event(GameEventType.PLAYER_LEFT, player_uid=player_uid))
         self._log(
