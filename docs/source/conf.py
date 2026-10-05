@@ -9,6 +9,7 @@ from datetime import date
 
 from docutils import nodes
 from sphinx.application import Sphinx
+from sphinx_markdown_builder.contexts import SubContextParams, WrappedContext
 
 sys.path.insert(0, os.path.abspath("../../src"))
 
@@ -44,6 +45,29 @@ def _md_admonition_handlers(title: str) -> tuple:
     return visit, depart
 
 
+def _md_visit_generic_admonition(self, node: nodes.admonition) -> None:
+    # The title of a generic admonition is its first child, so it becomes the
+    # box heading and only the remaining children are rendered as the body.
+    title = node[0].astext() if isinstance(node[0], nodes.title) else "NOTE"
+    self._push_box(title.upper())
+    for child in node.children[1:]:
+        child.walkabout(self)
+    self._pop_context(node)
+    raise nodes.SkipNode
+
+
+def _md_depart_generic_admonition(self, node: nodes.admonition) -> None:
+    pass
+
+
+def _md_visit_caption(self, node: nodes.caption) -> None:
+    self._push_context(WrappedContext("*", params=SubContextParams(2, 2)))
+
+
+def _md_depart_caption(self, node: nodes.caption) -> None:
+    self._pop_context(node)
+
+
 def setup(app: Sphinx):
     app.add_config_value("project_name", project, "html")
 
@@ -54,6 +78,21 @@ def setup(app: Sphinx):
         nodes.classifier,
         override=True,
         **{md_builder: (_md_visit_classifier, _md_depart_classifier)},
+    )
+    app.add_node(
+        nodes.admonition,
+        override=True,
+        **{
+            md_builder: (
+                _md_visit_generic_admonition,
+                _md_depart_generic_admonition,
+            )
+        },
+    )
+    app.add_node(
+        nodes.caption,
+        override=True,
+        **{md_builder: (_md_visit_caption, _md_depart_caption)},
     )
     for node_cls, title in [
         (nodes.tip, "TIP"),
