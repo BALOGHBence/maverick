@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "How Maverick's documentation is made LLM-friendly using sphinx-llm, per-page Markdown downloads and a Claude Code plugin."
+---
+
 # LLM-Friendly Documentation
 
 Maverick's documentation is built to be consumed not just by humans in a browser, but also by LLMs. Every page in the HTML docs has a corresponding Markdown version that can be fed directly into an AI assistant's context window.

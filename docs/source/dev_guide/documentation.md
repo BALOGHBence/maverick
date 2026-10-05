@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "How to write NumPy-style docstrings and Sphinx documentation pages for Maverick."
+---
+
 # Documenting
 
 The documentation for the project is generated using Sphinx. Writing documentation consists of the following components:

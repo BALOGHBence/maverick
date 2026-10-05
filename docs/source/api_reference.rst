@@ -1,3 +1,6 @@
+.. meta::
+   :description: Reference documentation for all public classes, functions and enumerations of the Maverick library.
+
 API Reference
 =============
 

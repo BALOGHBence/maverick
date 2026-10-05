@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Ways to feed Maverick's LLM-friendly documentation (llms.txt, per-page Markdown, Claude Code plugin) to AI coding assistants."
+---
+
 # Teach Your LLM to Use Maverick
 
 ```{note}
@@ -19,7 +25,7 @@ There are number of ways to feed Maverick's documentation to an LLM, each suited
 The drawback is size — it's a large file and might consume an unreasonable portion of your models' context window.
 
 ```{raw} html
-<a href="_llms-full.txt"
+<a href="llms-full.txt"
    download="llms-full.txt"
    style="display:inline-block; padding:0.5em 1.2em; background:#1a73e8;
           color:white; border-radius:4px; text-decoration:none;">
@@ -65,46 +71,7 @@ Every page in this documentation has a Markdown twin at the same URL with `.md` 
 
 The easiest way to get the Markdown for the page you are currently reading is the **download dropdown** in the article header at the top of every page — click the download icon and select `.md`.
 
-## Option 4: Use SKILL.md with Claude Code
-
-[Claude Code](https://claude.ai/code) supports *skills* — reusable instruction files that Claude automatically loads when a question matches their description. Maverick ships a skill file that you can drop into any project where you use the library.
-
-When the skill is in place, Claude Code auto-invokes it whenever you ask about Maverick's API, features, concepts, or usage. Instead of relying on training data, it reads the locally built documentation (`docs/build/html/llms.txt`) and answers from those pages — so responses always reflect the exact version of the library in your project.
-
-**When to use this option:**
-
-- You are working in Claude Code on a project that depends on Maverick.
-- You want answers grounded in the local copy of the docs rather than the model's training knowledge.
-- You want Maverick support to work automatically, without writing any prompts.
-
-```{note}
-Building the documentation requires the `docs` dependency group to be installed.
-See {ref}`Building the Documentation <building-the-documentation>` for setup instructions.
-```
-
-**How to set it up:**
-
-1. Create the directory `.claude/skills/maverick/` in your project root.
-2. Download `SKILL.md` below and place it there.
-3. Build the local documentation once with `uv run sphinx-build docs/source docs/build/html` (or `make html`).
-4. Ask Claude Code any question about Maverick — it will pick up the skill automatically.
-
-```{raw} html
-<a href="_static/SKILL.md"
-   download="SKILL.md"
-   style="display:inline-block; padding:0.5em 1.2em; background:#1a73e8;
-          color:white; border-radius:4px; text-decoration:none;">
-  ⬇ Download SKILL.md
-</a>
-```
-
-The contents of the skill file are shown below for reference:
-
-```{literalinclude} ../../.claude/skills/maverick/SKILL.md
-:language: markdown
-```
-
-## Option 5: Install the Claude Code plugin
+## Option 4: Install the Claude Code plugin
 
 Maverick ships a Claude Code plugin that installs all available skills in one command — no file downloading or copying required. The plugin is hosted directly in the Maverick repository and follows the [claude-skills-marketplace](https://github.com/mhattingpete/claude-skills-marketplace) format.
 

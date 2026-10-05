@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Introduction to the rules of poker, including betting rounds, positions, blinds and hand rankings."
+---
+
 # Poker Fundamentals
 
 Poker is a family of card games where players compete to win chips (or money). You win by either:

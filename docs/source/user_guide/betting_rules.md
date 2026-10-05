@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Exact betting semantics implemented by the Maverick engine, including minimum raises and all-in edge cases."
+---
+
 # Betting Rules - Implemented Semantics & Edge Cases
 
 This document summarizes **the exact betting semantics implemented by this engine** where different poker engines sometimes diverge.
