@@ -88,7 +88,7 @@ Run the following command inside Claude Code:
 /plugin marketplace add BALOGHBence/maverick
 ```
 
-This installs the `maverick-plugin`, which provides three skills:
+This installs the `maverick` plugin, which provides three skills:
 
 | Skill | Activates when you say… | What it does |
 | --- | --- | --- |
