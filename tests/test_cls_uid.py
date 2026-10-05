@@ -116,11 +116,11 @@ class TestClsUid(unittest.TestCase):
 
         # Instantiate the class
         player = player_class(
-            id="test", name="TestPlayer", state=PlayerState(stack=1000, seat=0)
+            uid="test", name="TestPlayer", state=PlayerState(stack=1000, seat=0)
         )
         self.assertIsInstance(player, CallBot)
         self.assertEqual(player.name, "TestPlayer")
-        self.assertEqual(player.id, "test")
+        self.assertEqual(player.uid, "test")
 
     def test_all_players_retrievable_by_uid(self) -> None:
         """Test that all player classes can be retrieved by their cls_uid."""

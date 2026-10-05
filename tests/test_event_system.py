@@ -56,12 +56,12 @@ class MockPlayer(Player):
             action_type, amount = self._actions[self._action_index]
             self._action_index += 1
             return PlayerAction(
-                player_id=self.id,
+                player_uid=self.uid,
                 action_type=action_type,
                 amount=amount if amount is not None else 0,
             )
         # Default to fold
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)
 
     def on_event(self, event: GameEvent, game: Game) -> None:
         """Record events for testing."""
@@ -135,12 +135,12 @@ class TestEventSubscription(unittest.TestCase):
         game.unsubscribe(token)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=[(ActionType.FOLD, None)],
         )
@@ -164,12 +164,12 @@ class TestEventEmission(unittest.TestCase):
         game.subscribe(GameEventType.GAME_STARTED, recorder.record)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=[(ActionType.FOLD, None)],
         )
@@ -189,12 +189,12 @@ class TestEventEmission(unittest.TestCase):
         game.subscribe(GameEventType.HAND_STARTED, recorder.record)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=[(ActionType.FOLD, None)],
         )
@@ -214,12 +214,12 @@ class TestEventEmission(unittest.TestCase):
         game.subscribe(GameEventType.PLAYER_ACTION_TAKEN, recorder.record)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=[(ActionType.CALL, None)],
         )
@@ -232,7 +232,7 @@ class TestEventEmission(unittest.TestCase):
         self.assertTrue(len(recorder.events) > 0)
         # Check that events contain player_id and action
         for event in recorder.events:
-            self.assertIsNotNone(event.player_id)
+            self.assertIsNotNone(event.player_uid)
             self.assertIsNotNone(event.action)
 
     def test_player_joined_event_emitted(self):
@@ -242,12 +242,12 @@ class TestEventEmission(unittest.TestCase):
 
         game.subscribe(GameEventType.PLAYER_JOINED, recorder.record)
 
-        p1 = MockPlayer(id="p1", name="P1")
+        p1 = MockPlayer(uid="p1", name="P1")
         game.add_player(p1, state=PlayerState(stack=100))
 
         self.assertEqual(len(recorder.events), 1)
         self.assertEqual(recorder.events[0].type, GameEventType.PLAYER_JOINED)
-        self.assertEqual(recorder.events[0].player_id, "p1")
+        self.assertEqual(recorder.events[0].player_uid, "p1")
 
     def test_all_required_events_emitted(self):
         """Test that all required events are emitted during a complete hand."""
@@ -260,7 +260,7 @@ class TestEventEmission(unittest.TestCase):
 
         # Create players that will play through a hand
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=[
                 (ActionType.CALL, None),  # Call BB
@@ -270,7 +270,7 @@ class TestEventEmission(unittest.TestCase):
             ],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=[
                 (ActionType.CHECK, None),  # Check after BB
@@ -330,12 +330,12 @@ class TestHandlerExecutionOrder(unittest.TestCase):
         game.subscribe(GameEventType.GAME_STARTED, handler3)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=[(ActionType.FOLD, None)],
         )
@@ -361,12 +361,12 @@ class TestHandlerExceptionSafety(unittest.TestCase):
         game.subscribe(GameEventType.GAME_STARTED, failing_handler)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=[(ActionType.FOLD, None)],
         )
@@ -395,12 +395,12 @@ class TestHandlerExceptionSafety(unittest.TestCase):
         game.subscribe(GameEventType.GAME_STARTED, successful_handler)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=[(ActionType.FOLD, None)],
         )
@@ -421,12 +421,12 @@ class TestNoHandlersBehavior(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2, max_hands=1)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=[(ActionType.FOLD, None)],
         )
@@ -447,12 +447,12 @@ class TestPlayerEventHook(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2, max_hands=1)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=[(ActionType.FOLD, None)],
         )
@@ -475,12 +475,12 @@ class TestPlayerEventHook(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2, max_hands=1)
 
         p1 = FailingPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=[(ActionType.FOLD, None)],
         )
@@ -500,7 +500,7 @@ class TestEventPayloadAccuracy(unittest.TestCase):
 
     def test_player_action_event_reflects_post_action_state(self):
         """Test that PLAYER_ACTION_TAKEN events contain post-action state."""
-        game = Game(small_blind=1, big_blind=2, max_hands=1)
+        game = Game(small_blind=1, big_blind=2, max_hands=1, first_button_position=0)
         action_events = []
 
         def record_action(event: GameEvent, game: Game):
@@ -510,12 +510,12 @@ class TestEventPayloadAccuracy(unittest.TestCase):
         game.subscribe(GameEventType.PLAYER_ACTION_TAKEN, record_action)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=[(ActionType.CALL, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=[(ActionType.CHECK, None)],
         )
@@ -527,7 +527,7 @@ class TestEventPayloadAccuracy(unittest.TestCase):
         # Check that action events have correct data
         self.assertTrue(len(action_events) > 0)
         for event in action_events:
-            self.assertIsNotNone(event.player_id)
+            self.assertIsNotNone(event.player_uid)
             self.assertIsNotNone(event.action)
 
 
@@ -567,12 +567,12 @@ class TestGameStateChangedOptimization(unittest.TestCase):
     def _make_game(self):
         game = Game(small_blind=10, big_blind=20, max_hands=1)
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=[(ActionType.FOLD, None)],
         )
@@ -616,12 +616,12 @@ class TestPlayerStateChangedEvents(unittest.TestCase):
     def _make_game_with_players(self, p1_actions, p2_actions, stacks=(500, 500)):
         game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=p1_actions,
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=p2_actions,
         )
@@ -750,12 +750,12 @@ class TestCommunityCardStateChangedEvents(unittest.TestCase):
     def _make_game_with_players(self, p1_actions, p2_actions):
         game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=p1_actions,
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=p2_actions,
         )

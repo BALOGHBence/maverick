@@ -14,7 +14,7 @@ class TestAggressiveBotEdgeCases(unittest.TestCase):
 
     def test_aggressive_with_no_raise(self):
         """Test when raise is not available."""
-        bot = AggressiveBot(id="agg", name="Agg")
+        bot = AggressiveBot(uid="agg", name="Agg")
         game = Mock()
         game.state.pot = 20
         game.state.big_blind = 10
@@ -46,7 +46,7 @@ class TestCallBotEdgeCases(unittest.TestCase):
 
     def test_callbot_with_all_in(self):
         """Test CallBot with ALL_IN available."""
-        bot = CallBot(id="call", name="Call")
+        bot = CallBot(uid="call", name="Call")
         game = Mock()
 
         action = bot.decide_action(
@@ -60,7 +60,7 @@ class TestCallBotEdgeCases(unittest.TestCase):
 
     def test_callbot_with_fold_only(self):
         """Test CallBot forced to fold."""
-        bot = CallBot(id="call", name="Call")
+        bot = CallBot(uid="call", name="Call")
         game = Mock()
 
         action = bot.decide_action(
@@ -78,7 +78,7 @@ class TestLoosePassiveBotPaths(unittest.TestCase):
 
     def test_loose_passive_with_check(self):
         """Test LoosePassiveBot checking."""
-        bot = LoosePassiveBot(id="lp", name="LP")
+        bot = LoosePassiveBot(uid="lp", name="LP")
 
         game = Mock()
         game.state.pot = 20
@@ -102,7 +102,7 @@ class TestManiacBotPaths(unittest.TestCase):
 
     def test_maniac_with_bet(self):
         """Test ManiacBot betting."""
-        bot = ManiacBot(id="maniac", name="Maniac")
+        bot = ManiacBot(uid="maniac", name="Maniac")
 
         game = Mock()
         game.state.pot = 30
@@ -122,7 +122,7 @@ class TestManiacBotPaths(unittest.TestCase):
 
     def test_maniac_with_call(self):
         """Test ManiacBot calling."""
-        bot = ManiacBot(id="maniac", name="Maniac")
+        bot = ManiacBot(uid="maniac", name="Maniac")
 
         game = Mock()
         game.state.pot = 30

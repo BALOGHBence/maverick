@@ -222,7 +222,7 @@ class TestAddPlayer(unittest.TestCase):
 
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0].type, GameEventType.PLAYER_JOINED)
-        self.assertEqual(events[0].player_id, "p1")
+        self.assertEqual(events[0].player_uid, "p1")
 
     def test_add_player_with_existing_name_raises_error(self):
         """Test that adding a player to a full table raises ValueError."""
@@ -296,7 +296,7 @@ class TestRemovePlayer(unittest.TestCase):
         # Find the PLAYER_LEFT event
         left_events = [e for e in events if e.type == GameEventType.PLAYER_LEFT]
         self.assertEqual(len(left_events), 1)
-        self.assertEqual(left_events[0].player_id, "p1")
+        self.assertEqual(left_events[0].player_uid, "p1")
 
     def test_remove_player_updates_player_list(self):
         """Test that removing a player updates the player list correctly."""
