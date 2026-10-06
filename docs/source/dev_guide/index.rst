@@ -1,3 +1,6 @@
+.. meta::
+   :description: Guide for contributors covering the development setup, workflow, conventions, documentation, testing and releases of Maverick.
+
 Developer Guide
 ===============
 

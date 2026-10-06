@@ -19,15 +19,6 @@ Or install this plugin individually:
 Skills activate automatically based on natural language — no slash commands needed.
 
 | Skill | Activates when you say… | What it does |
-|---|---|---|
-| **api-consulting** | "how do I use Maverick", "what does X do in Maverick", "show me an example of…" | Reads the locally built documentation index, selects relevant pages, and answers from their content |
-| **bot-generating** | "create a bot", "write a player", "implement a strategy", "scaffold a decide_action" | Guides you through requirements and generates a complete `Player` subclass |
-| **scenario-building** | "set up a game", "create a scenario", "test hand", "reproduce a bug", "Omaha setup" | Produces a self-contained game setup script with optional event subscriptions and test assertions |
-
-## Notes
-
-- **api-consulting** requires locally built documentation. If it isn't built yet, the skill will prompt you to run:
-  ```bash
-  uv run sphinx-build docs/source docs/build/html
-  ```
-- **bot-generating** and **scenario-building** work without built docs.
+| --- | --- | --- |
+| **maverick** | "write a bot", "set up a game", "subscribe to events", "record the game history" | Teaches the library's core usage: the player contract, betting semantics, game setup, events, listeners and game histories |
+| **maverick-docs** | "how do I use Maverick", "what does X do in Maverick", "show me an example of…" | Reads the online documentation index, selects relevant pages, and answers from their content |

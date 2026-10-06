@@ -16,6 +16,7 @@
 
   <div>
     <a href="https://pymaverick.readthedocs.io/en/latest/index.html"><img src="https://img.shields.io/badge/Documentation-blue?style=flat" alt="Documentation"></a>
+    <a href="https://pymaverick.readthedocs.io/en/latest/LLMs.html"><img src="https://img.shields.io/badge/%F0%9F%A4%96%20Coding%20Agents-Guide-8A2BE2?style=flat" alt="Coding Agents Guide"></a>
   </div>
   
   <br>
@@ -30,9 +31,25 @@
     A Python library for simulating poker games with custom player strategies.
   </p>
 
-</div>
+  <br>
 
-> **Alpha software:** Maverick is currently in early development (pre-1.0). The API may change between releases without notice. If you need a stable, production-ready library, wait for v1.0 and above.
+  <table>
+    <tr>
+      <td align="center">
+        <h3>🤖 Build with Coding Agents</h3>
+        <p>
+          Using <b>Claude Code</b>, <b>Cursor</b>, <b>Copilot</b>, <b>Windsurf</b> or <b>ChatGPT</b>?<br>
+          Teach your AI assistant Maverick's API and let it write bots, strategies and simulations for you.
+        </p>
+        <p>
+          <code>llms.txt</code> &nbsp;•&nbsp; <code>llms-full.txt</code> &nbsp;•&nbsp; per-page Markdown &nbsp;•&nbsp; Claude Code plugin &amp; skills
+        </p>
+        <a href="https://pymaverick.readthedocs.io/en/latest/LLMs.html"><img src="https://img.shields.io/badge/Read%20the%20Coding%20Agents%20Guide-%E2%86%92-8A2BE2?style=for-the-badge&logo=anthropic&logoColor=white" alt="Read the Coding Agents Guide"></a>
+      </td>
+    </tr>
+  </table>
+
+</div>
 
 Poker is a great sandbox for decision-making systems: hidden information, imperfect opponents, probabilistic outcomes, and lots of room for experimentation.
 

@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "How Maverick applies semantic versioning and maintains its changelog in the Keep a Changelog format."
+---
+
 # Changes and Versioning
 
 The project adheres to [semantic versioning](https://semver.org/).

@@ -1,3 +1,6 @@
+.. meta::
+   :description: Table of contents of the Maverick user guide, covering games, players, scoring, betting rules, events and reproducibility.
+
 User Guide
 ==========
 

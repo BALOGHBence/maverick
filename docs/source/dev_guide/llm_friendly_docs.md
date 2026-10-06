@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "How Maverick's documentation is made LLM-friendly using sphinx-llm, per-page Markdown downloads and a Claude Code plugin."
+---
+
 # LLM-Friendly Documentation
 
 Maverick's documentation is built to be consumed not just by humans in a browser, but also by LLMs. Every page in the HTML docs has a corresponding Markdown version that can be fed directly into an AI assistant's context window.
@@ -82,7 +88,7 @@ The plugin follows the [claude-skills-marketplace](https://github.com/mhattingpe
 
 ### The symlink in `.claude/skills/`
 
-`.claude/skills/maverick/SKILL.md` is a symlink pointing to `maverick-plugin/skills/api-consulting.md`. This keeps the project-local Claude Code skill in sync with the canonical skill file in the plugin without duplication.
+`.claude/skills/maverick-docs/SKILL.md` is a symlink pointing to `maverick-plugin/skills/maverick-docs.md`. This keeps the project-local Claude Code skill in sync with the canonical skill file in the plugin without duplication.
 
 **Windows caveat:** git on Windows does not create symlinks by default. Without symlink support, this file is checked out as a plain text file containing the path string, and the project-local skill will not work. To fix this, enable **Developer Mode** in Windows Settings or run the following before cloning:
 

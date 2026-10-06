@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Record of key architectural decisions in Maverick, the reasoning behind them and the trade-offs accepted."
+---
+
 # Design Decisions
 
 This page records key architectural decisions made during development, the reasoning

@@ -34,23 +34,23 @@ class MockPlayer(Player):
             action_type, amount = self._actions[self._action_index]
             self._action_index += 1
             return PlayerAction(
-                player_id=self.id,
+                player_uid=self.uid,
                 action_type=action_type,
                 amount=amount if amount is not None else 0,
             )
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)
 
 
 def _make_game(max_hands=1):
     """Helper to create a minimal two-player game."""
     game = Game(small_blind=1, big_blind=2, max_hands=max_hands)
     p1 = MockPlayer(
-        id="p1",
+        uid="p1",
         name="P1",
         actions=[(ActionType.FOLD, None)],
     )
     p2 = MockPlayer(
-        id="p2",
+        uid="p2",
         name="P2",
         actions=[(ActionType.FOLD, None)],
     )
@@ -96,12 +96,12 @@ class TestGameUidAfterStart(unittest.TestCase):
         game.subscribe(GameEventType.GAME_STARTED, on_game_started)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
             actions=[(ActionType.FOLD, None)],
         )

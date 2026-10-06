@@ -19,7 +19,7 @@ class SimpleTestPlayer(Player):
         call_amount,
         min_bet_amount,
     ) -> PlayerAction:
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)
 
 
 class TestTableInitialization(unittest.TestCase):

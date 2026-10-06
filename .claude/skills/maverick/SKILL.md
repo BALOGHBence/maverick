@@ -1,1 +1,0 @@
-../../../maverick-plugin/skills/api-consulting.md

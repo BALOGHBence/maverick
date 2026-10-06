@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "How to set up a Maverick development environment with uv and install the dependency groups."
+---
+
 # Installation for Developers
 
 ## Installing uv

@@ -42,11 +42,11 @@ class TestStepExecution(unittest.TestCase):
         """Test that step processes exactly one event."""
         game = Game(small_blind=1, big_blind=2, max_hands=1)
         game.add_player(
-            FoldBot(id="p1", name="P1"),
+            FoldBot(uid="p1", name="P1"),
             state=PlayerState(stack=50, seat=0),
         )
         game.add_player(
-            CallBot(id="p2", name="P2"),
+            CallBot(uid="p2", name="P2"),
             state=PlayerState(stack=50, seat=1),
         )
 
@@ -76,11 +76,11 @@ class TestStepExecution(unittest.TestCase):
         """Test that stepping through all events completes a game."""
         game = Game(small_blind=1, big_blind=2, max_hands=1)
         game.add_player(
-            FoldBot(id="p1", name="P1"),
+            FoldBot(uid="p1", name="P1"),
             state=PlayerState(stack=50, seat=0),
         )
         game.add_player(
-            CallBot(id="p2", name="P2"),
+            CallBot(uid="p2", name="P2"),
             state=PlayerState(stack=50, seat=1),
         )
 
@@ -105,11 +105,11 @@ class TestStepExecution(unittest.TestCase):
         # Game 1: using start()
         game1 = Game(small_blind=1, big_blind=2, max_hands=1)
         game1.add_player(
-            FoldBot(id="p1", name="P1"),
+            FoldBot(uid="p1", name="P1"),
             state=PlayerState(stack=50, seat=0),
         )
         game1.add_player(
-            CallBot(id="p2", name="P2"),
+            CallBot(uid="p2", name="P2"),
             state=PlayerState(stack=50, seat=1),
         )
         game1.start()
@@ -117,11 +117,11 @@ class TestStepExecution(unittest.TestCase):
         # Game 2: using step()
         game2 = Game(small_blind=1, big_blind=2, max_hands=1)
         game2.add_player(
-            FoldBot(id="p1", name="P1"),
+            FoldBot(uid="p1", name="P1"),
             state=PlayerState(stack=50, seat=0),
         )
         game2.add_player(
-            CallBot(id="p2", name="P2"),
+            CallBot(uid="p2", name="P2"),
             state=PlayerState(stack=50, seat=1),
         )
         game2._initialize_game()
@@ -138,11 +138,11 @@ class TestStepExecution(unittest.TestCase):
         """Test that step-by-step execution works for multiple hands."""
         game = Game(small_blind=1, big_blind=2, max_hands=2)
         game.add_player(
-            FoldBot(id="p1", name="P1"),
+            FoldBot(uid="p1", name="P1"),
             state=PlayerState(stack=50, seat=0),
         )
         game.add_player(
-            CallBot(id="p2", name="P2"),
+            CallBot(uid="p2", name="P2"),
             state=PlayerState(stack=50, seat=1),
         )
 

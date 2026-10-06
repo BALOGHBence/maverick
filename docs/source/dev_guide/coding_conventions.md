@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Coding conventions for Maverick contributors, including formatting with Black, type hints and style rules."
+---
+
 # Coding Conventions
 
 ## Code Formatting with Black

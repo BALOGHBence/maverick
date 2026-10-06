@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "High-level overview of what Maverick can do and how its main components fit together."
+---
+
 # Overview
 
 Maverick is a Python library for simulating poker games with a small, composable API.

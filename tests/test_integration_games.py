@@ -32,15 +32,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """WhaleBot should play aggressively."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            WhaleBot(id="whale", name="Whale"),
+            WhaleBot(uid="whale", name="Whale"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -51,15 +51,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """SharkBot should make calculated decisions."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            SharkBot(id="shark", name="Shark"),
+            SharkBot(uid="shark", name="Shark"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -69,15 +69,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """FishBot should play loosely."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            FishBot(id="fish", name="Fish"),
+            FishBot(uid="fish", name="Fish"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -87,15 +87,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """HeroCallerBot should call with marginal hands."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            HeroCallerBot(id="hero", name="Hero"),
+            HeroCallerBot(uid="hero", name="Hero"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -105,15 +105,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """TiltedBot should make reckless decisions."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            TiltedBot(id="tilt", name="Tilted"),
+            TiltedBot(uid="tilt", name="Tilted"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -123,15 +123,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """BullyBot should be aggressive against short stacks."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            BullyBot(id="bully", name="Bully"),
+            BullyBot(uid="bully", name="Bully"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=100, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=100, seat=2),
         )
         game.start()
@@ -141,15 +141,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """GrinderBot should play patient poker."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            GrinderBot(id="grind", name="Grinder"),
+            GrinderBot(uid="grind", name="Grinder"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -159,15 +159,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """GTOBot should use balanced strategy."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            GTOBot(id="gto", name="GTO"),
+            GTOBot(uid="gto", name="GTO"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -177,15 +177,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """ManiacBot should raise frequently."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            ManiacBot(id="maniac", name="Maniac"),
+            ManiacBot(uid="maniac", name="Maniac"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -195,15 +195,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """ScaredMoneyBot should avoid big pots."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            ScaredMoneyBot(id="scared", name="Scared"),
+            ScaredMoneyBot(uid="scared", name="Scared"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -213,15 +213,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """LooseAggressiveBot should play many hands."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            LooseAggressiveBot(id="lag", name="LAG"),
+            LooseAggressiveBot(uid="lag", name="LAG"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -231,15 +231,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """TightPassiveBot should play tight."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            TightPassiveBot(id="tp", name="Rock"),
+            TightPassiveBot(uid="tp", name="Rock"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -249,15 +249,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """LoosePassiveBot should call often."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            LoosePassiveBot(id="lp", name="Station"),
+            LoosePassiveBot(uid="lp", name="Station"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -267,15 +267,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """ABCBot should play straightforward."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            ABCBot(id="abc", name="ABC"),
+            ABCBot(uid="abc", name="ABC"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -285,15 +285,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """TightAggressiveBot should play premium hands aggressively."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            TightAggressiveBot(id="tag", name="TAG"),
+            TightAggressiveBot(uid="tag", name="TAG"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -303,15 +303,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """CallBot should always call."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            CallBot(id="call", name="Call"),
+            CallBot(uid="call", name="Call"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -321,15 +321,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """AggressiveBot should play aggressively."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            AggressiveBot(id="agg", name="Aggressive"),
+            AggressiveBot(uid="agg", name="Aggressive"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            FoldBot(id="fold1", name="Fold1"),
+            FoldBot(uid="fold1", name="Fold1"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            FoldBot(id="fold2", name="Fold2"),
+            FoldBot(uid="fold2", name="Fold2"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()
@@ -339,19 +339,19 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """Test game with mixed archetypes."""
         game = Game(small_blind=5, big_blind=10, max_hands=2)
         game.add_player(
-            WhaleBot(id="whale", name="Whale"),
+            WhaleBot(uid="whale", name="Whale"),
             state=PlayerState(stack=1000, seat=0),
         )
         game.add_player(
-            SharkBot(id="shark", name="Shark"),
+            SharkBot(uid="shark", name="Shark"),
             state=PlayerState(stack=1000, seat=1),
         )
         game.add_player(
-            FishBot(id="fish", name="Fish"),
+            FishBot(uid="fish", name="Fish"),
             state=PlayerState(stack=1000, seat=2),
         )
         game.add_player(
-            TightAggressiveBot(id="tag", name="TAG"),
+            TightAggressiveBot(uid="tag", name="TAG"),
             state=PlayerState(stack=1000, seat=3),
         )
         game.start()
@@ -361,15 +361,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """Test game where everyone calls."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            CallBot(id="call1", name="Call1"),
+            CallBot(uid="call1", name="Call1"),
             state=PlayerState(stack=200, seat=0),
         )
         game.add_player(
-            CallBot(id="call2", name="Call2"),
+            CallBot(uid="call2", name="Call2"),
             state=PlayerState(stack=200, seat=1),
         )
         game.add_player(
-            CallBot(id="call3", name="Call3"),
+            CallBot(uid="call3", name="Call3"),
             state=PlayerState(stack=200, seat=2),
         )
         game.start()
@@ -379,15 +379,15 @@ class TestArchetypesPlayGames(unittest.TestCase):
         """Test aggressive vs passive bots."""
         game = Game(small_blind=5, big_blind=10, max_hands=1)
         game.add_player(
-            AggressiveBot(id="agg", name="Aggressive"),
+            AggressiveBot(uid="agg", name="Aggressive"),
             state=PlayerState(stack=500, seat=0),
         )
         game.add_player(
-            TightPassiveBot(id="tp", name="Rock"),
+            TightPassiveBot(uid="tp", name="Rock"),
             state=PlayerState(stack=500, seat=1),
         )
         game.add_player(
-            LoosePassiveBot(id="lp", name="Station"),
+            LoosePassiveBot(uid="lp", name="Station"),
             state=PlayerState(stack=500, seat=2),
         )
         game.start()

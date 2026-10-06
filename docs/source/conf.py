@@ -4,11 +4,12 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import os
-import shutil
 import sys
 from datetime import date
 
-from sphinx.config import Config
+from docutils import nodes
+from sphinx.application import Sphinx
+from sphinx_markdown_builder.contexts import SubContextParams, WrappedContext
 
 sys.path.insert(0, os.path.abspath("../../src"))
 
@@ -18,19 +19,90 @@ import maverick as library
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = library.__pkg_name__
-project_copyright = "2026-%s, Bence Balogh" % date.today().year
+_first_year, _this_year = 2026, date.today().year
+_years = (
+    str(_first_year) if _this_year == _first_year else f"{_first_year}-{_this_year}"
+)
+project_copyright = f"{_years}, Bence Balogh"
 author = "Bence Balogh"
 
 
-def _copy_skill_md(app: Config) -> None:
-    src = os.path.join(app.confdir, "../../.claude/skills/maverick/SKILL.md")
-    dst = os.path.join(app.confdir, "_static", "SKILL.md")
-    shutil.copy2(src, dst)
+def _md_visit_classifier(self, node: nodes.classifier) -> None:
+    self.add(" : ")
 
 
-def setup(app: Config):
+def _md_depart_classifier(self, node: nodes.classifier) -> None:
+    pass
+
+
+def _md_admonition_handlers(title: str) -> tuple:
+    def visit(self, node: nodes.Admonition) -> None:
+        self._push_box(title)
+
+    def depart(self, node: nodes.Admonition) -> None:
+        self._pop_context(node)
+
+    return visit, depart
+
+
+def _md_visit_generic_admonition(self, node: nodes.admonition) -> None:
+    # The title of a generic admonition is its first child, so it becomes the
+    # box heading and only the remaining children are rendered as the body.
+    title = node[0].astext() if isinstance(node[0], nodes.title) else "NOTE"
+    self._push_box(title.upper())
+    for child in node.children[1:]:
+        child.walkabout(self)
+    self._pop_context(node)
+    raise nodes.SkipNode
+
+
+def _md_depart_generic_admonition(self, node: nodes.admonition) -> None:
+    pass
+
+
+def _md_visit_caption(self, node: nodes.caption) -> None:
+    self._push_context(WrappedContext("*", params=SubContextParams(2, 2)))
+
+
+def _md_depart_caption(self, node: nodes.caption) -> None:
+    self._pop_context(node)
+
+
+def setup(app: Sphinx):
     app.add_config_value("project_name", project, "html")
-    app.connect("builder-inited", _copy_skill_md)
+
+    # Teach the Markdown builder used by sphinx_llm the nodes it does not
+    # support out of the box, otherwise their content is dropped.
+    md_builder = "llms-markdown"
+    app.add_node(
+        nodes.classifier,
+        override=True,
+        **{md_builder: (_md_visit_classifier, _md_depart_classifier)},
+    )
+    app.add_node(
+        nodes.admonition,
+        override=True,
+        **{
+            md_builder: (
+                _md_visit_generic_admonition,
+                _md_depart_generic_admonition,
+            )
+        },
+    )
+    app.add_node(
+        nodes.caption,
+        override=True,
+        **{md_builder: (_md_visit_caption, _md_depart_caption)},
+    )
+    for node_cls, title in [
+        (nodes.tip, "TIP"),
+        (nodes.danger, "DANGER"),
+        (nodes.caution, "CAUTION"),
+        (nodes.error, "ERROR"),
+    ]:
+        app.add_node(
+            node_cls, override=True, **{md_builder: _md_admonition_handlers(title)}
+        )
 
 
 # The short X.Y version.
@@ -52,8 +124,45 @@ extensions = [
     
     # LLM-powered content generation
     # https://github.com/NVIDIA/sphinx-llm
-    "sphinx_llm.txt",  
+    "sphinx_llm.txt",
 ]
+
+_docs_base_url = "https://pymaverick.readthedocs.io/en/latest/"
+
+# Without this, sphinx_llm falls back to the package metadata, i.e. the README.
+llms_txt_description = (
+    "Maverick is a Python library for simulating poker games with custom player "
+    "strategies. It provides a complete poker game loop (dealing, betting rounds, "
+    "showdown, pot distribution), a composable player interface and an event "
+    "stream for building, testing and benchmarking poker bots.\n"
+    "\n"
+    "How to read this file:\n"
+    "\n"
+    "- Every link below points to a Markdown version of a documentation page.\n"
+    "- Links are relative URLs, resolved against the directory that contains "
+    "the llms.txt file you are reading.\n"
+    "- Fetch the linked `.html.md` files directly; they contain the full page "
+    "content as Markdown.\n"
+    "- If you are reading a local copy, resolve the links against its directory "
+    "on disk the same way.\n"
+    "\n"
+    f"Examples for the top-level index at {_docs_base_url}llms.txt:\n"
+    "\n"
+    "- `[Overview](overview.html.md)` resolves to "
+    f"{_docs_base_url}overview.html.md\n"
+    "- `[User Guide](user_guide/index.html.md)` resolves to "
+    f"{_docs_base_url}user_guide/index.html.md\n"
+    "- `[Configuring and Running Games](user_guide/games.html.md)` resolves to "
+    f"{_docs_base_url}user_guide/games.html.md\n"
+    "\n"
+    "Each subdirectory also has its own index (for example "
+    f"{_docs_base_url}user_guide/llms.txt) whose links are relative to that "
+    "subdirectory, so the same page is linked there as `games.html.md`."
+)
+
+# Nodes with no meaningful Markdown representation: <meta> tags and the
+# abbreviation used for the keyword-only "*" marker in signatures.
+llms_txt_suppress_unknown_node_warnings = ["meta", "abbreviation"]
 
 source_suffix = {
     ".rst": "restructuredtext",

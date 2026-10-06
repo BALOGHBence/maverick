@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Collection of common Git commands and recipes for working with the Maverick repository."
+---
+
 # Git Cookbook
 
 ## Basic Git Commands

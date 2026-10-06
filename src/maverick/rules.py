@@ -37,14 +37,17 @@ class DealingRules(BaseModel):
         How board cards are revealed over the streets, expressed as a dictionary mapping
         Street to int.
 
-        For standard Hold'em:
-        {
-            Street.PRE_FLOP: 0,
-            Street.FLOP: 3,
-            Street.TURN: 1,
-            Street.RIVER: 1,
-        }
+        For standard Hold'em::
+
+            {
+                Street.PRE_FLOP: 0,
+                Street.FLOP: 3,
+                Street.TURN: 1,
+                Street.RIVER: 1,
+            }
+
         meaning:
+
             - preflop: 0 board cards dealt (only hole cards)
             - flop:    3 board cards
             - turn:    1 board card
