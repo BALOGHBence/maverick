@@ -12,6 +12,8 @@ Messages from the engine:
   ``{"seq", "action", "error", "hook_errors"}``.
 - ``("export", seq)``: call ``export_state`` and reply with
   ``{"seq", "state", "state_error", "hook_errors"}``.
+- ``("import", seq, state)``: call ``import_state`` and reply with
+  ``{"seq", "state_error", "hook_errors"}``.
 - ``("close",)``: export the state one last time, reply with
   ``{"closed": true, "state", "state_error", "hook_errors"}`` and exit.
 
@@ -118,6 +120,19 @@ class _Worker:
         reply["hook_errors"] = self.take_hook_errors()
         return json.dumps(reply).encode()
 
+    def import_(self, seq: int, state: dict[str, Any]) -> bytes:
+        """Restore a state with the player's ``import_state`` and reply."""
+        reply: dict[str, Any] = {"seq": seq, "state_error": None}
+        try:
+            import_state = getattr(self.player, "import_state", None)
+            if not callable(import_state):
+                raise TypeError("the player doesn't implement import_state")
+            import_state(state)
+        except Exception:
+            reply["state_error"] = traceback.format_exc()
+        reply["hook_errors"] = self.take_hook_errors()
+        return json.dumps(reply).encode()
+
 
 def run_worker(conn: Connection, player_bytes: bytes) -> None:
     """Serve one player in a worker process until the engine closes the connection.
@@ -151,6 +166,8 @@ def run_worker(conn: Connection, player_bytes: bytes) -> None:
             conn.send_bytes(worker.decide(*message[1:]))
         elif kind == "export":
             conn.send_bytes(worker.export(seq=message[1]))
+        elif kind == "import":
+            conn.send_bytes(worker.import_(*message[1:]))
         elif kind == "close":
             conn.send_bytes(worker.export(closed=True))
             return

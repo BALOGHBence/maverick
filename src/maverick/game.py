@@ -12,6 +12,7 @@ from typing import Deque, Optional
 from collections import deque
 import json
 import logging
+import random
 import time
 import uuid
 from warnings import warn
@@ -92,6 +93,14 @@ class Game:
         to isolated players. If not set anywhere, there is no limit.
 
         .. versionadded:: 0.7.0
+    seed : int | None
+        Seed of the game's own random number generator, which shuffles the deck and draws the first button.
+        Games with the same seed, players and decisions deal the same cards. If None (the default), a seed
+        is drawn from the global ``random`` module, so seeding ``random`` before creating the game keeps
+        working. The generator is never shared with players, so players that use random numbers don't
+        change the cards that are dealt.
+
+        .. versionadded:: 0.7.0
 
     Notes
     -----
@@ -116,6 +125,7 @@ class Game:
         first_button_position: Optional[int] = None,
         player_isolation: Optional[PlayerIsolation | str] = None,
         decision_timeout: Optional[float] = None,
+        seed: Optional[int] = None,
     ):
         if not exc_handling_mode in ["log", "raise"]:
             raise ValueError("exc_handling_mode must be 'log' or 'raise'")
@@ -155,6 +165,14 @@ class Game:
         self._settings = resolve_settings(
             player_isolation=player_isolation, decision_timeout=decision_timeout
         )
+
+        if seed is not None and (not isinstance(seed, int) or isinstance(seed, bool)):
+            raise ValueError("seed must be an integer")
+
+        # The game's own random number generator, so players that use the global
+        # ``random`` module can neither change nor predict the cards that are dealt
+        self._seed = seed if seed is not None else random.getrandbits(64)
+        self._rng = random.Random(self._seed)
 
         self._rules = rules
         self._max_hands = max_hands
@@ -256,6 +274,17 @@ class Game:
             A list of all game events in chronological order.
         """
         return self._event_history
+
+    @property
+    def seed(self) -> int:
+        """The seed of the game's random number generator.
+
+        Passing it to a new game, with the same players and decisions, deals the same
+        cards. It is not part of :attr:`state`, so players never see it.
+
+        .. versionadded:: 0.7.0
+        """
+        return self._seed
 
     @property
     def settings(self) -> IsolationSettings:
@@ -696,6 +725,58 @@ class Game:
             )
         return None if state is None else json.loads(json.dumps(state))
 
+    def set_player_state(self, player: "PlayerLike | str", state: dict) -> None:
+        """Restore a player's state with its ``import_state`` hook.
+
+        The counterpart of :meth:`get_player_state`: passing what it returned restores
+        the player. Works the same in both isolation modes. For a player running in a
+        worker process, ``import_state`` runs in the worker, on the copy of the player
+        that actually plays. The player receives a copy of ``state`` that went through
+        JSON.
+
+        Parameters
+        ----------
+        player : PlayerLike | str
+            A player object or a plain UID string.
+        state : dict
+            JSON-serializable data, typically returned by :meth:`get_player_state`.
+
+        Raises
+        ------
+        TypeError
+            If ``state`` is not a JSON-serializable ``dict``, or an in-process player
+            doesn't implement ``import_state``.
+        ValueError
+            If the player is not in the game.
+        RuntimeError
+            If an isolated player's worker is not running or fails to restore the
+            state.
+
+        .. versionadded:: 0.7.0
+        """
+        if not isinstance(state, dict):
+            raise TypeError(f"state must be a dict, got {type(state).__name__}")
+        state = json.loads(json.dumps(state))
+        uid = player if isinstance(player, str) else player.uid
+        proxy = self._proxies.get(uid)
+        if proxy is not None:
+            try:
+                proxy.import_state(state)
+            except PlayerFailure as exc:
+                raise RuntimeError(str(exc)) from exc
+            return
+        if uid in self._final_states:
+            raise RuntimeError(
+                f"The worker of player {uid} has stopped, so its state can't be set"
+            )
+        target = self._strategies.get(uid)
+        if target is None:
+            raise ValueError(f"Player with uid {uid} not found")
+        import_state = getattr(target, "import_state", None)
+        if not callable(import_state):
+            raise TypeError(f"Player {target.name} doesn't implement import_state")
+        import_state(state)
+
     def __enter__(self) -> "Game":
         return self
 
@@ -719,7 +800,7 @@ class Game:
         if len(self.state.players) == 0:
             raise ValueError("No players to assign button position")
 
-        deck = Deck.standard_deck(shuffle=True)
+        deck = Deck.standard_deck(shuffle=True, rng=self._rng)
         suit_priority = {
             Suit.SPADES: 3,
             Suit.HEARTS: 2,
@@ -731,7 +812,7 @@ class Game:
         best_score: tuple[int, int] | None = None
 
         for idx in range(len(self.state.players)):
-            card = deck.deal(1)[0]
+            card = deck.deal(1, rng=self._rng)[0]
             score = (card.rank.value, suit_priority[card.suit])
 
             if best_score is None or score > best_score:
@@ -973,7 +1054,7 @@ class Game:
         ):
             raise ValueError("Not enough players to start hand")
 
-        self._deck = Deck.standard_deck(shuffle=True)
+        self._deck = Deck.standard_deck(shuffle=True, rng=self._rng)
         self._revealed_uids.clear()
         self._update_state(
             community_cards=(),
@@ -1169,7 +1250,7 @@ class Game:
         self._log(f"Dealing hole cards. Button: {button_name}", logging.INFO)
         for player in self.state.players:
             if player.state.state_type == PlayerStateType.ACTIVE:
-                cards = self._deck.deal(self.rules.dealing.hole_cards)
+                cards = self._deck.deal(self.rules.dealing.hole_cards, rng=self._rng)
                 self._update_player_state(player, holding=Holding(cards=cards))
 
     def _post_blinds(self) -> None:
@@ -1621,8 +1702,8 @@ class Game:
         )
 
     def _deal_flop(self) -> None:
-        self._deck.deal(1)
-        flop_cards = self._deck.deal(3)
+        self._deck.deal(1, rng=self._rng)
+        flop_cards = self._deck.deal(3, rng=self._rng)
         self._update_state(community_cards=(*self.state.community_cards, *flop_cards))
         self._log(
             f"Dealt flop. Community cards: {[card.utf8() for card in self.state.community_cards]}",
@@ -1630,8 +1711,8 @@ class Game:
         )
 
     def _deal_turn(self) -> None:
-        self._deck.deal(1)
-        turn_card = self._deck.deal(1)[0]
+        self._deck.deal(1, rng=self._rng)
+        turn_card = self._deck.deal(1, rng=self._rng)[0]
         self._update_state(community_cards=(*self.state.community_cards, turn_card))
         self._log(
             f"Dealt turn. Community cards: {[card.utf8() for card in self.state.community_cards]}",
@@ -1639,8 +1720,8 @@ class Game:
         )
 
     def _deal_river(self) -> None:
-        self._deck.deal(1)
-        river_card = self._deck.deal(1)[0]
+        self._deck.deal(1, rng=self._rng)
+        river_card = self._deck.deal(1, rng=self._rng)[0]
         self._update_state(community_cards=(*self.state.community_cards, river_card))
         self._log(
             f"Dealt river. Community cards: {[card.utf8() for card in self.state.community_cards]}",

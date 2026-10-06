@@ -177,13 +177,16 @@ class Player(metaclass=PlayerMeta):
 
     def export_state(self) -> Optional[dict[str, Any]]:
         """
-        Optional hook that returns data the player wants to report.
+        Optional hook that returns the state of the player.
 
-        :meth:`Game.get_player_state <maverick.game.Game.get_player_state>` calls it
-        to read data that the player collects while it plays, such as statistics or
-        the cost of calls to an external service. Override it to return a
-        JSON-serializable ``dict``.
+        Together with :meth:`import_state` this forms a pair: ``export_state`` returns
+        everything needed to restore the player later, as a JSON-serializable
+        ``dict``, and ``import_state`` restores it. Typical contents are statistics
+        the player collects while it plays, opponent models, or the cost of calls to
+        an external service. Leave out secrets such as API keys and anything that can
+        be recreated, such as clients.
 
+        :meth:`Game.get_player_state <maverick.game.Game.get_player_state>` reads it.
         This matters most for players isolated in worker processes: the player object
         there is a copy, so attributes it changes while playing are not visible on the
         object passed to :meth:`Game.add_player <maverick.game.Game.add_player>`. The
@@ -194,8 +197,26 @@ class Player(metaclass=PlayerMeta):
         Returns
         -------
         dict | None
-            JSON-serializable data, or ``None`` (the default) if there is nothing to
-            report.
+            JSON-serializable data, or ``None`` (the default) if the player has no
+            state worth keeping.
+
+        .. versionadded:: 0.7.0
+        """
+        return None
+
+    def import_state(self, state: dict[str, Any]) -> None:
+        """
+        Optional hook that restores a state returned by :meth:`export_state`.
+
+        :meth:`Game.set_player_state <maverick.game.Game.set_player_state>` calls it.
+        For players isolated in worker processes, it runs in the worker, on the copy
+        of the player that actually plays.
+
+        Parameters
+        ----------
+        state : dict
+            A copy of data previously returned by :meth:`export_state`, after a round
+            trip through JSON.
 
         .. versionadded:: 0.7.0
         """

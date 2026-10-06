@@ -88,6 +88,9 @@ class RecorderBot(Player):
     def export_state(self) -> dict:
         return {"calls": len(self.calls)}
 
+    def import_state(self, state) -> None:
+        self.calls.append(["import_state", state])
+
 
 class StatefulBot(CallBot):
     """Counts its decisions and reports the count through export_state."""
@@ -111,6 +114,22 @@ class StatefulBot(CallBot):
         if self.mode == "not a dict":
             return [self.decisions]
         return {"decisions": self.decisions}
+
+    def import_state(self, state) -> None:
+        if self.mode == "raise":
+            raise RuntimeError("import boom")
+        self.decisions = state["decisions"]
+
+
+class DuckPlayer:
+    """A PlayerLike that is not a Player and has no state hooks."""
+
+    def __init__(self, name: str):
+        self.uid = name
+        self.name = name
+
+    def decide_action(self, *, valid_actions, **_) -> PlayerAction:
+        return _check_or_call(self, valid_actions)
 
 
 class SlowBot(Player):
@@ -486,6 +505,73 @@ class TestExportState(IsolationTestCase):
             game.get_player_state("nobody")
 
 
+class TestImportState(IsolationTestCase):
+    def test_round_trip(self):
+        for isolation in ("none", "process"):
+            with self.subTest(isolation=isolation):
+                bot = StatefulBot(name="stateful")
+                game = _make_game(bot, CallBot(name="caller"), isolation=isolation)
+                game.set_player_state(bot, {"decisions": 100})
+                self.assertEqual(game.get_player_state(bot), {"decisions": 100})
+                game.start()
+                self.assertGreater(game.get_player_state(bot)["decisions"], 100)
+
+    def test_state_is_copied(self):
+        bot = StatefulBot(name="stateful")
+        game = _make_game(bot, CallBot(name="caller"), isolation="none")
+        state = {"decisions": 3}
+        game.set_player_state(bot, state)
+        state["decisions"] = 99
+        self.assertEqual(bot.decisions, 3)
+
+    def test_restore_into_a_new_game(self):
+        bot = StatefulBot(name="stateful")
+        with _make_game(bot, CallBot(name="caller")) as game:
+            game.start()
+        saved = game.get_player_state(bot)
+        restored = StatefulBot(name="stateful")
+        with _make_game(restored, CallBot(name="caller")) as game:
+            game.set_player_state(restored, saved)
+            self.assertEqual(game.get_player_state(restored), saved)
+
+    def test_failing_import(self):
+        bot = StatefulBot(mode="raise", name="stateful")
+        game = _make_game(bot, CallBot(name="caller"))
+        with self.assertRaisesRegex(RuntimeError, "import boom"):
+            game.set_player_state(bot, {"decisions": 1})
+        game.close()
+        bot = StatefulBot(mode="raise", name="stateful")
+        game = _make_game(bot, CallBot(name="caller"), isolation="none")
+        with self.assertRaisesRegex(RuntimeError, "import boom"):
+            game.set_player_state(bot, {"decisions": 1})
+
+    def test_player_without_import_state(self):
+        game = _make_game(DuckPlayer("duck"), CallBot(name="caller"), isolation="none")
+        with self.assertRaises(TypeError):
+            game.set_player_state("duck", {})
+        game = _make_game(DuckPlayer("duck"), CallBot(name="caller"))
+        with self.assertRaisesRegex(RuntimeError, "import_state"):
+            game.set_player_state("duck", {})
+        game.close()
+
+    def test_stopped_worker(self):
+        bot = StatefulBot(name="stateful")
+        game = _make_game(bot, CallBot(name="caller"))
+        game.start()
+        with self.assertRaisesRegex(RuntimeError, "stopped"):
+            game.set_player_state(bot, {"decisions": 1})
+
+    def test_invalid_state(self):
+        bot = StatefulBot(name="stateful")
+        game = _make_game(bot, CallBot(name="caller"), isolation="none")
+        with self.assertRaises(TypeError):
+            game.set_player_state(bot, [1])
+        with self.assertRaises(TypeError):
+            game.set_player_state(bot, {"decisions": {1}})
+        with self.assertRaises(ValueError):
+            game.set_player_state("nobody", {})
+
+
 class TestWorkerLoop(IsolationTestCase):
     """Runs the worker loop in a thread, where coverage can see it."""
 
@@ -566,6 +652,14 @@ class TestWorkerLoop(IsolationTestCase):
         self.assertEqual(reply["seq"], 7)
         self.assertEqual(reply["state"], {"calls": 0})
         self.assertIsNone(reply["state_error"])
+
+    def test_import(self):
+        self.engine.send(("import", 3, {"calls": 1}))
+        reply = json.loads(self.engine.recv_bytes())
+        self.assertEqual(reply["seq"], 3)
+        self.assertIsNone(reply["state_error"])
+        self.engine.send(("export", 4))
+        self.assertEqual(json.loads(self.engine.recv_bytes())["state"], {"calls": 1})
 
     def test_worker_exits_when_the_engine_goes_away(self):
         self.engine.close()

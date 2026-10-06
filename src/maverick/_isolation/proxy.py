@@ -243,6 +243,22 @@ class ProcessPlayer:
         reply = self._request(lambda seq: ("export", seq), "export its state")
         return self._state_from_reply(reply)
 
+    def import_state(self, state: dict[str, Any]) -> None:
+        """Ask the worker to restore ``state`` with the player's ``import_state``.
+
+        Raises
+        ------
+        PlayerFailure
+            If the worker doesn't answer in time, has died, or ``import_state``
+            raised an exception.
+        """
+        reply = self._request(lambda seq: ("import", seq, state), "import its state")
+        if reply.get("state_error"):
+            raise PlayerFailure(
+                f"import_state of player {self.name!r} failed:\n"
+                f"{reply['state_error']}"
+            )
+
     def _request(
         self, build_message: Callable[[int], tuple], what: str
     ) -> dict[str, Any]:

@@ -99,7 +99,8 @@ Exceptions in event hooks are logged, as in in-process mode.
 - **Player state lives in the worker.** The worker gets a copy of the player when it is
   added. Attributes the bot changes while playing are not visible on the object you
   passed to `add_player`. `Player.game` on that object is still updated with the latest
-  view. To get data out of a bot, use `export_state` (see below).
+  view. To get data out of a bot or into it, use `export_state` and `import_state`
+  (see below).
 - **Workers are started when players are added** and stopped when they leave, are
   eliminated, or the game ends. Use the game as a context manager, or call
   `game.close()`, to stop them early.
@@ -109,17 +110,25 @@ Exceptions in event hooks are logged, as in in-process mode.
 - **`decision_time_seconds`** on recorded actions includes the time to communicate with
   the worker.
 
-## Getting data out of isolated players
+## Player state: export and import
 
 Listeners subscribed with `game.subscribe(...)` run in the engine's process and receive
 the full `Game`, so game histories, transcripts and statistics collected by listeners
 work the same in both modes. Data that a bot collects on itself is different, for
-example the number of hands it has played or the token usage of an LLM it calls. In
-process mode that data lives in the worker's copy of the bot.
+example the number of hands it has played, a model of its opponents, or the token usage
+of an LLM it calls. In process mode that data lives in the worker's copy of the bot.
 
-To report such data, override {meth}`~maverick.player.Player.export_state` and return a
-JSON-serializable `dict`. Read it with
-{meth}`~maverick.game.Game.get_player_state`:
+Players expose that data through a pair of optional hooks:
+
+- {meth}`~maverick.player.Player.export_state` returns the player's state as a
+  JSON-serializable `dict`. It should contain everything needed to restore the player
+  later. Leave out secrets, such as API keys, and anything that can be recreated, such
+  as clients.
+- {meth}`~maverick.player.Player.import_state` restores a state returned by
+  `export_state`.
+
+The game calls them through {meth}`~maverick.game.Game.get_player_state` and
+{meth}`~maverick.game.Game.set_player_state`:
 
 ```python
 from maverick import Game, PlayerState
@@ -138,6 +147,9 @@ class CountingBot(CallBot):
     def export_state(self) -> dict:
         return {"decisions": self.decisions}
 
+    def import_state(self, state: dict) -> None:
+        self.decisions = state["decisions"]
+
 
 if __name__ == "__main__":
     bot = CountingBot(name="Alice")
@@ -146,24 +158,37 @@ if __name__ == "__main__":
         game.add_player(CallBot(name="Bob"), state=PlayerState(stack=200))
         game.start()
 
-    print(game.get_player_state(bot))  # {'decisions': ...}
-    print(bot.decisions)               # 0: this is the copy in your process
+    saved = game.get_player_state(bot)
+    print(saved)          # {'decisions': ...}
+    print(bot.decisions)  # 0: this is the copy in your process
+
+    # Continue counting in a new game
+    with Game(small_blind=1, big_blind=2, player_isolation="process") as game:
+        game.add_player(bot, state=PlayerState(stack=200))
+        game.add_player(CallBot(name="Bob"), state=PlayerState(stack=200))
+        game.set_player_state(bot, saved)
+        game.start()
 ```
 
-`get_player_state` works the same in both isolation modes:
+Both methods work the same in both isolation modes:
 
-- **While the worker runs,** the engine asks it for the data. You can call
-  `get_player_state` between hands, for example from a listener, or after the game.
+- **While the worker runs,** the engine asks it to export or import the state. You can
+  call them between hands, for example from a listener, or before and after the game.
 - **When the worker stops,** because the player left or was eliminated or the game
-  ended, the worker exports the data one last time. `get_player_state` keeps returning
-  that data afterwards.
-- **In-process,** the bot's `export_state` is called directly.
+  ended, the worker exports the state one last time. `get_player_state` keeps returning
+  that state afterwards. `set_player_state` raises a `RuntimeError`, because there is
+  no worker left to restore it in.
+- **In-process,** the bot's hooks are called directly.
 
-The result is always a copy that went through JSON, so changing it doesn't affect the
-bot. Bots that don't implement `export_state` return `None`. If an isolated bot's
-`export_state` raises, times out, returns something that is not a JSON-serializable
-`dict`, or its worker has died, `get_player_state` logs a warning and returns `None`.
-In-process, the exception propagates.
+Data always goes through JSON, in both directions and in both modes, so neither side
+holds references into the other. Bots that don't implement `export_state` return
+`None`.
+
+If an isolated bot's `export_state` raises, times out, returns something that is not a
+JSON-serializable `dict`, or its worker has died, `get_player_state` logs a warning and
+returns `None`, so a misbehaving bot can't stop the code that collects results.
+`set_player_state` raises a `RuntimeError` instead, because a state that silently fails
+to load would be worse. In-process, exceptions from the hooks propagate.
 
 ## How the engine talks to workers
 
@@ -193,7 +218,7 @@ unpickles every object taken out of it. A pipe lets the engine read raw bytes wi
   or container.
 - **Resource limits.** A worker can use as much CPU and memory as the operating system
   allows. Use containers or operating system limits if you need hard limits.
-- **Random numbers in bots.** Workers don't inherit the engine's random state, so
-  seeding `random` in your script doesn't make the decisions of isolated bots
-  reproducible. Shuffling and seating happen in the engine and are not affected (see
-  {doc}`reproducibility`).
+- **Random numbers in bots.** Workers don't inherit the random state of your script,
+  so seeding `random` doesn't make the decisions of isolated bots reproducible. The
+  cards are not affected: the game shuffles with its own generator, which you can seed
+  with `Game(seed=...)` (see {doc}`reproducibility`).

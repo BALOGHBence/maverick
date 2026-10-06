@@ -263,14 +263,23 @@ pay for any of this.
   A `Pipe` lets the engine read raw bytes with a size limit (`recv_bytes(maxlength)`)
   and decode them itself. With one engine and one worker per channel, a queue's support
   for many producers and consumers, its feeder thread and its locks aren't needed either.
-- **Data leaves a worker only through `export_state`.** Bots keep their state in the
-  worker, so changes are not visible on the object passed to `add_player`. Sending the
-  bot object back pickled would be transparent but unsafe, and mirroring attributes as
-  JSON would fail silently for anything that isn't JSON-serializable. Instead, a bot
-  opts in by returning a JSON-serializable `dict` from `Player.export_state`, and
-  `Game.get_player_state` reads it. The worker exports once more when it stops, so the
-  data outlives the worker. In-process, the method is called directly and the result
-  round-trips through JSON, so both modes return the same kind of copy.
+- **Bot state crosses the process boundary only through `export_state` and
+  `import_state`.** Bots keep their state in the worker, so changes are not visible on
+  the object passed to `add_player`. Sending the bot object back pickled would be
+  transparent but unsafe, and mirroring attributes as JSON would fail silently for
+  anything that isn't JSON-serializable. Instead, a bot opts in with a pair of hooks:
+  `export_state` returns everything needed to restore it as a JSON-serializable `dict`,
+  and `import_state` restores it. `Game.get_player_state` and `Game.set_player_state`
+  call them. The worker exports once more when it stops, so the data outlives the
+  worker. In-process, the hooks are called directly and the data round-trips through
+  JSON, so both modes behave the same.
+- **One pair of hooks for reporting and for restoring.** The same data serves both
+  purposes, for example the token usage of an LLM bot, and two pairs of methods with
+  overlapping data would drift apart. Saving and resuming games (#103) will use the
+  same pair.
+- **Failed exports return `None`, failed imports raise.** Results are often collected
+  from many bots at once, so one misbehaving bot shouldn't stop that. A state that
+  silently fails to load would be worse, so `set_player_state` raises.
 - **One long-lived worker per player,** because bots keep state between decisions. A
   pool of workers would lose it.
 - **Only the new history entries are sent.** Each worker keeps its own copy of the
@@ -292,3 +301,28 @@ pay for any of this.
 Process isolation doesn't cover code that runs when the bot is created: the bot's module
 is imported and the player is created and pickled in the engine's process. It also sets
 no CPU or memory limits.
+
+## The game owns its random number generator
+
+Every `Game` has its own `random.Random`, created from the `seed` argument, and passes
+it to every shuffle and deal (`Deck` methods take an optional `rng`). The engine used to
+rely on the global `random` module, which had three problems:
+
+- **Players changed the cards.** An in-process player that called `random.random()`
+  consumed numbers from the generator that shuffles the deck, so games were only
+  reproducible if every player behaved identically.
+- **Players could predict the cards.** An in-process player could call
+  `random.getstate()` and simulate the next shuffle without touching the `Game`, a path
+  that `PlayerView` couldn't close.
+- **The state couldn't be saved.** Saving and resuming games (#103) needs the state of
+  the generator that deals the cards, and the global one is shared with everything else
+  in the interpreter.
+
+If no seed is given, it is drawn from the global `random` module. That keeps
+`random.seed(...)` before creating a game reproducible, as documented before. The seed
+is available as `Game.seed`, so any game can be repeated, but it is not part of
+`GameState`, so players never see it.
+
+The engine's generator is still an object in the engine's process, so an in-process
+player can reach it through introspection like anything else there. With process
+isolation, players have no way to reach it.

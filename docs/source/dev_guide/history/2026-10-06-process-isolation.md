@@ -9,9 +9,9 @@ myst:
 | | |
 |---|---|
 | **Date** | 2026-10-06 |
-| **PR / Issues** | #101 |
+| **PR / Issues** | #101, prepares #103 |
 | **Version** | 0.7.0 (unreleased) |
-| **Breaking** | No |
+| **Breaking** | Minor: seeding `random` after creating a game no longer affects the cards |
 
 ## Summary
 
@@ -22,10 +22,13 @@ process. The engine sends it pickled views and receives actions as JSON. Players
 time out, raise, return garbage or crash fold instead of stopping the game. The mode and
 an optional `decision_timeout` can be set as `Game` arguments, through the
 `MAVERICK_PLAYER_ISOLATION` and `MAVERICK_DECISION_TIMEOUT` environment variables, or in
-`[tool.maverick]` of `pyproject.toml`, in that order of priority. Bots report data they
-collect on themselves through a new optional `Player.export_state()` hook, read with
-`Game.get_player_state()` in either mode. In-process mode stays the default and is as
-fast as before.
+`[tool.maverick]` of `pyproject.toml`, in that order of priority. Bot state crosses the
+process boundary through a new pair of optional hooks, `Player.export_state()` and
+`Player.import_state()`, called by `Game.get_player_state()` and
+`Game.set_player_state()` in either mode. The game now also shuffles and deals with its
+own seedable random number generator instead of the global `random` module. In-process
+mode stays the default and is as fast as before. Both the state hooks and the generator
+are prerequisites for saving and resuming games (#103).
 
 ## Details
 
@@ -62,16 +65,35 @@ this can't be fixed by changing the API. See #101 for the proof of concept.
   - New `get_player_state(player)`. It asks a running worker, falls back to the state
     exported when the worker stopped, or calls the bot directly in-process. The result
     always goes through JSON.
-- **`Player.export_state()`**: a new optional hook that returns JSON-serializable data
-  the bot wants to report. The default returns `None`.
-- **Docs:** a new user-guide page, `player_isolation.md`. The `llm_as_player` example
-  now reports its token usage through `export_state` and reads it with
-  `get_player_state`, so the cost summary works in both isolation modes. Its stored
-  outputs are unchanged, because the notebook needs an OpenAI key to run.
+  - New `set_player_state(player, state)`, which restores a state through the worker
+    or directly in-process. The state also goes through JSON.
+  - New `seed` argument and property. The game creates its own `random.Random` from
+    the seed and passes it to every shuffle and deal. Without a seed, one is drawn from
+    the global `random` module.
+- **`Player.export_state()` / `Player.import_state()`**: a new pair of optional hooks.
+  `export_state` returns everything needed to restore the player as a
+  JSON-serializable `dict`, and `import_state` restores it. By default they return
+  `None` and do nothing.
+- **`Deck`**: `build`, `standard_deck`, `shuffle` and `deal` take an optional `rng`.
+  They still use the global `random` module by default.
+- **Docs:**
+  - A new user-guide page, `player_isolation.md`.
+  - The `llm_as_player` example now exports its token usage with `export_state`, can
+    restore it with `import_state`, and reads it with `get_player_state`, so the cost
+    summary works in both isolation modes. Its stored outputs are unchanged, because
+    the notebook needs an OpenAI key to run.
+  - The reproducibility guide now uses `seed` and was re-executed.
 
 ### Breaking changes and migration
 
-None. In-process mode is the default, and its behaviour is unchanged.
+In-process mode is the default, and players behave as before. One change in how cards
+are dealt:
+
+- The game no longer shuffles and deals with the global `random` module. Seeding
+  `random` before creating a game is still reproducible, because the game draws its
+  seed from it. Seeding it after the game has been created no longer affects the
+  cards. Pass `seed` to `Game` instead.
+- For the same seed, the cards differ from those dealt by earlier versions.
 
 ### Design decisions and alternatives considered
 
@@ -94,12 +116,24 @@ in separate processes". Choices made for the open questions of #101:
 - **A pipe per worker instead of `multiprocessing.Queue`:** a queue unpickles whatever
   is taken out of it, so it can't be used for replies from untrusted workers without
   giving up the JSON-only reply path.
-- **`export_state` instead of syncing the bot object back:** bot state lives in the
-  worker, so data collected on the bot (statistics, LLM token usage, ...) was lost to
-  the caller. Sending the bot back pickled would be unsafe for the reason above, and
-  mirroring attributes as JSON would fail silently for attributes that can't be
-  serialized. An explicit, opt-in `dict` is safe and lets the bot author decide what
-  to report. Listeners need none of this: they run in the engine's process.
+- **`export_state`/`import_state` instead of syncing the bot object back:** bot state
+  lives in the worker, so data collected on the bot (statistics, LLM token usage, ...)
+  was lost to the caller. Sending the bot back pickled would be unsafe for the reason
+  above, and mirroring attributes as JSON would fail silently for attributes that can't
+  be serialized. An explicit, opt-in `dict` is safe and lets the bot author decide what
+  to keep. Listeners need none of this: they run in the engine's process.
+- **One pair of hooks for reporting and restoring:** `export_state` was first added for
+  reports only. Saving games (#103) needs "everything to restore the player", and two
+  pairs of methods with overlapping data would drift apart. The contract was settled
+  before 0.7.0 is released, while it can still change without breaking bots.
+- **Failed exports return `None`, failed imports raise:** collecting results from many
+  bots shouldn't stop because of one, but a state that silently fails to load is worse
+  than an error.
+- **An engine-owned random number generator:** see {doc}`../design_decisions`, section
+  "The game owns its random number generator". In short: in-process players changed
+  the cards by using `random`, could predict them with `random.getstate()`, and the
+  global state couldn't be saved for #103. The default seed is drawn from `random`, so
+  that existing `random.seed(...)` code stays reproducible.
 - **Startup handshake:** the worker confirms it could unpickle the player. Without it,
   a player class defined in a notebook would only fail in the worker, and the player
   would silently fold the whole game.
@@ -146,7 +180,19 @@ including starting the two workers.
     `export_state`, and `None` with a warning when an isolated bot's export raises,
     isn't JSON, isn't a `dict`, or its worker has died. In-process, these errors
     propagate.
+  - `set_player_state` restores state in both modes, before a game and in a new game
+    from a saved state. It copies the state, raises a `RuntimeError` when an isolated
+    import fails or the worker has stopped, and a `TypeError` for invalid states or
+    in-process players without `import_state`.
   - The worker loop is also tested in a thread, where coverage can see it.
+- New `tests/test_rng.py`:
+  - The same seed deals the same cards, and different seeds deal different cards.
+  - `game.seed` repeats a game that wasn't seeded explicitly.
+  - Seeding `random` before creating a game is still reproducible.
+  - Players that consume global random numbers don't change the cards.
+  - Isolated and in-process games with the same seed deal the same cards.
+  - The seed is not visible in the state or in player views.
+  - `Deck` methods with an `rng` are independent of the global `random` module.
 - The existing suite passes unchanged. `test_integration_games.py` also passes with
   `MAVERICK_PLAYER_ISOLATION=process`.
 
@@ -159,5 +205,7 @@ including starting the two workers.
   simple start on POSIX systems.
 - An option to seed the random number generator of each worker for reproducible bot
   decisions.
+- Saving and resuming games builds on `export_state`/`import_state` and on the
+  engine-owned generator: #103.
 - A timeout can't stop a worker that is still computing. Its next decisions wait
   behind the late one and may time out too.
