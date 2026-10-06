@@ -63,14 +63,16 @@ uv build
 def decide_action(
     self,
     *,
-    game: "Game",
+    game: "PlayerView",
     valid_actions: list[ActionType],
     min_raise_amount: int,
     call_amount: int,
     min_bet_amount: int,
 ) -> PlayerAction: ...
 ```
-Optional hook: `on_event(event: GameEvent, game: Game)` — called for every game event if defined.
+Optional hooks: `on_event(event: GameEvent, game: PlayerView)` for every game event, and `on_<event_type>(event, game)` (e.g. `on_hand_started`) for a specific one.
+
+**Player views** (`playerview.py`) — Players never receive the live `Game`. `decide_action` and the player hooks get a `PlayerView`: a frozen, per-seat copy with `state` (redacted `GameState`), `rules`, `history`, `holding`, `me` and `get_player_snapshot()`. Other players' holdings are `None` until they are revealed at showdown, `GAME_STATE_CHANGED` payloads are redacted for player hooks and left out of `PlayerView.history`, and the deck, table and strategy objects are not reachable. `Player.game` returns the last view a player received. External `EventBus` listeners still get the full `Game`. Never pass `Game` (or anything referencing it) to player code.
 
 **State models** (`state.py`, `playerstate.py`) — `GameState` and `PlayerState` are immutable frozen Pydantic models. `GameState` captures the full table snapshot (street, pot, community cards, positions, all player states).
 

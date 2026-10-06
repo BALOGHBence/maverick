@@ -5,7 +5,7 @@ from ...enums import ActionType
 from ...playeraction import PlayerAction
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ...game import Game
+    from ...playerview import PlayerView
 
 __all__ = ["WhaleBot"]
 
@@ -29,7 +29,7 @@ class WhaleBot(Player):
     def decide_action(
         self,
         *,
-        game: "Game",
+        game: "PlayerView",
         valid_actions: list[ActionType],
         min_raise_amount: int,
         min_bet_amount: int,

@@ -10,7 +10,7 @@ You are writing code that uses the Maverick poker library (Python >= 3.12). It i
 Subclass `maverick.Player` (or duck-type `maverick.PlayerLike`: needs `uid: str`, `name: str`, `decide_action`).
 
 ```python
-from maverick import Game, Player, PlayerAction, ActionType
+from maverick import Player, PlayerAction, PlayerView, ActionType
 
 class MyBot(Player):
     cls_uid = "…32-char hex…"  # optional: stable id for Player.get_by_uid()
@@ -18,7 +18,7 @@ class MyBot(Player):
     def decide_action(
         self,
         *,
-        game: Game,
+        game: PlayerView,
         valid_actions: list[ActionType],
         min_raise_amount: int,
         call_amount: int,
@@ -39,7 +39,7 @@ Contract rules:
 - Players are strategies, not state holders: the engine owns all state. `game.state.players` holds frozen `PlayerSnapshot`s (`uid`, `name`, `state`), not your player objects.
 - `PlayerAction.payload` may carry extra dict data; `decision_time_seconds` is filled by the engine.
 - Constructor is keyword-only: `MyBot(name="Bob", uid=None)`. Names and uids must be unique per game. When overriding `__init__`, forward `**kwargs` to `super().__init__`.
-- Useful inside `decide_action`: `self.state` (`PlayerState`: `stack`, `current_bet`, `total_contributed`, `holding.cards`, `state_type`, `seat`), `game.state` (`GameState`: `street`, `pot`, `current_bet`, `min_bet`, `last_raise_size`, `community_cards`, `small_blind`, `big_blind`, `hand_number`, `players`, `get_players_in_hand()`, `get_active_players()`), `game.rules.showdown.hole_cards_required`. `self.state` only works for `Player` subclasses; duck-typed players use `game.get_player_snapshot(self.uid).state`.
+- Useful inside `decide_action`: `self.state` (`PlayerState`: `stack`, `current_bet`, `total_contributed`, `holding.cards`, `state_type`, `seat`), `game.state` (`GameState`: `street`, `pot`, `current_bet`, `min_bet`, `last_raise_size`, `community_cards`, `small_blind`, `big_blind`, `hand_number`, `players`, `get_players_in_hand()`, `get_active_players()`), `game.rules.showdown.hole_cards_required`, `game.holding` (own hole cards). `game` is a read-only `PlayerView`: opponents' `holding` is `None` until revealed at showdown and there is no `game.deck`. `self.state` only works for `Player` subclasses; duck-typed players use `game.get_player_snapshot(self.uid).state`.
 - Hand evaluation (scores only compare hands; strength is a win probability):
   - `maverick.utils.score_hand(cards)` → `(HandType, score)` for up to 5 cards; `Holding(cards=...).score()`, `Hand(private_cards=..., community_cards=...).score()` do the same.
   - `maverick.utils.find_highest_scoring_hand(private, community, n_private=...)` → `(cards, HandType, score)`.
@@ -135,6 +135,7 @@ game.unsubscribe(token)
 **Player hooks** (run after explicit listeners, exceptions always logged):
 - `on_event(self, event, game)` — called for every event.
 - Implicit `on_<event_type_lowercase>(self, event, game)`, e.g. `on_hand_started`, `on_pot_won`, `on_game_ended`.
+- Hooks receive a `PlayerView` (not the `Game`) and a copy of the event; `GAME_STATE_CHANGED` payloads have other players' unrevealed holdings removed.
 
 ## 5. Reading events
 
@@ -187,10 +188,11 @@ df = pd.DataFrame(transcriber.event_dump)  # tabular; enum columns are ints
 df["type_name"] = df["type"].map({e.value: e.name for e in GameEventType})
 ```
 
-A player can read a live transcript mid-game (e.g. inside `decide_action`) by keeping a reference to a transcriber attached to the same game.
+Inside `decide_action`, read past events from `game.history` (the player's redacted history, see below). Don't hand a transcriber or collector to a player: they hold the full `Game`, which would leak hidden information.
 
 **Without `GameTranscriber`:**
 - `game.history` → `list[GameEvent]` of every emitted event, in order; always recorded, no setup needed.
+- In player code, `game` is a `PlayerView` and `game.history` is a read-only sequence of copies of the same events, without `GAME_STATE_CHANGED`.
 
 ```python
 for e in game.history:

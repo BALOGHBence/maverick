@@ -32,6 +32,7 @@ Go through every changed file and evaluate the items below. Only flag items that
 ### Types & interfaces
 - [ ] All functions and methods have type hints.
 - [ ] `decide_action` signature matches the required keyword-only interface exactly.
+- [ ] Player code (`decide_action`, `on_event`, `on_<event>` hooks) only receives a `PlayerView`, never the live `Game` or anything holding a reference to it (deck, table, listeners, strategy objects).
 
 ### Style (PEP 8 + project conventions)
 - [ ] Line length ≤ 88 characters (Black-compatible).

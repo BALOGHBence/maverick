@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `all_stacks_at_game_start` property to the `Game` class.
 - Added `PlayerSnapshot` frozen Pydantic model (fields: `uid`, `name`, `state`) that captures observable player data at a point in time, decoupled from strategy logic.
 - Added `Game.get_player_snapshot(uid)` helper method that returns the current `PlayerSnapshot` for a player by UID or player object.
+- Added `PlayerView`, a read-only, per-seat view of the game that players receive instead of the `Game` itself. It exposes `state` (with the holdings of other players removed until they are revealed at showdown), `rules`, `history`, `holding`, `me` and `get_player_snapshot()`.
+- Added `Game.get_player_view(player)` method that returns the `PlayerView` of a player.
+- Added the `redact_state` and `redact_event` functions and the `EventHistoryView` class to the new `maverick.playerview` module.
 
 ### Changed
 
@@ -37,7 +40,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Game._strategies` dict holds all live strategy objects keyed by player UID; `Game.add_player` populates it, `Game.remove_player` clears the entry.
 - All built-in player strategies (`FoldBot`, `CallBot`, `AggressiveBot`, and all archetype bots) updated to retrieve their current state via `game.get_player_snapshot(self.uid)` instead of `self.state`.
 - `GameState.get_active_players()` and `GameState.get_players_in_hand()` now return `list[PlayerSnapshot]`.
+- **Breaking:** `Player.decide_action` and the player event hooks (`on_event` and `on_<event_type>`) now receive a `PlayerView` as their `game` argument instead of the live `Game` instance. Strategies that only use `game.state`, `game.rules` and `game.get_player_snapshot()` keep working; code that relied on other `Game` members (e.g. `game.deck`, `game.table`, `game.subscribe`) from inside a player must be updated.
+- **Breaking:** `Player.game` now returns the most recent `PlayerView` the player received instead of the `Game`, and `Player.state` reads from that view.
+- **Breaking:** Player event hooks receive a copy of each event; `GAME_STATE_CHANGED` payloads delivered to players have the unrevealed holdings of other players removed.
+- **Breaking:** `Card` is now an immutable (frozen) Pydantic model.
 - **Breaking:** `deck` has been removed from `GameState`. The active deck is now held by `Game._deck` and exposed via the read-only `game.deck` property. Code that previously accessed `game.state.deck` must be updated to use `game.deck`.
+
+### Security
+
+- Players can no longer access hidden information through the game object passed to them: the hole cards of other players, the remaining deck, the strategy objects of other players and the engine internals are not reachable from a `PlayerView`.
 
 ## [0.6.0] - 2026.03.20
 

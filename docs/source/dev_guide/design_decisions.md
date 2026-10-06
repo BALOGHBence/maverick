@@ -62,6 +62,10 @@ The `Deck` will be held by `Game._deck`, not stored as a field on `GameState`. A
 read-only `game.deck` property will expose it for bots that need it for Monte Carlo
 simulations.
 
+*(Superseded for players by "Players receive a PlayerView, not the Game" below: bots
+no longer have access to `game.deck`. The property remains available to code that holds
+the `Game` itself.)*
+
 ### Rationale
 
 - **Observable state vs. engine internals** — `GameState` represents the observable state
@@ -177,3 +181,62 @@ before allocating the `before`/`after` dicts.
 without a `GAME_STATE_CHANGED` listener; paying the serialization cost unconditionally on
 every state transition would be wasteful. The `has_subscribers` guard reduces the overhead
 to a single `any()` call over the subscriber list when no listeners are registered.
+
+---
+
+## Players receive a PlayerView, not the Game
+
+### Decision
+
+The engine never passes the live `Game` to player code. `decide_action`, `on_event` and
+the implicit `on_<event_type>` hooks receive a `PlayerView` instead: a frozen,
+per-seat object built for every call by `Game.get_player_view(uid)`. It holds:
+
+- `state` — a copy of `GameState` in which the holdings of all other players are `None`,
+  except for players who revealed their cards at showdown in the current hand,
+- `rules` — a per-player copy of `PokerRules`,
+- `history` — the player's copy of the event history (an `EventHistoryView`),
+- convenience accessors: `me`, `holding`, `get_player_snapshot()`.
+
+Player hooks receive a copy of each event. `GAME_STATE_CHANGED` payloads are redacted
+the same way as `state`. `Player.game` returns the most recent view the player received
+instead of the `Game`. External `EventBus` listeners are trusted observers and keep
+receiving the full `Game`.
+
+### Rationale
+
+- **Hidden information** — With the live `Game`, a bot could read opponents' hole cards
+  (`game.state.players[i].state.holding`), the upcoming board (`game.deck`), the strategy
+  objects of other players, or change the game through private methods. In a real game
+  none of this is observable, so results of bot-vs-bot simulations could not be trusted.
+- **No back-reference** — `PlayerView` holds only copies and no reference to the `Game`,
+  `Deck`, `Table` or strategy objects, so nothing private is reachable through its
+  attributes. Changing anything in a view has no effect on the game or on other players.
+- **Compatibility** — The argument is still called `game`, and the view mirrors the parts
+  of `Game` that strategies use (`state`, `rules`, `get_player_snapshot`, `history`), so
+  most existing bots keep working unchanged.
+
+### Performance
+
+Views are built on every decision and for every player hook that is actually
+overridden; the no-op `Player.on_event` default is skipped. To keep this cheap:
+
+- `Card` is frozen, so cards can be shared between the engine and the views; only
+  `Holding.cards` lists and the players list are copied.
+- Rules are copied once per player, not per view.
+- Each player's history is synced incrementally, and `EventHistoryView` is an O(1)
+  fixed-length window over it.
+- `GAME_STATE_CHANGED` events are left out of player histories. They are diagnostics
+  for external listeners that only exist while someone subscribes to them, so including
+  them would make a bot's history depend on unrelated observers and require copying two
+  full state dumps per state change for every player. The view always carries the
+  current state anyway.
+
+### Known limitation
+
+Inside a single Python process isolation cannot be complete: a deliberately malicious
+bot can still reach the `Game` through interpreter introspection (e.g. walking the call
+stack with `sys._getframe` or using `gc.get_referrers`). The `PlayerView` closes every
+API-level leak, so well-behaved bots cannot see hidden information by accident and
+cheating requires deliberate introspection. Running untrusted bots with guaranteed
+isolation requires a separate process per bot.

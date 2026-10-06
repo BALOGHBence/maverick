@@ -18,6 +18,7 @@ Core Classes
    maverick.state.GameState
    maverick.protocol.PlayerLike
    maverick.player.Player
+   maverick.playerview.PlayerView
    maverick.playerstate.PlayerState
    maverick.playeraction.PlayerAction
 

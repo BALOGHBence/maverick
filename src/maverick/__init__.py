@@ -22,6 +22,7 @@ from .state import GameState
 from .protocol import PlayerLike
 from .playeraction import PlayerAction
 from .playerstate import PlayerState, PlayerSnapshot
+from .playerview import PlayerView
 from .events import GameEvent
 from .table import Table
 
@@ -47,6 +48,7 @@ __all__ = [
     "PlayerAction",
     "PlayerState",
     "PlayerSnapshot",
+    "PlayerView",
     "GameEvent",
     "Table",
 ]
