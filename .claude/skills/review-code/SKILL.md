@@ -50,6 +50,7 @@ Go through every changed file and evaluate the items below. Only flag items that
 ### Docs / changelog
 - [ ] Public API additions/changes are reflected in the relevant docstring.
 - [ ] `CHANGELOG.md` is updated if the change is user-visible.
+- [ ] A development history entry is added in `docs/source/dev_guide/history/` (summary first, then details), following the template in `history/index.md`.
 - [ ] If the change affects how users should build or run the docs, `docs/` is updated accordingly.
 - [ ] Examples in `docs/source/examples/` are updated if relevant.
 - [ ] If new classes or functions are added, they are included in the API reference docs.
