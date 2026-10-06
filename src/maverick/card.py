@@ -26,7 +26,12 @@ class Card(BaseModel):
     >>> card = Card(suit=Suit.HEARTS, rank=Rank.ACE)
     >>> card.utf8()
     'A♥'
+
+    .. versionchanged:: 0.7.0
+        Cards are immutable.
     """
+
+    model_config = {"frozen": True}
 
     suit: Suit
     rank: Rank

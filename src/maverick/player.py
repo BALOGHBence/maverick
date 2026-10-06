@@ -9,8 +9,8 @@ from .playerstate import PlayerState
 from ._registered_players import registered_players
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .game import Game
     from .events import GameEvent
+    from .playerview import PlayerView
 
 __all__ = ["Player"]
 
@@ -56,7 +56,7 @@ class Player(metaclass=PlayerMeta):
             )
         self.uid = uid or _id or uuid.uuid4().hex
         self.name = name
-        self._game: "Optional[Game]" = None
+        self._view: "Optional[PlayerView]" = None
 
     @property
     def id(self) -> str:
@@ -69,20 +69,26 @@ class Player(metaclass=PlayerMeta):
         return self.uid
 
     @property
-    def game(self) -> Optional["Game"]:
-        """Get the game instance this player is currently in, or None if not in a game."""
-        return self._game
+    def game(self) -> Optional["PlayerView"]:
+        """The most recent view of the game this player received, or None.
+
+        The engine refreshes this view right before calling :meth:`decide_action` and
+        the event hooks, so it is current inside those methods. Outside of them it
+        reflects the game as of the player's last decision or event.
+
+        .. versionchanged:: 0.7.0
+            Returns a :class:`~maverick.playerview.PlayerView` instead of the live
+            :class:`~maverick.game.Game` instance.
+        """
+        return self._view
 
     @property
     def state(self) -> Optional["PlayerState"]:
-        """Get the current state of the player."""
-        if self.game is None:
+        """The state of the player as of the most recent view of the game."""
+        if self._view is None:
             return None
-        # Find the player's state in the game state by matching uid
-        for snapshot in self.game.state.players:
-            if snapshot.uid == self.uid:
-                return snapshot.state
-        return None
+        snapshot = self._view.me
+        return snapshot.state if snapshot is not None else None
 
     @classmethod
     def get_by_uid(cls, uid: str) -> Optional[type["Player"]]:
@@ -105,7 +111,7 @@ class Player(metaclass=PlayerMeta):
     def decide_action(
         self,
         *,
-        game: "Game",
+        game: "PlayerView",
         valid_actions: list[ActionType],
         min_raise_amount: int,
         call_amount: int,
@@ -118,8 +124,14 @@ class Player(metaclass=PlayerMeta):
 
         Parameters
         ----------
-        game : Game
-            The game instance containing the current state.
+        game : PlayerView
+            A read-only view of the game from this player's perspective. It contains
+            the public game state, the player's own hole cards, the rules and the
+            event history, but not the deck or the hole cards of other players.
+
+            .. versionchanged:: 0.7.0
+                A :class:`~maverick.playerview.PlayerView` is passed instead of the
+                live :class:`~maverick.game.Game` instance.
         valid_actions : list[ActionType]
             List of valid actions the player can take.
         min_raise_amount : int
@@ -136,7 +148,9 @@ class Player(metaclass=PlayerMeta):
         """
         ...
 
-    def on_event(self, event: "GameEvent", game: "Game") -> None:  # pragma: no cover
+    def on_event(
+        self, event: "GameEvent", game: "PlayerView"
+    ) -> None:  # pragma: no cover
         """
         Optional hook called when a game event occurs.
 
@@ -146,9 +160,13 @@ class Player(metaclass=PlayerMeta):
         Parameters
         ----------
         event : GameEvent
-            The game event that occurred.
-        game : Game
-            The game instance containing the current state.
+            The game event that occurred, with private information removed.
+        game : PlayerView
+            A read-only view of the game from this player's perspective.
+
+            .. versionchanged:: 0.7.0
+                A :class:`~maverick.playerview.PlayerView` is passed instead of the
+                live :class:`~maverick.game.Game` instance.
 
         Notes
         -----

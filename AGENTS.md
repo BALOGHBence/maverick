@@ -63,14 +63,16 @@ uv build
 def decide_action(
     self,
     *,
-    game: "Game",
+    game: "PlayerView",
     valid_actions: list[ActionType],
     min_raise_amount: int,
     call_amount: int,
     min_bet_amount: int,
 ) -> PlayerAction: ...
 ```
-Optional hook: `on_event(event: GameEvent, game: Game)` — called for every game event if defined.
+Optional hooks: `on_event(event: GameEvent, game: PlayerView)` for every game event, and `on_<event_type>(event, game)` (e.g. `on_hand_started`) for a specific one.
+
+**Player views** (`playerview.py`) — Players never receive the live `Game`. `decide_action` and the player hooks get a `PlayerView`: a frozen, per-seat copy with `state` (redacted `GameState`), `rules`, `history`, `holding`, `me` and `get_player_snapshot()`. Other players' holdings are `None` until they are revealed at showdown, `GAME_STATE_CHANGED` payloads are redacted for player hooks and left out of `PlayerView.history`, and the deck, table and strategy objects are not reachable. `Player.game` returns the last view a player received. External `EventBus` listeners still get the full `Game`. Never pass `Game` (or anything referencing it) to player code.
 
 **State models** (`state.py`, `playerstate.py`) — `GameState` and `PlayerState` are immutable frozen Pydantic models. `GameState` captures the full table snapshot (street, pot, community cards, positions, all player states).
 
@@ -135,9 +137,13 @@ Key enums used throughout: `Street`, `GameStage`, `ActionType`, `GameEventType`,
 
 ## Documentation
 
-Documentation for the project is written using Sphinx. The source files of the documentation can be found in the folder `docs/source` and Sphinx is configured to build the documentation into a separate build directory, which is `docs/build`. The configuration for the Sphinx project can be found in the file `docs/source/config.py`.
+Documentation for the project is written using Sphinx. The source files of the documentation can be found in the folder `docs/source` and Sphinx is configured to build the documentation into a separate build directory, which is `docs/build`. The configuration for the Sphinx project can be found in the file `docs/source/conf.py`.
 
 The documentation has a user guide and a developer guide section, and the user facing classes, functions, enumerations, etc. are documented in the `api_reference.rst` file using the `autosummary` Sphinx extension.
+
+### Development history
+
+Every pull request adds an entry to the development history in `docs/source/dev_guide/history/`, in addition to updating `CHANGELOG.md`. Name the file `YYYY-MM-DD-short-slug.md` and follow the template in `docs/source/dev_guide/history/index.md`: a summary that can be read on its own first, then the details (motivation, changes, breaking changes, design decisions, performance, testing, follow-ups). Link to `design_decisions.md`, issues and PRs instead of repeating them. Entries are not edited after they are merged. These pages are excluded from `llms.txt` via `llms_txt_exclude` in `docs/source/conf.py`.
 
 ## Coding Style
 

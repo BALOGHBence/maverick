@@ -40,14 +40,20 @@ The extension works by spawning a secondary Sphinx build using the `markdown` bu
 
 ### Configuration
 
-The extension is enabled in `docs/source/conf.py` and requires no additional settings beyond being listed in `extensions`:
+The extension is enabled in `docs/source/conf.py` by listing it in `extensions`, and a few `llms_txt_*` settings tune its output:
 
 ```python
 extensions = [
     ...
     "sphinx_llm.txt",
 ]
+
+llms_txt_description = "..."  # the introduction at the top of llms.txt
+llms_txt_suppress_unknown_node_warnings = ["meta", "abbreviation"]
+llms_txt_exclude = ["dev_guide/history/*"]
 ```
+
+`llms_txt_exclude` takes glob patterns of document names. Matching pages are left out of `llms.txt` and `llms-full.txt`, but their `.html.md` files are still built, so the download button keeps working. The {doc}`development history <history/index>` is excluded this way: it records how the code changed over time, which would only add noise for an LLM that needs to know how to use Maverick today.
 
 The `sphinx-llm[gen]` package is listed in the `docs` dependency group in `pyproject.toml`.
 

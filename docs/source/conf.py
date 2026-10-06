@@ -164,6 +164,10 @@ llms_txt_description = (
 # abbreviation used for the keyword-only "*" marker in signatures.
 llms_txt_suppress_unknown_node_warnings = ["meta", "abbreviation"]
 
+# The development history describes how the code got here, not how to use it, so it is
+# left out of llms.txt and llms-full.txt. Its per-page Markdown files are still built.
+llms_txt_exclude = ["dev_guide/history/*"]
+
 source_suffix = {
     ".rst": "restructuredtext",
     ".md": "myst-nb",

@@ -32,6 +32,7 @@ from .state import GameState
 from .player import Player
 from .playeraction import PlayerAction
 from .playerstate import PlayerState, PlayerSnapshot
+from .playerview import EventHistoryView, PlayerView, redact_event, redact_state
 from .utils import find_highest_scoring_hand
 from .eventbus import EventBus
 from .rules import PokerRules, DealingRules, StakesRules, ShowdownRules
@@ -141,6 +142,14 @@ class Game:
         # Event handling
         self._events = EventBus(strict=exc_handling_mode == "raise")
         self._event_history: list[GameEvent] = []
+        # Per-player copies of ``_event_history`` (without GAME_STATE_CHANGED events),
+        # synced on demand, and the number of events already synced for each player.
+        self._player_histories: dict[str, list[GameEvent]] = {}
+        self._player_history_synced: dict[str, int] = {}
+        # Per-player copies of the rules, handed out in player views
+        self._player_rules: dict[str, PokerRules] = {}
+        # UIDs of players who revealed their holding at showdown in the current hand
+        self._revealed_uids: set[str] = set()
 
         # Table
         self._table = Table(n_seats=rules.dealing.max_players)
@@ -334,24 +343,39 @@ class Game:
         # external listeners
         self._events.emit(event, self)
 
-        # player hooks - iterate in snapshot order to preserve deterministic ordering
+        # player hooks - iterate in snapshot order to preserve deterministic ordering.
+        # Players only ever receive their own redacted copy of the event and a
+        # PlayerView, never the Game itself.
         for s in self._state.players:
             p = self._strategies.get(s.uid)
             if p is None:
                 continue
             fn = getattr(p, "on_event", None)
+            if getattr(fn, "__func__", None) is Player.on_event:
+                fn = None  # the default hook does nothing, skip building a view
+            specific = getattr(p, f"on_{event.type.name.lower()}", None)
+            if not (callable(fn) or callable(specific)):
+                continue
+            view = self._build_player_view(p)
+            if event.type == GameEventType.GAME_STATE_CHANGED:
+                player_event = redact_event(
+                    event, p.uid, frozenset(self._revealed_uids)
+                )
+            else:
+                player_event = next(
+                    e for e in reversed(view.history) if e.uid == event.uid
+                )
             if callable(fn):
                 try:
-                    fn(event, self)
+                    fn(player_event, view)
                 except Exception:
                     self._logger.warning(
                         f"Exception in player {p.name} on_event hook for {event.type.name}",
                         exc_info=True,
                     )
-            specific = getattr(p, f"on_{event.type.name.lower()}", None)
             if callable(specific):
                 try:
-                    specific(event, self)
+                    specific(player_event, view)
                 except Exception:
                     self._logger.warning(
                         f"Exception in player {p.name} {specific.__name__} hook for {event.type.name}",
@@ -484,10 +508,6 @@ class Game:
         self._strategies[player.uid] = player
         self._update_state(players=[*self.state.players, snapshot])
 
-        # register the game instance on the player object for easy access in handlers
-        if isinstance(player, Player):
-            player._game = self
-
         self._handle_event(GameEventType.PLAYER_JOINED)
         self._emit(
             self._create_event(GameEventType.PLAYER_JOINED, player_uid=player.uid)
@@ -532,9 +552,12 @@ class Game:
         else:
             self._event_queue.append(GameEventType.PLAYER_LEFT)
 
-        # delete the game reference on the player object to prevent accidental access in handlers after they've been removed from the game
+        # drop the last view held by the player and its redacted history
         if isinstance(player, Player):
-            player._game = None
+            player._view = None
+        self._player_histories.pop(player_uid, None)
+        self._player_history_synced.pop(player_uid, None)
+        self._player_rules.pop(player_uid, None)
 
         self._emit(self._create_event(GameEventType.PLAYER_LEFT, player_uid=player_uid))
         self._log(
@@ -813,6 +836,7 @@ class Game:
             raise ValueError("Not enough players to start hand")
 
         self._deck = Deck.standard_deck(shuffle=True)
+        self._revealed_uids.clear()
         self._update_state(
             community_cards=(),
             pot=0,
@@ -868,6 +892,57 @@ class Game:
         uid = player if isinstance(player, str) else player.uid
         return next((s for s in self._state.players if s.uid == uid), None)
 
+    def get_player_view(self, player: "PlayerLike | str") -> PlayerView:
+        """Return a fresh :class:`~maverick.playerview.PlayerView` for a player.
+
+        The view contains only the information the player is allowed to observe and
+        holds no reference to this game. This is what the engine passes to
+        ``decide_action`` and to the event hooks of players.
+
+        Parameters
+        ----------
+        player : PlayerLike | str
+            A player object (any object with a ``uid`` attribute) or a plain
+            UID string.
+
+        Returns
+        -------
+        PlayerView
+            The redacted view of the game for the given player.
+
+        .. versionadded:: 0.7.0
+        """
+        uid = player if isinstance(player, str) else player.uid
+        if uid not in self._strategies:
+            raise ValueError(f"Player with uid {uid} not found")
+        # GAME_STATE_CHANGED events are diagnostics for external listeners that only
+        # exist while someone subscribes to them. They are left out of player
+        # histories, which keeps those deterministic and cheap; the view itself
+        # always carries the current state.
+        history = self._player_histories.setdefault(uid, [])
+        synced = self._player_history_synced.get(uid, 0)
+        for event in self._event_history[synced:]:
+            if event.type != GameEventType.GAME_STATE_CHANGED:
+                history.append(redact_event(event, uid))
+        self._player_history_synced[uid] = len(self._event_history)
+        rules = self._player_rules.get(uid)
+        if rules is None:
+            rules = self._player_rules[uid] = self._rules.model_copy(deep=True)
+        return PlayerView(
+            player_uid=uid,
+            game_uid=self._game_uid,
+            state=redact_state(self._state, uid, frozenset(self._revealed_uids)),
+            rules=rules,
+            history=EventHistoryView(history),
+        )
+
+    def _build_player_view(self, player: PlayerLike) -> PlayerView:
+        """Build a view for *player* and remember it on ``Player`` instances."""
+        view = self.get_player_view(player.uid)
+        if isinstance(player, Player):
+            player._view = view
+        return view
+
     def _get_snapshot(self, player) -> PlayerSnapshot:
         """Return the snapshot for *player* (which may be PlayerLike or PlayerSnapshot)."""
         return next(s for s in self._state.players if s.uid == player.uid)
@@ -904,15 +979,20 @@ class Game:
         valid_actions = self._get_valid_actions(current_snapshot)
         min_raise_amount = self._calculate_min_raise_amount()
 
+        view = self._build_player_view(current_player)
+
         _t0 = time.perf_counter()
         action: PlayerAction = current_player.decide_action(
-            game=self,
+            game=view,
             valid_actions=valid_actions,
             min_raise_amount=min_raise_amount,
             call_amount=self.state.current_bet - current_snapshot.state.current_bet,
             min_bet_amount=self.state.min_bet,
         )
-        action.decision_time_seconds = time.perf_counter() - _t0
+        decision_time_seconds = time.perf_counter() - _t0
+        # Keep a private copy, so the player can't alter the recorded action later
+        action = action.model_copy(deep=True)
+        action.decision_time_seconds = decision_time_seconds
 
         try:
             self._register_player_action(current_player, action)
@@ -1510,6 +1590,8 @@ class Game:
                     )
                     player_scores.append((player, best_score))
 
+                    # the holding becomes public information from now on
+                    self._revealed_uids.add(player.uid)
                     self._emit(
                         self._create_event(
                             GameEventType.PLAYER_CARDS_REVEALED,

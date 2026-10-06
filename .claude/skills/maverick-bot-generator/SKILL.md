@@ -32,27 +32,28 @@ Generate the complete file. Requirements:
 
 - Subclass `Player` from `maverick.player`
 - Import `ActionType` from `maverick.enums` and `PlayerAction` from `maverick.playeraction`
-- Use `TYPE_CHECKING` guard for the `Game` type hint (avoids circular imports)
+- Use `TYPE_CHECKING` guard for the `PlayerView` type hint (`from maverick.playerview import PlayerView`; avoids circular imports)
 - Include a `cls_uid` class attribute — generate a fresh UUID4 hex string (32 hex chars, no dashes)
 - Implement `decide_action` with the full signature:
   ```python
   def decide_action(
       self,
       *,
-      game: "Game",
+      game: "PlayerView",
       valid_actions: list[ActionType],
       min_raise_amount: int,
       call_amount: int,
       min_bet_amount: int,
   ) -> PlayerAction:
   ```
+- `game` is a read-only `PlayerView`: use `game.state`, `game.rules`, `game.holding` (own hole cards), `game.get_player_snapshot(uid)` and `game.history`. There is no `game.deck`, and opponents' holdings are `None` until revealed at showdown
 - Always return a `PlayerAction`; as a last resort fall back to `FOLD`
 - **`PlayerAction.amount` is the delta chips to add** — it is NOT the total bet size
 - If hand strength is used, call `estimate_holding_strength` from `maverick.utils`
 - Add a docstring describing key traits, strengths, and weaknesses (follow the archetype style)
 - If `on_event` is requested, add:
   ```python
-  def on_event(self, event: "GameEvent", game: "Game") -> None: ...
+  def on_event(self, event: "GameEvent", game: "PlayerView") -> None: ...
   ```
   with the import `GameEvent` from `maverick.events`
 

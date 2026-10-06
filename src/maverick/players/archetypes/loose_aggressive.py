@@ -6,7 +6,7 @@ from ...playeraction import PlayerAction
 from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ...game import Game
+    from ...playerview import PlayerView
 
 __all__ = ["LooseAggressiveBot"]
 
@@ -29,7 +29,7 @@ class LooseAggressiveBot(Player):
     def decide_action(
         self,
         *,
-        game: "Game",
+        game: "PlayerView",
         valid_actions: list[ActionType],
         min_raise_amount: int,
         min_bet_amount: int,

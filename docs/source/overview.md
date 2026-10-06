@@ -40,7 +40,7 @@ The required method is keyword-only:
 def decide_action(
     self,
     *,
-    game: "Game",
+    game: "PlayerView",
     valid_actions: list[ActionType],
     min_raise_amount: int,
     call_amount: int,
@@ -51,6 +51,7 @@ def decide_action(
 
 Where:
 
+- `game` is a {class}`~maverick.playerview.PlayerView`, a read-only view of the game from your seat. It holds the public table state, the rules, the event history and your own hole cards, but not the deck or the hole cards of other players (until they are revealed at showdown).
 - `valid_actions` tells you what is legal right now.
 - `call_amount` is how many chips you must add *now* to call.
 - `min_raise_amount` is the minimum extra chips you must add *now* to complete a minimum raise.
