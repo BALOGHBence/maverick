@@ -1,0 +1,1 @@
+../../../maverick-plugin/skills/maverick-docs.md

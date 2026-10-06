@@ -88,14 +88,9 @@ Run the following command inside Claude Code:
 /plugin marketplace add BALOGHBence/maverick
 ```
 
-This installs the `maverick` plugin, which provides three skills:
+This installs the `maverick` plugin, which provides two skills:
 
 | Skill | Activates when you say… | What it does |
 | --- | --- | --- |
-| `api-consulting` | "how do I use Maverick", "what does X do", "show me an example" | Reads the locally built docs and answers from their content |
-| `bot-generating` | "create a bot", "write a player", "implement a strategy" | Generates a complete `Player` subclass scaffold |
-| `scenario-building` | "set up a game", "create a scenario", "test hand" | Produces a self-contained game setup with optional event hooks |
-
-```{note}
-The `api-consulting` skill reads `docs/build/html/llms.txt` and requires locally built documentation, just like Option 4. The `bot-generating` and `scenario-building` skills work without it.
-```
+| `maverick` | "write a bot", "set up a game", "subscribe to events", "record the game history" | Teaches the core usage of the library: the player contract, betting semantics, game setup, events, listeners and game histories |
+| `maverick-docs` | "how do I use Maverick", "what does X do", "show me an example" | Reads the online documentation and answers from its content |

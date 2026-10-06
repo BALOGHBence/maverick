@@ -59,7 +59,7 @@ The dealer button and the casual dealer.
 The identity of the dealer is not just about who deals the cards. The dealer gets to act last in most betting rounds, which is a huge positional advantage, because they can see what everyone else does first.
 ```
 
-## Hands
+## How it Goes
 
 A game consists of a series of rounds called **hands**, and every hand ends with at least one player collecting some well-earned chips. At the start of every hand, each player is dealt exactly 2 cards, which only they can see. Accidents do happen, of course, but you should never intentionally show your cards to an opponent.
 
@@ -70,6 +70,14 @@ The two private cards are often called the **holding**, **hole cards**, **pocket
 ```
 
 Each hand is further divided into betting rounds known as **streets**. The different streets have their own designated names: **pre-flop**, **flop**, **turn**, **river**.
+
+```{figure} _static/img/game_structure.jpeg
+:alt: The structure of a game.
+:align: center
+:width: 80%
+
+The structure of a game.
+```
 
 ### Pre-flop
 

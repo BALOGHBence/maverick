@@ -10,7 +10,7 @@ By submitting a pull request, you are licensing your code under the project [lic
 
 ## Windows note
 
-`.claude/skills/maverick/SKILL.md` is a symlink pointing to `maverick-plugin/skills/api-consulting.md`. On macOS and Linux this works transparently. On Windows, git requires symlink support to be enabled — either turn on **Developer Mode** in Windows Settings, or run:
+`.claude/skills/maverick-docs/SKILL.md` is a symlink pointing to `maverick-plugin/skills/maverick-docs.md`. On macOS and Linux this works transparently. On Windows, git requires symlink support to be enabled — either turn on **Developer Mode** in Windows Settings, or run:
 
 ```bash
 git config --global core.symlinks true

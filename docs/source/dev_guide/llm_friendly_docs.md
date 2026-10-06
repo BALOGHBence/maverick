@@ -88,7 +88,7 @@ The plugin follows the [claude-skills-marketplace](https://github.com/mhattingpe
 
 ### The symlink in `.claude/skills/`
 
-`.claude/skills/maverick/SKILL.md` is a symlink pointing to `maverick-plugin/skills/api-consulting.md`. This keeps the project-local Claude Code skill in sync with the canonical skill file in the plugin without duplication.
+`.claude/skills/maverick-docs/SKILL.md` is a symlink pointing to `maverick-plugin/skills/maverick-docs.md`. This keeps the project-local Claude Code skill in sync with the canonical skill file in the plugin without duplication.
 
 **Windows caveat:** git on Windows does not create symlinks by default. Without symlink support, this file is checked out as a plain text file containing the path string, and the project-local skill will not work. To fix this, enable **Developer Mode** in Windows Settings or run the following before cloning:
 
