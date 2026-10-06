@@ -119,8 +119,10 @@ about 14× slower than `dev`. Profiling led to these optimizations:
 - Views are not built for players whose `on_event` is the no-op `Player.on_event` default.
   Before, most of the views built were for that.
 - `Card` is frozen, so most of the state can be shared (see above).
-- Event payloads are copied with a pickle round trip, with `deepcopy` as a fallback, and
-  empty payloads are skipped.
+- Event payloads are copied by rebuilding their dicts and lists directly, with
+  `deepcopy` as a fallback for anything that is not JSON-like, and empty payloads are
+  cheap. A pickle round trip was about as fast, but Codacy flags any use of `pickle` as
+  a security issue.
 - Rules are copied once per player, not per view. An earlier version passed the copy as
   the default argument of `dict.setdefault`, which evaluated it every time.
 - `GAME_STATE_CHANGED` events are left out of player histories (see above).

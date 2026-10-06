@@ -8,7 +8,6 @@ revealed at showdown, and the (redacted) event history.
 """
 
 import copy
-import pickle
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional, overload
@@ -16,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Optional, overload
 from .enums import GameEventType
 from .events import GameEvent
 from .holding import Holding
+from .playeraction import ClosedDict
 from .playerstate import PlayerSnapshot
 from .rules import PokerRules
 from .state import GameState
@@ -74,15 +74,16 @@ def redact_state(
 def _copy_payload(obj: Any) -> Any:
     """Deep copy an event payload.
 
-    Payloads are JSON-like data, for which a pickle round trip is much faster than
-    ``copy.deepcopy``.
+    Payloads are JSON-like data, for which copying the dicts and lists directly is
+    much faster than ``copy.deepcopy``. Anything else falls back to ``copy.deepcopy``.
     """
-    if not obj:
-        return type(obj)()
-    try:
-        return pickle.loads(pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL))
-    except Exception:
-        return copy.deepcopy(obj)
+    if type(obj) in (dict, ClosedDict):
+        return type(obj)({k: _copy_payload(v) for k, v in obj.items()})
+    if type(obj) is list:
+        return [_copy_payload(v) for v in obj]
+    if obj is None or type(obj) in (str, int, float, bool):
+        return obj
+    return copy.deepcopy(obj)
 
 
 def _redact_state_dump(dump: Any, viewer_uid: str, revealed: frozenset[str]) -> Any:
