@@ -232,11 +232,63 @@ overridden; the no-op `Player.on_event` default is skipped. To keep this cheap:
   full state dumps per state change for every player. The view always carries the
   current state anyway.
 
-### Known limitation
+### Limits of in-process isolation
 
 Inside a single Python process isolation cannot be complete: a deliberately malicious
 bot can still reach the `Game` through interpreter introspection (e.g. walking the call
 stack with `sys._getframe` or using `gc.get_referrers`). The `PlayerView` closes every
 API-level leak, so well-behaved bots cannot see hidden information by accident and
-cheating requires deliberate introspection. Running untrusted bots with guaranteed
-isolation requires a separate process per bot.
+cheating requires deliberate introspection. For untrusted bots, players can run in
+separate processes; see the next section.
+
+## Players can run in separate processes
+
+With `player_isolation="process"`, every player runs in its own worker process. The
+engine talks to it through a `ProcessPlayer` proxy (`maverick/_isolation/`), which
+satisfies `PlayerLike`, so the engine barely changes: it calls the proxy where it would
+call the player, and `Game.button`, `get_current_player()` and the other public members
+still return the original player objects. In-process mode stays the default and doesn't
+pay for any of this.
+
+- **`spawn`, never `fork`.** A forked worker would inherit a copy of the engine,
+  including the global `random` state that shuffles the deck, so a bot could predict the
+  cards. Spawned workers share nothing with the engine.
+- **Pickle in, JSON out.** The engine sends pickled views to workers, which is safe
+  because the engine is trusted. Workers answer with JSON only, of limited size, and the
+  engine validates the action with `PlayerAction.model_validate`. Unpickling data from an
+  untrusted worker would let it run code in the engine. This is the security boundary of
+  the design: any new message from workers must be JSON too.
+- **A pipe per worker, not a `multiprocessing.Queue`.** A queue unpickles every object
+  taken out of it, so a worker → engine queue would let a bot run code in the engine.
+  A `Pipe` lets the engine read raw bytes with a size limit (`recv_bytes(maxlength)`)
+  and decode them itself. With one engine and one worker per channel, a queue's support
+  for many producers and consumers, its feeder thread and its locks aren't needed either.
+- **Data leaves a worker only through `export_state`.** Bots keep their state in the
+  worker, so changes are not visible on the object passed to `add_player`. Sending the
+  bot object back pickled would be transparent but unsafe, and mirroring attributes as
+  JSON would fail silently for anything that isn't JSON-serializable. Instead, a bot
+  opts in by returning a JSON-serializable `dict` from `Player.export_state`, and
+  `Game.get_player_state` reads it. The worker exports once more when it stops, so the
+  data outlives the worker. In-process, the method is called directly and the result
+  round-trips through JSON, so both modes return the same kind of copy.
+- **One long-lived worker per player,** because bots keep state between decisions. A
+  pool of workers would lose it.
+- **Only the new history entries are sent.** Each worker keeps its own copy of the
+  player's history and rebuilds an `EventHistoryView` over it. Rules are sent once.
+- **Hooks are one-way messages.** The engine doesn't wait for them, and the pipe keeps
+  them in order before the next decision. The proxy only exposes the hooks the player
+  implements, so `Game._emit` skips the others as it does in-process. Exceptions in
+  hooks are reported back with the next reply and logged.
+- **Isolated players fail closed.** On a timeout, an exception, an invalid reply or a
+  dead worker, the player folds instead of stopping the game. Each decision carries a
+  sequence number, so a late answer to a decision that timed out is discarded.
+  `exc_handling_mode` still only applies to event bus handlers.
+- **Settings come from code, environment or `pyproject.toml`,** in that order, so a
+  tournament can switch isolation on without changing the code that builds the games.
+  `IsolationSettings` is a Pydantic model because it validates and converts untrusted
+  strings from the environment and from TOML. It is built once per game, so the cost of
+  validation doesn't matter.
+
+Process isolation doesn't cover code that runs when the bot is created: the bot's module
+is imported and the player is created and pickled in the engine's process. It also sets
+no CPU or memory limits.

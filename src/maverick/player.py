@@ -1,6 +1,6 @@
 import warnings
 from abc import ABC, ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 import uuid
 
 from .enums import ActionType
@@ -174,3 +174,29 @@ class Player(metaclass=PlayerMeta):
         Subclasses can override this method to observe events.
         """
         ...
+
+    def export_state(self) -> Optional[dict[str, Any]]:
+        """
+        Optional hook that returns data the player wants to report.
+
+        :meth:`Game.get_player_state <maverick.game.Game.get_player_state>` calls it
+        to read data that the player collects while it plays, such as statistics or
+        the cost of calls to an external service. Override it to return a
+        JSON-serializable ``dict``.
+
+        This matters most for players isolated in worker processes: the player object
+        there is a copy, so attributes it changes while playing are not visible on the
+        object passed to :meth:`Game.add_player <maverick.game.Game.add_player>`. The
+        returned data is sent to the engine as JSON, so it is the only way to get data
+        out of an isolated player. The engine reads it one last time when the worker
+        stops, so it stays available after the game has ended.
+
+        Returns
+        -------
+        dict | None
+            JSON-serializable data, or ``None`` (the default) if there is nothing to
+            report.
+
+        .. versionadded:: 0.7.0
+        """
+        return None

@@ -10,17 +10,21 @@ from __future__ import annotations
 
 from typing import Deque, Optional
 from collections import deque
+import json
 import logging
 import time
 import uuid
 from warnings import warn
 import warnings
 
+from ._isolation import PlayerFailure, ProcessPlayer
+from .config import IsolationSettings, resolve_settings
 from .deck import Deck
 from .enums import (
     ActionType,
     GameEventType,
     GameStage,
+    PlayerIsolation,
     PlayerStateType,
     Street,
     Suit,
@@ -75,6 +79,26 @@ class Game:
     first_button_position : int | None
         The seat index of the player who will be the button in the first hand. If None (the default), the
         button is assigned randomly using a card draw.
+    player_isolation : PlayerIsolation | str | None
+        Where the code of the players runs. ``"none"`` runs players in the engine's process, ``"process"``
+        runs every player in its own worker process. If None (the default), the value is taken from the
+        ``MAVERICK_PLAYER_ISOLATION`` environment variable, then from ``[tool.maverick]`` in
+        ``pyproject.toml``, and falls back to ``"none"``.
+
+        .. versionadded:: 0.7.0
+    decision_timeout : float | None
+        Maximum number of seconds an isolated player may take to decide. A player that exceeds it folds.
+        Resolved like ``player_isolation`` (environment variable ``MAVERICK_DECISION_TIMEOUT``). Only applies
+        to isolated players. If not set anywhere, there is no limit.
+
+        .. versionadded:: 0.7.0
+
+    Notes
+    -----
+    With process isolation, worker processes are started when players are added and stopped when they
+    leave, are eliminated or the game ends. Use the game as a context manager, or call :meth:`close`, to
+    stop them early. Scripts that use process isolation must guard their entry point with
+    ``if __name__ == "__main__":``.
     """
 
     def __init__(
@@ -90,6 +114,8 @@ class Game:
         log_events: bool = True,
         rules: Optional[PokerRules] = None,
         first_button_position: Optional[int] = None,
+        player_isolation: Optional[PlayerIsolation | str] = None,
+        decision_timeout: Optional[float] = None,
     ):
         if not exc_handling_mode in ["log", "raise"]:
             raise ValueError("exc_handling_mode must be 'log' or 'raise'")
@@ -126,6 +152,10 @@ class Game:
             if not first_button_position >= 0:
                 raise ValueError("first_button_position must be non-negative")
 
+        self._settings = resolve_settings(
+            player_isolation=player_isolation, decision_timeout=decision_timeout
+        )
+
         self._rules = rules
         self._max_hands = max_hands
         self._state = GameState(
@@ -159,6 +189,11 @@ class Game:
 
         # Strategy objects - keyed by player UID; separate from GameState snapshots
         self._strategies: dict[str, PlayerLike] = {}
+        # Proxies of players running in worker processes, keyed by player UID. The
+        # engine calls these instead of the strategy objects.
+        self._proxies: dict[str, ProcessPlayer] = {}
+        # States exported by isolated players when their workers were stopped
+        self._final_states: dict[str, Optional[dict]] = {}
 
         # Active deck - held here, not in GameState
         self._deck: Optional[Deck] = None
@@ -221,6 +256,14 @@ class Game:
             A list of all game events in chronological order.
         """
         return self._event_history
+
+    @property
+    def settings(self) -> IsolationSettings:
+        """The resolved isolation settings of the game.
+
+        .. versionadded:: 0.7.0
+        """
+        return self._settings
 
     @property
     def table(self) -> Table:
@@ -350,10 +393,11 @@ class Game:
             p = self._strategies.get(s.uid)
             if p is None:
                 continue
-            fn = getattr(p, "on_event", None)
+            target = self._proxies.get(s.uid, p)
+            fn = getattr(target, "on_event", None)
             if getattr(fn, "__func__", None) is Player.on_event:
                 fn = None  # the default hook does nothing, skip building a view
-            specific = getattr(p, f"on_{event.type.name.lower()}", None)
+            specific = getattr(target, f"on_{event.type.name.lower()}", None)
             if not (callable(fn) or callable(specific)):
                 continue
             view = self._build_player_view(p)
@@ -493,9 +537,25 @@ class Game:
         else:
             initial_player_state = PlayerState()
 
+        # Start the worker before changing any state, so a player that can't be
+        # isolated is rejected cleanly
+        if self._settings.player_isolation == PlayerIsolation.PROCESS:
+            proxy = ProcessPlayer(
+                player,
+                decision_timeout=self._settings.decision_timeout,
+                logger=self._logger,
+            )
+            proxy.start()
+            self._proxies[player.uid] = proxy
+            self._final_states.pop(player.uid, None)
+
         # Determine the seat
         preferred_seat = initial_player_state.seat
-        seat_index = self.table.seat_player(player, seat_index=preferred_seat)
+        try:
+            seat_index = self.table.seat_player(player, seat_index=preferred_seat)
+        except Exception:
+            self._close_proxy(player.uid)
+            raise
         initial_player_state = initial_player_state.model_copy(
             update={"seat": seat_index, "state_type": PlayerStateType.ACTIVE}
         )
@@ -543,6 +603,7 @@ class Game:
 
         self.table.remove_player(snapshot)
         self._strategies.pop(player_uid, None)
+        self._close_proxy(player_uid)
         self._update_state(
             players=[p for p in self.state.players if p.uid != player_uid]
         )
@@ -565,6 +626,81 @@ class Game:
             logging.INFO,
             stage_prefix=False,
         )
+
+    def close(self) -> None:
+        """Stop the worker processes of isolated players.
+
+        Called automatically when the game ends. Does nothing if no player runs in a
+        worker process.
+
+        .. versionadded:: 0.7.0
+        """
+        for uid in list(self._proxies):
+            self._close_proxy(uid)
+
+    def _close_proxy(self, uid: str) -> None:
+        proxy = self._proxies.pop(uid, None)
+        if proxy is not None:
+            proxy.close()
+            self._final_states[uid] = proxy.final_state
+
+    def get_player_state(self, player: "PlayerLike | str") -> Optional[dict]:
+        """Return the data a player reports through ``export_state``.
+
+        Works the same in both isolation modes. For a player running in a worker
+        process, the data is requested from the worker, or, once the worker has
+        stopped, taken from its last export. In-process, the player's
+        ``export_state`` is called directly. Either way, the result is a copy that
+        went through JSON, so it holds no references into the player.
+
+        Parameters
+        ----------
+        player : PlayerLike | str
+            A player object or a plain UID string. Pass the player object for an
+            in-process player that has been eliminated or removed.
+
+        Returns
+        -------
+        dict | None
+            The exported data, or ``None`` if the player doesn't implement
+            ``export_state`` or its worker failed to answer (a warning is logged).
+
+        Raises
+        ------
+        ValueError
+            If the player is unknown.
+
+        .. versionadded:: 0.7.0
+        """
+        uid = player if isinstance(player, str) else player.uid
+        proxy = self._proxies.get(uid)
+        if proxy is not None:
+            try:
+                return proxy.export_state()
+            except PlayerFailure as exc:
+                self._logger.warning(
+                    f"Could not get the state of player {proxy.name}: {exc}"
+                )
+                return None
+        if uid in self._final_states:
+            state = self._final_states[uid]
+            return None if state is None else json.loads(json.dumps(state))
+        target = self._strategies.get(uid) if isinstance(player, str) else player
+        if target is None:
+            raise ValueError(f"Player with uid {uid} not found")
+        export_state = getattr(target, "export_state", None)
+        state = export_state() if callable(export_state) else None
+        if state is not None and not isinstance(state, dict):
+            raise TypeError(
+                f"export_state must return a dict or None, got {type(state).__name__}"
+            )
+        return None if state is None else json.loads(json.dumps(state))
+
+    def __enter__(self) -> "Game":
+        return self
+
+    def __exit__(self, *exc_info) -> None:
+        self.close()
 
     def start(self) -> None:
         """Start the poker game."""
@@ -747,6 +883,7 @@ class Game:
                     # Free the table seat and strategy but keep snapshot in state.players
                     self.table.remove_player(player)
                     self._strategies.pop(player.uid, None)
+                    self._close_proxy(player.uid)
 
                 # Check if we have enough players to continue
                 if (
@@ -776,6 +913,7 @@ class Game:
             case GameEventType.GAME_ENDED:
                 self._log("Game ended", logging.INFO, stage_prefix=False)
                 self._emit(self._create_event(GameEventType.GAME_ENDED))
+                self.close()
 
             case GameEventType.PLAYER_JOINED:
                 if self.state.stage == GameStage.WAITING_FOR_PLAYERS:
@@ -980,15 +1118,28 @@ class Game:
         min_raise_amount = self._calculate_min_raise_amount()
 
         view = self._build_player_view(current_player)
+        decider = self._proxies.get(current_player.uid, current_player)
 
         _t0 = time.perf_counter()
-        action: PlayerAction = current_player.decide_action(
-            game=view,
-            valid_actions=valid_actions,
-            min_raise_amount=min_raise_amount,
-            call_amount=self.state.current_bet - current_snapshot.state.current_bet,
-            min_bet_amount=self.state.min_bet,
-        )
+        try:
+            action: PlayerAction = decider.decide_action(
+                game=view,
+                valid_actions=valid_actions,
+                min_raise_amount=min_raise_amount,
+                call_amount=self.state.current_bet - current_snapshot.state.current_bet,
+                min_bet_amount=self.state.min_bet,
+            )
+        except PlayerFailure as exc:
+            self._log(
+                f"Player {current_player.name} failed to decide, folding. {exc}",
+                logging.WARNING,
+            )
+            warn(f"Player {current_player.name} failed to decide, folding.")
+            action = PlayerAction(
+                player_uid=current_player.uid, action_type=ActionType.FOLD
+            )
+            self._register_player_action(current_player, action)
+            return
         decision_time_seconds = time.perf_counter() - _t0
         # Keep a private copy, so the player can't alter the recorded action later
         action = action.model_copy(deep=True)

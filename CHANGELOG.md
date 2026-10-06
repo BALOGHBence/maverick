@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `PlayerView`, a read-only, per-seat view of the game that players receive instead of the `Game` itself. It exposes `state` (with the holdings of other players removed until they are revealed at showdown), `rules`, `history`, `holding`, `me` and `get_player_snapshot()`.
 - Added `Game.get_player_view(player)` method that returns the `PlayerView` of a player.
 - Added the `redact_state` and `redact_event` functions and the `EventHistoryView` class to the new `maverick.playerview` module.
+- Added optional process isolation for players. With `Game(player_isolation="process")`, every player runs in its own worker process and can't reach the engine, the deck or the hole cards of other players, not even through interpreter introspection. Failing, hanging or crashing isolated players fold instead of stopping the game.
+- Added the `decision_timeout` argument to `Game`, which limits how long an isolated player may take for a decision.
+- Added the `PlayerIsolation` enumeration, and the `maverick.config` module with `IsolationSettings` and `resolve_settings`. The isolation settings can also be set with the `MAVERICK_PLAYER_ISOLATION` and `MAVERICK_DECISION_TIMEOUT` environment variables, or in the `[tool.maverick]` table of `pyproject.toml`. Arguments take priority over environment variables, which take priority over `pyproject.toml`.
+- Added `Game.close()`, `Game.settings`, and support for using `Game` as a context manager.
+- Added the optional `Player.export_state()` hook and `Game.get_player_state(player)`. A player returns JSON-serializable data from `export_state`, such as statistics it collects while playing, and `get_player_state` reads it. This works the same in both isolation modes, and is the way to get data out of a player isolated in a worker process. The last export of an isolated player stays available after its worker has stopped.
 
 ### Changed
 
