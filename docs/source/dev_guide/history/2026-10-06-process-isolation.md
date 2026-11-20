@@ -9,7 +9,7 @@ myst:
 | | |
 |---|---|
 | **Date** | 2026-10-06 |
-| **PR / Issues** | #101, prepares #103 |
+| **PR / Issues** | #109, closes #101, prepares #103 |
 | **Version** | 0.7.0 (unreleased) |
 | **Breaking** | Minor: seeding `random` after creating a game no longer affects the cards |
 
