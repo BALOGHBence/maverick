@@ -577,7 +577,7 @@ class TestWorkerLoop(IsolationTestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        import pickle
+        import pickle  # nosec B403
         import threading
         from multiprocessing import Pipe
 
@@ -585,7 +585,8 @@ class TestWorkerLoop(IsolationTestCase):
         self.bot = RecorderBot(str(report), name="r")
         self.engine, worker_conn = Pipe()
         self.thread = threading.Thread(
-            target=run_worker, args=(worker_conn, pickle.dumps(self.bot))
+            target=run_worker,
+            args=(worker_conn, pickle.dumps(self.bot)),  # nosemgrep
         )
         self.thread.start()
         self.assertEqual(json.loads(self.engine.recv_bytes()), {"ready": True})

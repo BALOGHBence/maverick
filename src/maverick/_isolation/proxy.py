@@ -15,7 +15,7 @@ replace the pipe with a ``multiprocessing.Queue``, which unpickles what it recei
 import json
 import logging
 import multiprocessing
-import pickle
+import pickle  # nosec B403 - only used to send the player to its worker
 import time
 import weakref
 from multiprocessing.connection import Connection
@@ -140,7 +140,9 @@ class ProcessPlayer:
             If the worker can't load the player or doesn't start in time.
         """
         try:
-            payload = pickle.dumps(self.player)
+            # Pickles the caller's own player for the worker. Replies from the
+            # worker are never unpickled.
+            payload = pickle.dumps(self.player)  # nosemgrep
         except Exception as exc:
             raise TypeError(
                 f"Player {self.name!r} can't be run in a worker process because it "

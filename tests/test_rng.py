@@ -14,7 +14,7 @@ class RandomConsumingBot(CallBot):
 
     def decide_action(self, **kwargs):
         for _ in range(100):
-            random.random()
+            random.random()  # nosec B311
         return super().decide_action(**kwargs)
 
 
@@ -104,7 +104,7 @@ class TestSeed(unittest.TestCase):
 class TestDeckRng(unittest.TestCase):
     def test_shuffle_and_deal_with_rng(self):
         def draw(seed: int) -> list[str]:
-            rng = random.Random(seed)
+            rng = random.Random(seed)  # nosec B311
             deck = Deck.standard_deck(shuffle=True, rng=rng)
             return [c.code() for c in deck.deal(5, rng=rng)] + [
                 c.code() for c in deck.cards
@@ -115,9 +115,10 @@ class TestDeckRng(unittest.TestCase):
 
     def test_rng_is_independent_of_global_random(self):
         random.seed(1)
-        first = Deck.build(shuffle=True, rng=random.Random(4)).cards
+        first = Deck.build(shuffle=True, rng=random.Random(4)).cards  # nosec B311
         random.seed(2)
-        self.assertEqual(first, Deck.build(shuffle=True, rng=random.Random(4)).cards)
+        second = Deck.build(shuffle=True, rng=random.Random(4)).cards  # nosec B311
+        self.assertEqual(first, second)
 
 
 if __name__ == "__main__":

@@ -170,9 +170,10 @@ class Game:
             raise ValueError("seed must be an integer")
 
         # The game's own random number generator, so players that use the global
-        # ``random`` module can neither change nor predict the cards that are dealt
-        self._seed = seed if seed is not None else random.getrandbits(64)
-        self._rng = random.Random(self._seed)
+        # ``random`` module can neither change nor predict the cards that are dealt.
+        # It must be seedable for reproducible games, so ``secrets`` can't be used.
+        self._seed = seed if seed is not None else random.getrandbits(64)  # nosec B311
+        self._rng = random.Random(self._seed)  # nosec B311
 
         self._rules = rules
         self._max_hands = max_hands

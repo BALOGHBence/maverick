@@ -22,7 +22,7 @@ Messages from the engine:
 """
 
 import json
-import pickle
+import pickle  # nosec B403 - only loads the player sent by the engine
 import traceback
 from multiprocessing.connection import Connection
 from typing import Any, NamedTuple, Optional
@@ -145,7 +145,9 @@ def run_worker(conn: Connection, player_bytes: bytes) -> None:
         The pickled player object.
     """
     try:
-        worker = _Worker(pickle.loads(player_bytes))
+        # The bytes come from the engine that started this worker, not from a bot.
+        player = pickle.loads(player_bytes)  # nosec B301  # nosemgrep
+        worker = _Worker(player)
     except Exception:
         conn.send_bytes(
             json.dumps({"ready": False, "error": traceback.format_exc()}).encode()
