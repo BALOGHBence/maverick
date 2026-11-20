@@ -359,10 +359,9 @@ class SaveWriter:
         path = self.directory / EVENTS_FILE
         fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, _FILE_MODE)
         with os.fdopen(fd, "a", encoding="utf-8", newline="\n") as handle:
-            if self._pending:
-                handle.write("".join(self._pending))
-                handle.flush()
-                os.fsync(handle.fileno())
+            handle.write("".join(self._pending))
+            handle.flush()
+            os.fsync(handle.fileno())
             size = handle.tell()
         self._written += len(self._pending)
         self._pending.clear()

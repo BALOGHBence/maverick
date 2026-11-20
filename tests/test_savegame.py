@@ -3,10 +3,8 @@
 import json
 import logging
 import os
-import subprocess  # nosec B404 - runs the test interpreter only
-import sys
+import multiprocessing
 import tempfile
-import textwrap
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -32,8 +30,6 @@ from maverick.savegame import (
     HEADER_FILE,
     SAVE_FORMAT_VERSION,
 )
-
-TESTS_DIR = Path(__file__).resolve().parent
 
 
 class CountingBot(Player):
@@ -108,10 +104,21 @@ class KillerBot(CallBot):
         super().__init__(**kwargs)
         self.kill_at = kill_at
 
-    def decide_action(self, *, game, **kwargs) -> PlayerAction:
-        if game.state.hand_number >= self.kill_at:
+    def decide_action(self, *, valid_actions, **_) -> PlayerAction:
+        # In-process, ``self.game`` is the view passed to this decision
+        if self.game.state.hand_number >= self.kill_at:
             os._exit(17)
-        return super().decide_action(game=game, **kwargs)
+        return super().decide_action(valid_actions=valid_actions)
+
+
+def _play_until_killed(save_dir: str) -> None:
+    """Runs in a child process, which KillerBot kills in hand 4."""
+    game = _new_game(
+        [CallBot(name="a", uid="a"), KillerBot(4, name="k", uid="k")],
+        max_hands=8,
+        save_dir=save_dir,
+    )
+    game.start()
 
 
 def _players() -> list:
@@ -308,24 +315,13 @@ class TestResume(SaveTestCase):
 class TestCrash(SaveTestCase):
     def test_killed_process_resumes_from_last_completed_hand(self):
         save_dir = self.dir / "crashed"
-        script = textwrap.dedent(
-            f"""
-            import sys
-            sys.path.insert(0, {str(TESTS_DIR)!r})
-            from test_savegame import KillerBot, _new_game
-            from maverick.players import CallBot
-            game = _new_game(
-                [CallBot(name="a", uid="a"), KillerBot(4, name="k", uid="k")],
-                max_hands=8,
-                save_dir={str(save_dir)!r},
-            )
-            game.start()
-            """
+        # A spawned process shares nothing with this one, like a separate run
+        process = multiprocessing.get_context("spawn").Process(
+            target=_play_until_killed, args=(str(save_dir),)
         )
-        result = subprocess.run(  # nosec B603 - fixed arguments
-            [sys.executable, "-c", script], capture_output=True, timeout=120
-        )
-        self.assertEqual(result.returncode, 17, result.stderr.decode())
+        process.start()
+        process.join(120)
+        self.assertEqual(process.exitcode, 17)
 
         loaded = Game.load(
             save_dir,
