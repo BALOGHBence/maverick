@@ -110,6 +110,8 @@ Exceptions in event hooks are logged, as in in-process mode.
 - **`decision_time_seconds`** on recorded actions includes the time to communicate with
   the worker.
 
+(player-state-export-import)=
+
 ## Player state: export and import
 
 Listeners subscribed with `game.subscribe(...)` run in the engine's process and receive
@@ -222,6 +224,10 @@ malicious bot can still do anything that user can do:
   secrets from the environment before starting a game with untrusted bots.
 - **Use files and the network.** A bot can read any file the user can read, including
   files your own code writes during the game, and send data anywhere.
+- **Read saved games.** If the game is saved with `save_dir`, a bot can read the
+  checkpoint of the last hand, which predicts the cards of the next one (see
+  {doc}`saving_games`). Save games with untrusted bots to a directory the workers
+  can't read.
 - **Interfere with other processes,** for example by killing the engine or the workers
   of other players, which stops the game.
 
