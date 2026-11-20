@@ -300,7 +300,12 @@ pay for any of this.
 
 Process isolation doesn't cover code that runs when the bot is created: the bot's module
 is imported and the player is created and pickled in the engine's process. It also sets
-no CPU or memory limits.
+no CPU or memory limits, and it is not a sandbox: workers run as the same operating
+system user, inherit the engine's environment variables, and can use files, the network
+and signals. `multiprocessing` offers no way to start a worker with a different
+environment, and clearing `os.environ` inside the worker is incomplete, because on Linux
+the original environment can still be read from `/proc/self/environ`. Untrusted
+tournaments should run in a container or as a separate user.
 
 ## The game owns its random number generator
 

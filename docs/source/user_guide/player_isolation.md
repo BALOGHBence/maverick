@@ -212,6 +212,24 @@ unpickles every object taken out of it. A pipe lets the engine read raw bytes wi
 
 ## What process isolation doesn't cover
 
+Process isolation keeps the engine's memory away from bots: they can't reach the
+`Game`, the deck or hidden holdings, not even through interpreter introspection. It is
+not a sandbox. A worker runs as the same operating system user as the engine, so a
+malicious bot can still do anything that user can do:
+
+- **Read the environment.** Workers inherit the environment variables of the engine's
+  process, including API keys and other secrets of whoever runs the game. Remove
+  secrets from the environment before starting a game with untrusted bots.
+- **Use files and the network.** A bot can read any file the user can read, including
+  files your own code writes during the game, and send data anywhere.
+- **Interfere with other processes,** for example by killing the engine or the workers
+  of other players, which stops the game.
+
+To run bots you don't trust at all, also run the game in a container or as a separate
+operating system user with no access to secrets, files or the network it doesn't need.
+
+Beyond that, process isolation doesn't cover:
+
 - **Code that runs when the bot is created.** You import the bot's module and create
   the player in your own process, so code at import time or in `__init__` runs next to
   the engine. If you don't trust that code either, create players in a separate process

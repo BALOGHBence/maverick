@@ -200,12 +200,17 @@ including starting the two workers.
 
 - Code that runs when a bot is created (module import, `__init__`, pickling) still runs
   in the engine's process. Fully untrusted bots would need to be created in the worker
-  from an import path and arguments.
-- No CPU or memory limits in workers. `resource.setrlimit` in the worker would be a
-  simple start on POSIX systems.
+  from an import path and arguments: #104.
+- No CPU or memory limits in workers, and workers are not sandboxed. They run as the
+  same user, inherit the engine's environment variables (including secrets), and can
+  use files, the network and signals. The user guide recommends containers or a
+  separate user for untrusted tournaments: #107.
 - An option to seed the random number generator of each worker for reproducible bot
-  decisions.
+  decisions: #108.
 - Saving and resuming games builds on `export_state`/`import_state` and on the
   engine-owned generator: #103.
 - A timeout can't stop a worker that is still computing. Its next decisions wait
-  behind the late one and may time out too.
+  behind the late one and may time out too. Restarting the worker and restoring its
+  state: #105.
+- Workers are started one after another in `add_player`, about 0.3–0.5s each:
+  #106.
