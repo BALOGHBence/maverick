@@ -184,7 +184,14 @@ including starting the two workers.
     from a saved state. It copies the state, raises a `RuntimeError` when an isolated
     import fails or the worker has stopped, and a `TypeError` for invalid states or
     in-process players without `import_state`.
-  - The worker loop is also tested in a thread, where coverage can see it.
+  - The worker loop is also tested in a thread, where coverage can see it, including
+    its error replies and messages it doesn't know.
+  - The proxy is tested against a simulated worker that sends replies that aren't
+    JSON or are malformed, never answers `close`, or has stopped. Workers that die
+    or hang while loading the player are rejected by `start`.
+  - Coverage isn't measured inside worker processes. Doing so tripled the time
+    coverage adds to the suite, so their code is covered through the thread-based
+    tests instead.
 - New `tests/test_rng.py`:
   - The same seed deals the same cards, and different seeds deal different cards.
   - `game.seed` repeats a game that wasn't seeded explicitly.

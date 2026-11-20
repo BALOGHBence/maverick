@@ -2,14 +2,19 @@
 
 import gc
 import json
+import logging
 import os
+import pickle  # nosec B403
 import random
 import sys
 import tempfile
+import threading
 import time
 import unittest
 import warnings
+from multiprocessing import Pipe
 from pathlib import Path
+from unittest import mock
 
 from maverick import (
     ActionType,
@@ -191,6 +196,24 @@ class UnloadableBot(CallBot):
         return (_fail_to_load, ())
 
 
+class DyingOnLoadBot(CallBot):
+    """Kills its worker while it is being unpickled."""
+
+    register = False
+
+    def __reduce__(self):
+        return (os._exit, (1,))
+
+
+class HangingOnLoadBot(CallBot):
+    """Blocks its worker while it is being unpickled."""
+
+    register = False
+
+    def __reduce__(self):
+        return (time.sleep, (30,))
+
+
 def _make_game(*players: Player, isolation: str = "process", **kwargs) -> Game:
     kwargs.setdefault("max_hands", 3)
     game = Game(
@@ -352,6 +375,27 @@ class TestFailures(IsolationTestCase):
         with self.assertRaisesRegex(RuntimeError, "can't load me"):
             game.add_player(UnloadableBot(name="a"), state=PlayerState(stack=200))
         self.assertEqual(game.state.players, [])
+
+    def test_worker_that_dies_while_loading_is_rejected(self):
+        game = _make_game()
+        with self.assertRaisesRegex(RuntimeError, "no response"):
+            game.add_player(DyingOnLoadBot(name="a"), state=PlayerState(stack=200))
+        self.assertEqual(game.state.players, [])
+
+    def test_worker_that_doesnt_start_in_time_is_rejected(self):
+        proxy = ProcessPlayer(
+            HangingOnLoadBot(name="a"), decision_timeout=None, logger=None
+        )
+        with mock.patch("maverick._isolation.proxy.START_TIMEOUT", 0.5):
+            with self.assertRaisesRegex(RuntimeError, "no response"):
+                proxy.start()
+        proxy.process.join(5)
+        self.assertFalse(proxy.process.is_alive())
+
+    def test_duck_typed_player_plays_in_isolated_mode(self):
+        game = _make_game(DuckPlayer("duck"), CallBot(name="c"))
+        game.start()
+        self.assertEqual(game.state.stage, GameStage.GAME_OVER)
 
 
 class TestLifecycle(IsolationTestCase):
@@ -572,15 +616,117 @@ class TestImportState(IsolationTestCase):
             game.set_player_state("nobody", {})
 
 
+class TestDefaultStateHooks(unittest.TestCase):
+    def test_player_defaults_export_nothing_and_ignore_imports(self):
+        bot = CallBot(name="c")
+        self.assertIsNone(bot.export_state())
+        self.assertIsNone(bot.import_state({"ignored": True}))
+
+
+class _FakeProcess:
+    """Stands in for a worker process that the test plays itself."""
+
+    def __init__(self) -> None:
+        self.alive = True
+
+    def is_alive(self) -> bool:
+        return self.alive
+
+    def join(self, timeout=None) -> None:
+        pass
+
+
+class TestProxyProtocol(unittest.TestCase):
+    """Connects a proxy to a pipe and plays the worker, including a misbehaving one."""
+
+    def setUp(self) -> None:
+        self.logger = logging.getLogger("maverick.test.proxy")
+        bot = RecorderBot("unused", name="r")
+        game = _make_game(bot, CallBot(name="c"), isolation="none")
+        self.view = game.get_player_view(bot.uid)
+        self.proxy = ProcessPlayer(bot, decision_timeout=1.0, logger=self.logger)
+        self.proxy._conn, self.worker = Pipe()
+        self.proxy._process = _FakeProcess()
+        self.proxy._finalizer = self.proxy._conn.close
+
+    def tearDown(self) -> None:
+        self.proxy._conn.close()
+        self.worker.close()
+
+    def reply(self, payload) -> None:
+        raw = payload if isinstance(payload, bytes) else json.dumps(payload).encode()
+        self.worker.send_bytes(raw)
+
+    def test_is_alive(self):
+        self.assertTrue(self.proxy.is_alive)
+        self.proxy._process.alive = False
+        self.assertFalse(self.proxy.is_alive)
+
+    def test_reply_that_is_not_json(self):
+        self.reply(b"\x80 not json")
+        with self.assertRaisesRegex(PlayerFailure, "not JSON"):
+            self.proxy.export_state()
+
+    def test_reply_that_is_not_an_object(self):
+        self.reply([1, 2])
+        with self.assertRaisesRegex(PlayerFailure, "malformed reply"):
+            self.proxy.export_state()
+
+    def test_state_that_is_not_an_object(self):
+        self.reply({"seq": 1, "state": [1], "state_error": None})
+        with self.assertRaisesRegex(PlayerFailure, "malformed state"):
+            self.proxy.export_state()
+
+    def test_malformed_hook_errors_are_skipped(self):
+        self.reply({"seq": 1, "state": None, "hook_errors": "not a list"})
+        with self.assertNoLogs(self.logger, logging.WARNING):
+            self.assertIsNone(self.proxy.export_state())
+        error = {"hook": "on_event", "event": "HAND_STARTED", "traceback": "tb"}
+        self.reply({"seq": 2, "state": None, "hook_errors": ["not a dict", error]})
+        with self.assertLogs(self.logger, logging.WARNING) as logs:
+            self.proxy.export_state()
+        self.assertEqual(len(logs.records), 1)
+        self.assertIn("on_event", logs.output[0])
+
+    def test_close_skips_other_replies_until_closed(self):
+        self.reply({"seq": 7, "action": None})  # late reply to an earlier request
+        self.reply({"closed": True, "state": {"calls": 3}, "state_error": None})
+        self.proxy.close()
+        self.assertEqual(self.proxy.final_state, {"calls": 3})
+        self.assertFalse(self.proxy.is_alive)
+
+    def test_close_gives_up_on_a_silent_worker(self):
+        with mock.patch("maverick._isolation.proxy.CLOSE_TIMEOUT", 0.1):
+            self.proxy.close()
+        self.assertIsNone(self.proxy.final_state)
+        self.assertFalse(self.proxy.is_alive)
+
+    def test_sending_to_a_stopped_worker(self):
+        self.worker.close()
+        event = self.view.history[-1]
+        with self.assertLogs(self.logger, logging.WARNING) as logs:
+            # hooks don't raise, but the worker is marked as stopped once
+            self.proxy.on_event(event, self.view)
+            self.proxy._mark_dead()
+        self.assertEqual(len(logs.records), 1)
+        self.assertFalse(self.proxy.is_alive)
+        # nothing is sent to a stopped worker anymore
+        self.proxy.on_event(event, self.view)
+        with self.assertRaisesRegex(PlayerFailure, "not running"):
+            self.proxy.export_state()
+
+    def test_failed_send_of_a_request_raises(self):
+        self.worker.close()
+        with self.assertLogs(self.logger, logging.WARNING):
+            with self.assertRaisesRegex(PlayerFailure, "not running"):
+                self.proxy.import_state({})
+
+
 class TestWorkerLoop(IsolationTestCase):
-    """Runs the worker loop in a thread, where coverage can see it."""
+    """Drives the worker loop in a thread, to test its side of the protocol."""
 
     def setUp(self) -> None:
         super().setUp()
-        import pickle  # nosec B403
-        import threading
-        from multiprocessing import Pipe
-
         report = self.dir / "calls.json"
         self.bot = RecorderBot(str(report), name="r")
         self.engine, worker_conn = Pipe()
@@ -661,6 +807,65 @@ class TestWorkerLoop(IsolationTestCase):
         self.assertIsNone(reply["state_error"])
         self.engine.send(("export", 4))
         self.assertEqual(json.loads(self.engine.recv_bytes())["state"], {"calls": 1})
+
+    def serve(self, bot):
+        """Runs another worker loop in a thread, for ``bot``."""
+        engine, worker_conn = Pipe()
+        thread = threading.Thread(
+            target=run_worker,
+            args=(worker_conn, pickle.dumps(bot)),  # nosemgrep
+        )
+        thread.start()
+        self.addCleanup(thread.join, 5)
+        self.addCleanup(engine.close)
+        self.assertEqual(json.loads(engine.recv_bytes()), {"ready": True})
+        return engine
+
+    def request(self, engine, *message) -> dict:
+        engine.send(message)
+        return json.loads(engine.recv_bytes())
+
+    def test_wrong_return_type_is_reported(self):
+        engine = self.serve(WrongTypeBot(name="w"))
+        reply = self.request(engine, "decide", 1, self.delta(), {})
+        self.assertIsNone(reply["action"])
+        self.assertIn("must return a PlayerAction", reply["error"])
+
+    def test_duck_typed_player(self):
+        engine = self.serve(DuckPlayer("duck"))
+        kwargs = dict(valid_actions=[ActionType.CHECK])
+        reply = self.request(engine, "decide", 1, self.delta(), kwargs)
+        self.assertEqual(reply["action"]["action_type"], ActionType.CHECK.value)
+        # no state hooks: nothing to export, and imports are rejected
+        self.assertIsNone(self.request(engine, "export", 2)["state"])
+        reply = self.request(engine, "import", 3, {})
+        self.assertIn("doesn't implement import_state", reply["state_error"])
+
+    def test_failing_state_hooks_are_reported(self):
+        engine = self.serve(StatefulBot(mode="raise", name="s"))
+        self.assertIn("export boom", self.request(engine, "export", 1)["state_error"])
+        reply = self.request(engine, "import", 2, {"decisions": 1})
+        self.assertIn("import boom", reply["state_error"])
+
+    def test_exported_state_must_be_a_dict(self):
+        engine = self.serve(StatefulBot(mode="not a dict", name="s"))
+        reply = self.request(engine, "export", 1)
+        self.assertIsNone(reply["state"])
+        self.assertIn("must return a dict or None", reply["state_error"])
+
+    def test_unknown_messages_are_ignored(self):
+        self.engine.send(("unknown",))
+        self.engine.send(("export", 1))
+        self.assertEqual(json.loads(self.engine.recv_bytes())["seq"], 1)
+
+    def test_bytes_that_cant_be_loaded(self):
+        engine, worker = Pipe()
+        run_worker(worker, b"not a pickle")
+        reply = json.loads(engine.recv_bytes())
+        self.assertFalse(reply["ready"])
+        self.assertIn("Traceback", reply["error"])
+        engine.close()
+        worker.close()
 
     def test_worker_exits_when_the_engine_goes_away(self):
         self.engine.close()
