@@ -26,6 +26,8 @@ from .playerstate import PlayerState, PlayerSnapshot
 from .playerview import PlayerView
 from .events import GameEvent
 from .table import Table
+from .replay import Replay
+from .savegame import SaveFormatError
 
 __all__ = [
     "Card",
@@ -53,6 +55,8 @@ __all__ = [
     "PlayerView",
     "GameEvent",
     "Table",
+    "Replay",
+    "SaveFormatError",
 ]
 
 __pkg_name__ = "maverick"

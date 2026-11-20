@@ -8,10 +8,12 @@ pot distribution.
 
 from __future__ import annotations
 
-from typing import Deque, Optional
+from typing import Deque, Iterable, Optional
 from collections import deque
 import json
 import logging
+import os
+from pathlib import Path
 import random
 import time
 import uuid
@@ -41,6 +43,22 @@ from .playerview import EventHistoryView, PlayerView, redact_event, redact_state
 from .utils import find_highest_scoring_hand
 from .eventbus import EventBus
 from .rules import PokerRules, DealingRules, StakesRules, ShowdownRules
+from .savegame import (
+    SAVE_FORMAT_VERSION,
+    Checkpoint,
+    PlayerRecord,
+    SaveFormatError,
+    SaveWriter,
+    SeatRecord,
+    TableRecord,
+    directory_has_save,
+    new_header,
+    parse_event,
+    read_checkpoint,
+    read_event_lines,
+    read_header,
+    truncate_event_log,
+)
 from .table import Table
 
 __all__ = ["Game"]
@@ -101,6 +119,14 @@ class Game:
         change the cards that are dealt.
 
         .. versionadded:: 0.7.0
+    save_dir : str | os.PathLike | None
+        Directory to save the game to, for replay with :class:`~maverick.replay.Replay`
+        and to resume it with :meth:`load`. The game writes the events of every hand,
+        and a checkpoint to resume from, each time a hand ends. The directory is
+        created when the game starts. It must not hold a saved game already. If None
+        (the default), the game is not saved.
+
+        .. versionadded:: 0.7.0
 
     Notes
     -----
@@ -126,6 +152,7 @@ class Game:
         player_isolation: Optional[PlayerIsolation | str] = None,
         decision_timeout: Optional[float] = None,
         seed: Optional[int] = None,
+        save_dir: Optional[str | os.PathLike] = None,
     ):
         if not exc_handling_mode in ["log", "raise"]:
             raise ValueError("exc_handling_mode must be 'log' or 'raise'")
@@ -217,6 +244,19 @@ class Game:
         # Active deck - held here, not in GameState
         self._deck: Optional[Deck] = None
 
+        # Saving to disk
+        self._save: Optional[SaveWriter] = None
+        if save_dir is not None:
+            directory = Path(save_dir)
+            if directory_has_save(directory):
+                raise FileExistsError(
+                    f"{directory} already holds a saved game. Use Game.load to "
+                    f"continue it, or choose another directory."
+                )
+            self._save = SaveWriter(directory)
+        # Set by load(): start() continues the loaded game instead of a new one
+        self._resuming = False
+
     @property
     def game_uid(self) -> Optional[str]:
         """Returns the unique identifier for the current game session.
@@ -286,6 +326,14 @@ class Game:
         .. versionadded:: 0.7.0
         """
         return self._seed
+
+    @property
+    def save_dir(self) -> Optional[Path]:
+        """The directory the game is saved to, or None if it is not saved.
+
+        .. versionadded:: 0.7.0
+        """
+        return self._save.directory if self._save is not None else None
 
     @property
     def settings(self) -> IsolationSettings:
@@ -412,6 +460,8 @@ class Game:
             The event to emit to handlers.
         """
         self._event_history.append(event)
+        if self._save is not None and event.type != GameEventType.GAME_STATE_CHANGED:
+            self._save.record(event, self._state)
 
         # external listeners
         self._events.emit(event, self)
@@ -778,6 +828,269 @@ class Game:
             raise TypeError(f"Player {target.name} doesn't implement import_state")
         import_state(state)
 
+    @classmethod
+    def load(
+        cls,
+        save_dir: str | os.PathLike,
+        *,
+        players: Iterable[PlayerLike],
+        max_hands: Optional[int] = None,
+        exc_handling_mode: str = "log",
+        log_events: bool = True,
+        player_isolation: Optional[PlayerIsolation | str] = None,
+        decision_timeout: Optional[float] = None,
+    ) -> "Game":
+        """Load a game saved with ``save_dir``, to continue it with :meth:`start`.
+
+        The game continues from the end of the last completed hand, with the same
+        cards it would have dealt had it not been interrupted. The rules, the seed and
+        ``first_button_position`` are taken from the save. The loaded game keeps
+        appending to the same save; events of a hand that was interrupted are dropped
+        from it.
+
+        The save only holds data, never code, so the players must be supplied. They
+        must be the players seated at the table when the checkpoint was written, with
+        the same UIDs and names. Players that were eliminated don't have to be
+        supplied. Each player gets back the state it exported with ``export_state``,
+        through its ``import_state`` hook.
+
+        Parameters
+        ----------
+        save_dir : str | os.PathLike
+            The directory the game was saved to.
+        players : Iterable[PlayerLike]
+            The players at the table.
+        max_hands : int | None
+            Maximum number of hands, counting those already played. If None, the
+            value of the saved game is used. Pass a larger value to continue a game
+            that reached its maximum.
+        exc_handling_mode, log_events, player_isolation, decision_timeout
+            As for :class:`Game`. They are not taken from the save, because they don't
+            change the cards or the decisions of deterministic players.
+
+        Returns
+        -------
+        Game
+            The loaded game. Call :meth:`start` to continue it.
+
+        Raises
+        ------
+        SaveFormatError
+            If the save is missing, malformed, or was written in an unsupported
+            format version.
+        ValueError
+            If the players don't match the players at the table.
+
+        Notes
+        -----
+        Loading never unpickles anything and never imports code named in the save.
+        Every file is read as JSON and validated.
+
+        .. versionadded:: 0.7.0
+        """
+        directory = Path(save_dir)
+        header = read_header(directory)
+        checkpoint = read_checkpoint(directory)
+        if checkpoint.game_uid != header.game_uid:
+            raise SaveFormatError(
+                "The checkpoint belongs to another game than the header of the save"
+            )
+        lines = read_event_lines(directory, limit=checkpoint.events)
+        if len(lines) < checkpoint.events:
+            raise SaveFormatError(
+                f"The event log has {len(lines)} complete lines, but the checkpoint "
+                f"expects {checkpoint.events}"
+            )
+        events = [parse_event(line, n) for n, line in enumerate(lines, start=1)]
+
+        game = cls(
+            rules=header.rules,
+            min_players=header.rules.dealing.min_players,
+            max_hands=max_hands if max_hands is not None else header.max_hands,
+            exc_handling_mode=exc_handling_mode,
+            log_events=log_events,
+            first_button_position=header.first_button_position,
+            player_isolation=player_isolation,
+            decision_timeout=decision_timeout,
+            seed=header.seed,
+        )
+        try:
+            game._restore(checkpoint, events, players)
+        except BaseException:
+            game.close()
+            raise
+        truncate_event_log(directory, checkpoint.log_size)
+        game._save = SaveWriter(directory, events=checkpoint.events)
+        return game
+
+    def _restore(
+        self,
+        checkpoint: Checkpoint,
+        events: list[GameEvent],
+        players: Iterable[PlayerLike],
+    ) -> None:
+        """Bring a new game to the state of ``checkpoint``, with ``players`` seated."""
+        state = checkpoint.state
+        if state.stage not in (GameStage.STARTED, GameStage.HAND_COMPLETE):
+            raise SaveFormatError(
+                f"The checkpoint was not written between two hands "
+                f"(stage {state.stage.name})"
+            )
+        seats = checkpoint.table.seats
+        if len(seats) != len(self._table):
+            raise SaveFormatError(
+                f"The checkpoint has {len(seats)} seats, but the rules allow "
+                f"{len(self._table)} players"
+            )
+        snapshots = {s.uid: s for s in state.players}
+        seated = [uid for uid in seats if uid is not None]
+        if len(set(seated)) != len(seated) or any(u not in snapshots for u in seated):
+            raise SaveFormatError("The seats of the checkpoint don't match its state")
+
+        supplied: dict[str, PlayerLike] = {}
+        for player in players:
+            if player.uid in supplied:
+                raise ValueError(f"Player uid '{player.uid}' is supplied twice")
+            supplied[player.uid] = player
+        missing = [snapshots[uid].name for uid in seated if uid not in supplied]
+        if missing:
+            raise ValueError(
+                f"The players at the table must be supplied, missing: "
+                f"{', '.join(missing)}"
+            )
+        unexpected = [p.name for uid, p in supplied.items() if uid not in seated]
+        if unexpected:
+            raise ValueError(
+                f"Only players at the table can be supplied, these are not: "
+                f"{', '.join(unexpected)}"
+            )
+        for uid in seated:
+            if supplied[uid].name != snapshots[uid].name:
+                raise ValueError(
+                    f"Player uid '{uid}' is called {snapshots[uid].name!r} in the "
+                    f"save, not {supplied[uid].name!r}"
+                )
+
+        rng_version, rng_internal, rng_gauss = checkpoint.rng_state
+        try:
+            self._rng.setstate((rng_version, tuple(rng_internal), rng_gauss))
+        except (TypeError, ValueError) as exc:
+            raise SaveFormatError(
+                f"The checkpoint holds an invalid random state: {exc}"
+            ) from exc
+
+        # Table, with the players in the seats of the checkpoint
+        for seat, uid in enumerate(seats):
+            if uid is not None:
+                self._table.seat_player(supplied[uid], seat_index=seat)
+        # The button may be on a seat that was emptied by an elimination, which the
+        # setter of Table.button_seat doesn't allow.
+        button_seat = checkpoint.table.button_seat
+        if button_seat is not None and not 0 <= button_seat < len(seats):
+            raise SaveFormatError(
+                f"The button is on seat {button_seat}, which is invalid"
+            )
+        self._table._button_seat = button_seat
+
+        self._state = state
+        self._game_uid = checkpoint.game_uid
+        self._all_stacks_at_game_start = checkpoint.all_stacks_at_game_start
+        self._revealed_uids = set(checkpoint.revealed_uids)
+        self._event_history = list(events)
+
+        for uid in seated:
+            player = supplied[uid]
+            if self._settings.player_isolation == PlayerIsolation.PROCESS:
+                proxy = ProcessPlayer(
+                    player,
+                    decision_timeout=self._settings.decision_timeout,
+                    logger=self._logger,
+                )
+                proxy.start()
+                self._proxies[uid] = proxy
+            self._strategies[uid] = player
+
+        for uid in seated:
+            record = checkpoint.players.get(uid, PlayerRecord())
+            if record.export_failed:
+                self._logger.warning(
+                    f"The state of player {supplied[uid].name} could not be saved, "
+                    f"it continues without it."
+                )
+            elif record.state is not None:
+                self.set_player_state(uid, record.state)
+
+        self._resuming = True
+
+    def _create_save(self) -> None:
+        """Write the header of the save when the game starts."""
+        if self._save is None:
+            return
+        self._save.create(
+            new_header(
+                game_uid=self._game_uid,
+                rules=self._rules,
+                seed=self._seed,
+                max_hands=self._max_hands,
+                first_button_position=self._first_button_position,
+                players=[
+                    SeatRecord(uid=p.uid, name=p.name, seat=p.state.seat)
+                    for p in self.state.players
+                ],
+            )
+        )
+
+    def _write_checkpoint(self) -> None:
+        """Save the events so far and a checkpoint, between two hands."""
+        if self._save is None:
+            return
+        players = {uid: self._export_for_checkpoint(uid) for uid in self._strategies}
+        rng_version, rng_internal, rng_gauss = self._rng.getstate()
+
+        def build(events: int, log_size: int) -> Checkpoint:
+            return Checkpoint(
+                format_version=SAVE_FORMAT_VERSION,
+                game_uid=self._game_uid,
+                created_at=time.time(),
+                events=events,
+                log_size=log_size,
+                state=self._state,
+                table=TableRecord(
+                    seats=list(self._table.seats),
+                    button_seat=self._table.button_seat,
+                ),
+                all_stacks_at_game_start=self._all_stacks_at_game_start,
+                revealed_uids=sorted(self._revealed_uids),
+                rng_state=(rng_version, list(rng_internal), rng_gauss),
+                players=players,
+            )
+
+        self._save.commit(build)
+
+    def _export_for_checkpoint(self, uid: str) -> PlayerRecord:
+        """Export a player's state for a checkpoint. A failure doesn't stop the game."""
+        player = self._strategies[uid]
+        try:
+            proxy = self._proxies.get(uid)
+            if proxy is not None:
+                state = proxy.export_state()
+            else:
+                export_state = getattr(player, "export_state", None)
+                state = export_state() if callable(export_state) else None
+                if state is not None and not isinstance(state, dict):
+                    raise TypeError(
+                        f"export_state must return a dict or None, "
+                        f"got {type(state).__name__}"
+                    )
+                state = json.loads(json.dumps(state))
+        except Exception as exc:
+            self._logger.warning(
+                f"Could not save the state of player {player.name}, it would continue "
+                f"without it if the game is loaded from this checkpoint: {exc}"
+            )
+            return PlayerRecord(export_failed=True)
+        return PlayerRecord(state=state)
+
     def __enter__(self) -> "Game":
         return self
 
@@ -785,7 +1098,18 @@ class Game:
         self.close()
 
     def start(self) -> None:
-        """Start the poker game."""
+        """Start the poker game, or continue a game loaded with :meth:`load`.
+
+        .. versionchanged:: 0.7.0
+            Continues a loaded game, after emitting a ``GAME_RESUMED`` event.
+        """
+        if self._resuming:
+            self._resuming = False
+            self._log("Game resumed.\n", logging.INFO, stage_prefix=False)
+            self._emit(self._create_event(GameEventType.GAME_RESUMED))
+            self._continue_between_hands()
+            self._drain_event_queue()
+            return
         self._log("Game started.\n", logging.INFO, stage_prefix=False)
         self._initialize_game()
         self._event_queue.append(GameEventType.GAME_STARTED)
@@ -831,9 +1155,10 @@ class Game:
                 assert self.state.stage == GameStage.READY
                 self._update_state(stage=GameStage.STARTED)
                 self._game_uid = uuid.uuid4().hex
+                self._create_save()
                 self._emit(self._create_event(GameEventType.GAME_STARTED))
-                self._start_new_hand()
-                self._event_queue.append(GameEventType.HAND_STARTED)
+                self._write_checkpoint()
+                self._continue_between_hands()
 
             case GameEventType.HAND_STARTED:
                 assert self.state.stage in [
@@ -939,62 +1264,15 @@ class Game:
 
             case GameEventType.HAND_ENDED:
                 self._log("Hand ended\n", logging.INFO, stage_prefix=False)
-
-                # Eliminate players with zero stack
-                eliminated_players = [
-                    p
-                    for p in self.state.players
-                    if p.state.stack == 0
-                    and p.state.state_type != PlayerStateType.ELIMINATED
-                ]
-                for player in eliminated_players:
-                    self._update_player_state(
-                        player, state_type=PlayerStateType.ELIMINATED
-                    )
-                    self._emit(
-                        self._create_event(
-                            GameEventType.PLAYER_ELIMINATED, player_uid=player.uid
-                        )
-                    )
-                    self._log(
-                        f"Player {player.name} has been eliminated from the game.",
-                        logging.INFO,
-                        stage_prefix=False,
-                    )
-                    self._event_queue.append(GameEventType.PLAYER_ELIMINATED)
-                    # Free the table seat and strategy but keep snapshot in state.players
-                    self.table.remove_player(player)
-                    self._strategies.pop(player.uid, None)
-                    self._close_proxy(player.uid)
-
-                # Check if we have enough players to continue
-                if (
-                    len(self.state.get_non_eliminated_players())
-                    < self.rules.dealing.min_players
-                ):
-                    self._log(
-                        "Not enough players to continue, ending game.", logging.INFO
-                    )
-                    self._update_state(stage=GameStage.GAME_OVER)
-                    self._event_queue.append(GameEventType.GAME_ENDED)
-                else:
-                    # Move button and start next hand
-                    if self.state.hand_number >= self._max_hands:
-                        self._log(
-                            "Reached maximum number of hands, ending game.",
-                            logging.INFO,
-                            stage_prefix=False,
-                        )
-                        self._update_state(stage=GameStage.GAME_OVER)
-                        self._event_queue.append(GameEventType.GAME_ENDED)
-                    else:
-                        self._move_button()
-                        self._start_new_hand()
-                        self._event_queue.append(GameEventType.HAND_STARTED)
+                self._eliminate_busted_players()
+                self._write_checkpoint()
+                self._continue_between_hands()
 
             case GameEventType.GAME_ENDED:
                 self._log("Game ended", logging.INFO, stage_prefix=False)
                 self._emit(self._create_event(GameEventType.GAME_ENDED))
+                if self._save is not None:
+                    self._save.flush()
                 self.close()
 
             case GameEventType.PLAYER_JOINED:
@@ -1014,6 +1292,66 @@ class Game:
 
             case _:  # pragma: no cover
                 raise ValueError(f"Unknown event: {event}")
+
+    def _eliminate_busted_players(self) -> None:
+        """Eliminate the players who lost their stack in the hand that just ended."""
+        # Eliminate players with zero stack
+        eliminated_players = [
+            p
+            for p in self.state.players
+            if p.state.stack == 0 and p.state.state_type != PlayerStateType.ELIMINATED
+        ]
+        for player in eliminated_players:
+            self._update_player_state(player, state_type=PlayerStateType.ELIMINATED)
+            self._emit(
+                self._create_event(
+                    GameEventType.PLAYER_ELIMINATED, player_uid=player.uid
+                )
+            )
+            self._log(
+                f"Player {player.name} has been eliminated from the game.",
+                logging.INFO,
+                stage_prefix=False,
+            )
+            self._event_queue.append(GameEventType.PLAYER_ELIMINATED)
+            # Free the table seat and strategy but keep snapshot in state.players
+            self.table.remove_player(player)
+            self._strategies.pop(player.uid, None)
+            self._close_proxy(player.uid)
+
+    def _continue_between_hands(self) -> None:
+        """Start the next hand, or end the game.
+
+        Runs between two hands: after the game has started, after a hand has ended,
+        and when a loaded game continues.
+        """
+        if self.state.stage == GameStage.STARTED:
+            self._start_new_hand()
+            self._event_queue.append(GameEventType.HAND_STARTED)
+            return
+
+        # Check if we have enough players to continue
+        if (
+            len(self.state.get_non_eliminated_players())
+            < self.rules.dealing.min_players
+        ):
+            self._log("Not enough players to continue, ending game.", logging.INFO)
+            self._update_state(stage=GameStage.GAME_OVER)
+            self._event_queue.append(GameEventType.GAME_ENDED)
+        else:
+            # Move button and start next hand
+            if self.state.hand_number >= self._max_hands:
+                self._log(
+                    "Reached maximum number of hands, ending game.",
+                    logging.INFO,
+                    stage_prefix=False,
+                )
+                self._update_state(stage=GameStage.GAME_OVER)
+                self._event_queue.append(GameEventType.GAME_ENDED)
+            else:
+                self._move_button()
+                self._start_new_hand()
+                self._event_queue.append(GameEventType.HAND_STARTED)
 
     def _drain_event_queue(self) -> None:
         while self.step():
