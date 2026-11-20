@@ -232,11 +232,102 @@ overridden; the no-op `Player.on_event` default is skipped. To keep this cheap:
   full state dumps per state change for every player. The view always carries the
   current state anyway.
 
-### Known limitation
+### Limits of in-process isolation
 
 Inside a single Python process isolation cannot be complete: a deliberately malicious
 bot can still reach the `Game` through interpreter introspection (e.g. walking the call
 stack with `sys._getframe` or using `gc.get_referrers`). The `PlayerView` closes every
 API-level leak, so well-behaved bots cannot see hidden information by accident and
-cheating requires deliberate introspection. Running untrusted bots with guaranteed
-isolation requires a separate process per bot.
+cheating requires deliberate introspection. For untrusted bots, players can run in
+separate processes; see the next section.
+
+## Players can run in separate processes
+
+With `player_isolation="process"`, every player runs in its own worker process. The
+engine talks to it through a `ProcessPlayer` proxy (`maverick/_isolation/`), which
+satisfies `PlayerLike`, so the engine barely changes: it calls the proxy where it would
+call the player, and `Game.button`, `get_current_player()` and the other public members
+still return the original player objects. In-process mode stays the default and doesn't
+pay for any of this.
+
+- **`spawn`, never `fork`.** A forked worker would inherit a copy of the engine,
+  including the global `random` state that shuffles the deck, so a bot could predict the
+  cards. Spawned workers share nothing with the engine.
+- **Pickle in, JSON out.** The engine sends pickled views to workers, which is safe
+  because the engine is trusted. Workers answer with JSON only, of limited size, and the
+  engine validates the action with `PlayerAction.model_validate`. Unpickling data from an
+  untrusted worker would let it run code in the engine. This is the security boundary of
+  the design: any new message from workers must be JSON too.
+- **A pipe per worker, not a `multiprocessing.Queue`.** A queue unpickles every object
+  taken out of it, so a worker → engine queue would let a bot run code in the engine.
+  A `Pipe` lets the engine read raw bytes with a size limit (`recv_bytes(maxlength)`)
+  and decode them itself. With one engine and one worker per channel, a queue's support
+  for many producers and consumers, its feeder thread and its locks aren't needed either.
+- **Bot state crosses the process boundary only through `export_state` and
+  `import_state`.** Bots keep their state in the worker, so changes are not visible on
+  the object passed to `add_player`. Sending the bot object back pickled would be
+  transparent but unsafe, and mirroring attributes as JSON would fail silently for
+  anything that isn't JSON-serializable. Instead, a bot opts in with a pair of hooks:
+  `export_state` returns everything needed to restore it as a JSON-serializable `dict`,
+  and `import_state` restores it. `Game.get_player_state` and `Game.set_player_state`
+  call them. The worker exports once more when it stops, so the data outlives the
+  worker. In-process, the hooks are called directly and the data round-trips through
+  JSON, so both modes behave the same.
+- **One pair of hooks for reporting and for restoring.** The same data serves both
+  purposes, for example the token usage of an LLM bot, and two pairs of methods with
+  overlapping data would drift apart. Saving and resuming games (#103) will use the
+  same pair.
+- **Failed exports return `None`, failed imports raise.** Results are often collected
+  from many bots at once, so one misbehaving bot shouldn't stop that. A state that
+  silently fails to load would be worse, so `set_player_state` raises.
+- **One long-lived worker per player,** because bots keep state between decisions. A
+  pool of workers would lose it.
+- **Only the new history entries are sent.** Each worker keeps its own copy of the
+  player's history and rebuilds an `EventHistoryView` over it. Rules are sent once.
+- **Hooks are one-way messages.** The engine doesn't wait for them, and the pipe keeps
+  them in order before the next decision. The proxy only exposes the hooks the player
+  implements, so `Game._emit` skips the others as it does in-process. Exceptions in
+  hooks are reported back with the next reply and logged.
+- **Isolated players fail closed.** On a timeout, an exception, an invalid reply or a
+  dead worker, the player folds instead of stopping the game. Each decision carries a
+  sequence number, so a late answer to a decision that timed out is discarded.
+  `exc_handling_mode` still only applies to event bus handlers.
+- **Settings come from code, environment or `pyproject.toml`,** in that order, so a
+  tournament can switch isolation on without changing the code that builds the games.
+  `IsolationSettings` is a Pydantic model because it validates and converts untrusted
+  strings from the environment and from TOML. It is built once per game, so the cost of
+  validation doesn't matter.
+
+Process isolation doesn't cover code that runs when the bot is created: the bot's module
+is imported and the player is created and pickled in the engine's process. It also sets
+no CPU or memory limits, and it is not a sandbox: workers run as the same operating
+system user, inherit the engine's environment variables, and can use files, the network
+and signals. `multiprocessing` offers no way to start a worker with a different
+environment, and clearing `os.environ` inside the worker is incomplete, because on Linux
+the original environment can still be read from `/proc/self/environ`. Untrusted
+tournaments should run in a container or as a separate user.
+
+## The game owns its random number generator
+
+Every `Game` has its own `random.Random`, created from the `seed` argument, and passes
+it to every shuffle and deal (`Deck` methods take an optional `rng`). The engine used to
+rely on the global `random` module, which had three problems:
+
+- **Players changed the cards.** An in-process player that called `random.random()`
+  consumed numbers from the generator that shuffles the deck, so games were only
+  reproducible if every player behaved identically.
+- **Players could predict the cards.** An in-process player could call
+  `random.getstate()` and simulate the next shuffle without touching the `Game`, a path
+  that `PlayerView` couldn't close.
+- **The state couldn't be saved.** Saving and resuming games (#103) needs the state of
+  the generator that deals the cards, and the global one is shared with everything else
+  in the interpreter.
+
+If no seed is given, it is drawn from the global `random` module. That keeps
+`random.seed(...)` before creating a game reproducible, as documented before. The seed
+is available as `Game.seed`, so any game can be repeated, but it is not part of
+`GameState`, so players never see it.
+
+The engine's generator is still an object in the engine's process, so an in-process
+player can reach it through introspection like anything else there. With process
+isolation, players have no way to reach it.

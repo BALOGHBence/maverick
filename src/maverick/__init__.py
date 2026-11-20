@@ -12,6 +12,7 @@ from .enums import (
     GameStage,
     ActionType,
     GameEventType,
+    PlayerIsolation,
 )
 from .player import Player
 from .hand import Hand
@@ -41,6 +42,7 @@ __all__ = [
     "Game",
     "GameState",
     "GameEventType",
+    "PlayerIsolation",
     "GameStateType",
     "GameStage",
     "ActionType",

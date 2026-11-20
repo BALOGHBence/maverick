@@ -10,6 +10,7 @@ __all__ = [
     "ActionType",
     "GameStage",
     "GameEventType",
+    "PlayerIsolation",
 ]
 
 
@@ -379,3 +380,27 @@ class GameEventType(Enum):
 
     # State change events
     GAME_STATE_CHANGED = auto()
+
+
+class PlayerIsolation(Enum):
+    """
+    Player isolation mode enumeration.
+
+    Controls where the code of the players runs relative to the game engine.
+
+    Attributes
+    ----------
+    NONE : str
+        Players run in the same process as the engine. This is the fastest mode, but a
+        deliberately malicious player can reach the engine through interpreter
+        introspection.
+    PROCESS : str
+        Every player runs in its own worker process and only receives serialized
+        player views, so it can't reach the engine, the deck or the hole cards of
+        other players.
+
+    .. versionadded:: 0.7.0
+    """
+
+    NONE = "none"
+    PROCESS = "process"

@@ -115,6 +115,18 @@ Rules
    maverick.rules.StakesRules
    maverick.rules.ShowdownRules
 
+.. _settings_api_reference:
+
+Settings
+--------
+
+.. autosummary::
+   :toctree: _autosummary
+   :recursive:
+
+   maverick.config.IsolationSettings
+   maverick.config.resolve_settings
+
 Hand Evaluation
 ---------------
 
@@ -149,3 +161,4 @@ Enumerations
    maverick.enums.GameStage
    maverick.enums.ActionType
    maverick.enums.GameEventType
+   maverick.enums.PlayerIsolation

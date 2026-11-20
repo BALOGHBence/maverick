@@ -1,3 +1,4 @@
+from typing import Optional
 from warnings import warn
 import random
 
@@ -31,13 +32,20 @@ class Deck(BaseModel):
     cards: list[Card]
 
     @classmethod
-    def build(cls, shuffle: bool = False) -> "Deck":
+    def build(
+        cls, shuffle: bool = False, rng: Optional[random.Random] = None
+    ) -> "Deck":
         """Build a standard deck of 52 cards.
 
         Parameters
         ----------
         shuffle : bool, optional
             Whether to shuffle the deck after building (default is False).
+        rng : random.Random, optional
+            Random number generator used for shuffling. Defaults to the global
+            ``random`` module.
+
+            .. versionadded:: 0.7.0
         """
         ranks = list(Rank)
         suits = list(Suit)
@@ -51,12 +59,14 @@ class Deck(BaseModel):
         deck = cls(cards=cards)
 
         if shuffle:
-            deck.shuffle()
+            deck.shuffle(rng=rng)
 
         return deck
 
     @classmethod
-    def standard_deck(cls, shuffle: bool = False) -> "Deck":
+    def standard_deck(
+        cls, shuffle: bool = False, rng: Optional[random.Random] = None
+    ) -> "Deck":
         """Create and optionally shuffle a standard deck of 52 cards.
 
         This is an alias for Deck.build() for clarity.
@@ -65,10 +75,15 @@ class Deck(BaseModel):
         ----------
         shuffle : bool, optional
             Whether to shuffle the deck after building (default is False).
-        """
-        return cls.build(shuffle=shuffle)
+        rng : random.Random, optional
+            Random number generator used for shuffling. Defaults to the global
+            ``random`` module.
 
-    def deal(self, n: int) -> list[Card]:
+            .. versionadded:: 0.7.0
+        """
+        return cls.build(shuffle=shuffle, rng=rng)
+
+    def deal(self, n: int, rng: Optional[random.Random] = None) -> list[Card]:
         """
         Deal n random cards from the deck.
 
@@ -76,6 +91,11 @@ class Deck(BaseModel):
         ----------
         n : int
             The number of cards to deal.
+        rng : random.Random, optional
+            Random number generator used to pick the cards. Defaults to the global
+            ``random`` module.
+
+            .. versionadded:: 0.7.0
 
         Returns
         -------
@@ -101,27 +121,32 @@ class Deck(BaseModel):
             )
             return []
 
-        dealt_cards = random.sample(self.cards, n)
+        dealt_cards = (rng or random).sample(self.cards, n)
 
         for card in dealt_cards:
             self.cards.remove(card)
 
         return dealt_cards
 
-    def shuffle(self, n: int = 1) -> "Deck":
+    def shuffle(self, n: int = 1, rng: Optional[random.Random] = None) -> "Deck":
         """Shuffle the deck of cards n times.
 
         Parameters
         ----------
         n : int, optional
             The number of times to shuffle the deck (default is 1).
+        rng : random.Random, optional
+            Random number generator used for shuffling. Defaults to the global
+            ``random`` module.
+
+            .. versionadded:: 0.7.0
         """
         if n <= 0:
             warn("Number of shuffles must be positive; returning unshuffled deck.")
             return self
 
         for _ in range(n):
-            random.shuffle(self.cards)
+            (rng or random).shuffle(self.cards)
 
         return self
 
