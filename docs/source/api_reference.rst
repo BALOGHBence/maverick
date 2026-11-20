@@ -101,6 +101,18 @@ Listeners are classes that can subscribe to game events and perform actions when
    maverick.listeners.GameStateCollector
    maverick.listeners.GameTranscriber
 
+.. _saved_games_api_reference:
+
+Saved Games
+-----------
+
+.. autosummary::
+   :toctree: _autosummary
+   :recursive:
+
+   maverick.replay.Replay
+   maverick.savegame.SaveFormatError
+
 .. _rules_api_reference:
 
 Rules

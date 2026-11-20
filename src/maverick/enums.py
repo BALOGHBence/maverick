@@ -348,6 +348,12 @@ class GameEventType(Enum):
                 "before": dict,  # Full GameState serialized via model_dump(mode="json") before the change
                 "after":  dict,  # Full GameState serialized via model_dump(mode="json") after the change
             }
+    GAME_RESUMED : str
+        A saved game was loaded with :meth:`Game.load <maverick.game.Game.load>` and
+        continues. Emitted by :meth:`Game.start <maverick.game.Game.start>`, between
+        hands, before the next hand starts.
+
+        .. versionadded:: 0.7.0
     """
 
     # Game lifecycle events
@@ -380,6 +386,10 @@ class GameEventType(Enum):
 
     # State change events
     GAME_STATE_CHANGED = auto()
+
+    # Added later. New members go at the end, because the values are stored in saved
+    # games.
+    GAME_RESUMED = auto()
 
 
 class PlayerIsolation(Enum):
