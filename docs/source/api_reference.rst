@@ -1,3 +1,6 @@
+.. meta::
+   :description: Reference documentation for all public classes, functions and enumerations of the Maverick library.
+
 API Reference
 =============
 
@@ -15,6 +18,7 @@ Core Classes
    maverick.state.GameState
    maverick.protocol.PlayerLike
    maverick.player.Player
+   maverick.playerview.PlayerView
    maverick.playerstate.PlayerState
    maverick.playeraction.PlayerAction
 
@@ -84,6 +88,19 @@ Events and Event Handling
    maverick.events.GameEvent
    maverick.eventbus.EventBus
 
+.. _listeners_api_reference:
+
+Listeners
+---------
+Listeners are classes that can subscribe to game events and perform actions when those events occur. They are useful for collecting data, logging, or implementing custom behavior in response to game events.
+
+.. autosummary::
+   :toctree: _autosummary
+   :recursive:
+
+   maverick.listeners.GameStateCollector
+   maverick.listeners.GameTranscriber
+
 .. _rules_api_reference:
 
 Rules
@@ -97,6 +114,18 @@ Rules
    maverick.rules.DealingRules
    maverick.rules.StakesRules
    maverick.rules.ShowdownRules
+
+.. _settings_api_reference:
+
+Settings
+--------
+
+.. autosummary::
+   :toctree: _autosummary
+   :recursive:
+
+   maverick.config.IsolationSettings
+   maverick.config.resolve_settings
 
 Hand Evaluation
 ---------------
@@ -132,3 +161,4 @@ Enumerations
    maverick.enums.GameStage
    maverick.enums.ActionType
    maverick.enums.GameEventType
+   maverick.enums.PlayerIsolation

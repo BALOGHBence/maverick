@@ -6,7 +6,7 @@ from ...playeraction import PlayerAction
 from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ...game import Game
+    from ...playerview import PlayerView
 
 __all__ = ["GrinderBot"]
 
@@ -29,15 +29,16 @@ class GrinderBot(Player):
     def decide_action(
         self,
         *,
-        game: "Game",
+        game: "PlayerView",
         valid_actions: list[ActionType],
         min_raise_amount: int,
         call_amount: int,
         min_bet_amount: int,
     ) -> PlayerAction:
         """Play solid, consistent poker focused on long-term EV using hand strength."""
+        snapshot = game.get_player_snapshot(self.uid)
         # Evaluate hand strength
-        private_cards = self.state.holding.cards
+        private_cards = snapshot.state.holding.cards
         community_cards = game.state.community_cards
 
         # Get hand equity
@@ -64,14 +65,14 @@ class GrinderBot(Player):
 
         # Standard raises for value
         if ActionType.RAISE in valid_actions and value_hand:
-            raise_amount = min(min_raise_amount, self.state.stack)
+            raise_amount = min(min_raise_amount, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_amount
             )
 
         # Bet for value with standard sizing
         if ActionType.BET in valid_actions and value_hand:
-            bet_amount = min(min_bet_amount * 2, self.state.stack)
+            bet_amount = min(min_bet_amount * 2, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
@@ -79,7 +80,10 @@ class GrinderBot(Player):
         # Call with good pot odds and profitable hands
         if ActionType.CALL in valid_actions and profitable_hand:
             # Basic pot odds calculation - call if getting 2:1 or better
-            if call_amount <= self.state.stack and call_amount <= game.state.pot * 0.5:
+            if (
+                call_amount <= snapshot.state.stack
+                and call_amount <= game.state.pot * 0.5
+            ):
                 return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Check when free

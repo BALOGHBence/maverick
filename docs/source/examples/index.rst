@@ -1,3 +1,6 @@
+.. meta::
+   :description: Index of example notebooks demonstrating advanced use cases of Maverick, including strategy comparison and LLM-based players.
+
 Examples
 ========
 

@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "How to run Maverick's test suite with pytest and measure code coverage locally and in CI."
+---
+
 # Testing and Coverage
 
 ## Running Tests

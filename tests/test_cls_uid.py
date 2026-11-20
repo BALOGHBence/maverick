@@ -56,7 +56,9 @@ class TestClsUid(unittest.TestCase):
                     f"{player_class.__name__} should have a cls_uid",
                 )
                 self.assertIsInstance(
-                    player_class.cls_uid, str, f"{player_class.__name__}.cls_uid should be a string"
+                    player_class.cls_uid,
+                    str,
+                    f"{player_class.__name__}.cls_uid should be a string",
                 )
                 self.assertEqual(
                     len(player_class.cls_uid),
@@ -88,7 +90,9 @@ class TestClsUid(unittest.TestCase):
         ]
 
         uids = [cls.cls_uid for cls in player_classes]
-        self.assertEqual(len(uids), len(set(uids)), "All cls_uid values should be unique")
+        self.assertEqual(
+            len(uids), len(set(uids)), "All cls_uid values should be unique"
+        )
 
     def test_get_by_uid_returns_correct_class(self) -> None:
         """Test that Player.get_by_uid returns the correct class."""
@@ -112,11 +116,11 @@ class TestClsUid(unittest.TestCase):
 
         # Instantiate the class
         player = player_class(
-            id="test", name="TestPlayer", state=PlayerState(stack=1000, seat=0)
+            uid="test", name="TestPlayer", state=PlayerState(stack=1000, seat=0)
         )
         self.assertIsInstance(player, CallBot)
         self.assertEqual(player.name, "TestPlayer")
-        self.assertEqual(player.id, "test")
+        self.assertEqual(player.uid, "test")
 
     def test_all_players_retrievable_by_uid(self) -> None:
         """Test that all player classes can be retrieved by their cls_uid."""

@@ -10,6 +10,7 @@ __all__ = [
     "ActionType",
     "GameStage",
     "GameEventType",
+    "PlayerIsolation",
 ]
 
 
@@ -339,6 +340,14 @@ class GameEventType(Enum):
         Player has been eliminated from the game.
 
         .. versionadded:: 0.2.0
+    GAME_STATE_CHANGED : str
+        Emitted every time the game state is replaced with a new instance.
+        Payload schema::
+
+            {
+                "before": dict,  # Full GameState serialized via model_dump(mode="json") before the change
+                "after":  dict,  # Full GameState serialized via model_dump(mode="json") after the change
+            }
     """
 
     # Game lifecycle events
@@ -368,3 +377,30 @@ class GameEventType(Enum):
     ANTES_POSTED = auto()
     BETTING_ROUND_STARTED = auto()
     BETTING_ROUND_COMPLETED = auto()
+
+    # State change events
+    GAME_STATE_CHANGED = auto()
+
+
+class PlayerIsolation(Enum):
+    """
+    Player isolation mode enumeration.
+
+    Controls where the code of the players runs relative to the game engine.
+
+    Attributes
+    ----------
+    NONE : str
+        Players run in the same process as the engine. This is the fastest mode, but a
+        deliberately malicious player can reach the engine through interpreter
+        introspection.
+    PROCESS : str
+        Every player runs in its own worker process and only receives serialized
+        player views, so it can't reach the engine, the deck or the hole cards of
+        other players.
+
+    .. versionadded:: 0.7.0
+    """
+
+    NONE = "none"
+    PROCESS = "process"

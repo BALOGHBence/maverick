@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "How Maverick's documentation is made LLM-friendly using sphinx-llm, per-page Markdown downloads and a Claude Code plugin."
+---
+
 # LLM-Friendly Documentation
 
 Maverick's documentation is built to be consumed not just by humans in a browser, but also by LLMs. Every page in the HTML docs has a corresponding Markdown version that can be fed directly into an AI assistant's context window.
@@ -34,14 +40,20 @@ The extension works by spawning a secondary Sphinx build using the `markdown` bu
 
 ### Configuration
 
-The extension is enabled in `docs/source/conf.py` and requires no additional settings beyond being listed in `extensions`:
+The extension is enabled in `docs/source/conf.py` by listing it in `extensions`, and a few `llms_txt_*` settings tune its output:
 
 ```python
 extensions = [
     ...
     "sphinx_llm.txt",
 ]
+
+llms_txt_description = "..."  # the introduction at the top of llms.txt
+llms_txt_suppress_unknown_node_warnings = ["meta", "abbreviation"]
+llms_txt_exclude = ["dev_guide/history/*"]
 ```
+
+`llms_txt_exclude` takes glob patterns of document names. Matching pages are left out of `llms.txt` and `llms-full.txt`, but their `.html.md` files are still built, so the download button keeps working. The {doc}`development history <history/index>` is excluded this way: it records how the code changed over time, which would only add noise for an LLM that needs to know how to use Maverick today.
 
 The `sphinx-llm[gen]` package is listed in the `docs` dependency group in `pyproject.toml`.
 
@@ -69,3 +81,25 @@ The DOM target (`.dropdown-download-buttons`) is specific enough to be stable ac
 ### Why JavaScript instead of a Jinja2 template override
 
 Sphinx-book-theme inherits its template structure from pydata-sphinx-theme, and the article header button area is generated through several layers of macro calls. Overriding a template at the right level would require coupling the implementation to internal theme internals that are not part of the public API and tend to change between minor releases. The JavaScript approach queries a stable, semantic CSS class that represents the download button group, making it resilient to theme updates.
+
+## The Claude Code Plugin
+
+Maverick ships a Claude Code plugin at `maverick-plugin/` that users can install via:
+
+```text
+/plugin marketplace add BALOGHBence/maverick
+```
+
+The plugin follows the [claude-skills-marketplace](https://github.com/mhattingpete/claude-skills-marketplace) format and is registered in `.claude-plugin/marketplace.json`. Skills are auto-discovered from `maverick-plugin/skills/`.
+
+### The symlink in `.claude/skills/`
+
+`.claude/skills/maverick-docs/SKILL.md` is a symlink pointing to `maverick-plugin/skills/maverick-docs.md`. This keeps the project-local Claude Code skill in sync with the canonical skill file in the plugin without duplication.
+
+**Windows caveat:** git on Windows does not create symlinks by default. Without symlink support, this file is checked out as a plain text file containing the path string, and the project-local skill will not work. To fix this, enable **Developer Mode** in Windows Settings or run the following before cloning:
+
+```bash
+git config --global core.symlinks true
+```
+
+Users of the plugin installed via `/plugin marketplace add` are not affected by this — the marketplace installs skills to `~/.claude/skills/` directly and does not involve the symlink.

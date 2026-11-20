@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Step-by-step process for tagging and publishing a new release of Maverick."
+---
+
 # Release Flow
 
 ## Create an annotated tag on the current main HEAD

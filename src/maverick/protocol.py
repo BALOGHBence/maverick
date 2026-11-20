@@ -12,8 +12,8 @@ from .playeraction import PlayerAction
 
 if TYPE_CHECKING:  # pragma: no cover
     from .game import Game
-    from .playerstate import PlayerState
     from .events import GameEvent
+    from .playerview import PlayerView
 
 __all__ = ["PlayerLike", "EventHandler"]
 
@@ -41,18 +41,15 @@ class PlayerLike(Protocol):
         Unique identifier for the player. Replaces deprecated ``id``.
     name : Optional[str]
         Display name for the player.
-    state : Optional[PlayerState]
-        Current player state containing seat, stack, holding, bets, etc.
     """
 
     uid: Optional[str]
     name: Optional[str]
-    state: Optional["PlayerState"]
 
     def decide_action(
         self,
         *,
-        game: "Game",
+        game: "PlayerView",
         valid_actions: list[ActionType],
         min_raise_amount: int,
         call_amount: int,
@@ -63,8 +60,14 @@ class PlayerLike(Protocol):
 
         Parameters
         ----------
-        game : Game
-            The game instance containing the current state.
+        game : PlayerView
+            A read-only view of the game from this player's perspective. It contains
+            the public game state, the player's own hole cards, the rules and the
+            event history, but not the deck or the hole cards of other players.
+
+            .. versionchanged:: 0.7.0
+                A :class:`~maverick.playerview.PlayerView` is passed instead of the
+                live :class:`~maverick.game.Game` instance.
         valid_actions : list[ActionType]
             List of valid actions the player can take.
         min_raise_amount : int
@@ -78,16 +81,5 @@ class PlayerLike(Protocol):
         -------
         PlayerAction
             An instance of PlayerAction representing the chosen action.
-        """
-        ...
-
-    def to_dict(self) -> dict:  # pragma: no cover
-        """
-        Serialize the player to a dictionary representation.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the player's attributes.
         """
         ...

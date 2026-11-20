@@ -14,10 +14,11 @@ class TestAggressiveBotEdgeCases(unittest.TestCase):
 
     def test_aggressive_with_no_raise(self):
         """Test when raise is not available."""
-        bot = AggressiveBot(id="agg", name="Agg", state=PlayerState(stack=100, seat=0))
+        bot = AggressiveBot(uid="agg", name="Agg")
         game = Mock()
         game.state.pot = 20
         game.state.big_blind = 10
+        game.get_player_snapshot.return_value.state.stack = 100
 
         # Test with just BET available
         action = bot.decide_action(
@@ -45,7 +46,7 @@ class TestCallBotEdgeCases(unittest.TestCase):
 
     def test_callbot_with_all_in(self):
         """Test CallBot with ALL_IN available."""
-        bot = CallBot(id="call", name="Call", state=PlayerState(stack=50, seat=0))
+        bot = CallBot(uid="call", name="Call")
         game = Mock()
 
         action = bot.decide_action(
@@ -59,7 +60,7 @@ class TestCallBotEdgeCases(unittest.TestCase):
 
     def test_callbot_with_fold_only(self):
         """Test CallBot forced to fold."""
-        bot = CallBot(id="call", name="Call", state=PlayerState(stack=50, seat=0))
+        bot = CallBot(uid="call", name="Call")
         game = Mock()
 
         action = bot.decide_action(
@@ -77,13 +78,7 @@ class TestLoosePassiveBotPaths(unittest.TestCase):
 
     def test_loose_passive_with_check(self):
         """Test LoosePassiveBot checking."""
-        bot = LoosePassiveBot(id="lp", name="LP", state=PlayerState(stack=500, seat=0))
-        bot.state.holding = Holding(
-            cards=[
-                Card(suit=Suit.HEARTS, rank=Rank.SIX),
-                Card(suit=Suit.CLUBS, rank=Rank.FOUR),
-            ]
-        )
+        bot = LoosePassiveBot(uid="lp", name="LP")
 
         game = Mock()
         game.state.pot = 20
@@ -107,21 +102,14 @@ class TestManiacBotPaths(unittest.TestCase):
 
     def test_maniac_with_bet(self):
         """Test ManiacBot betting."""
-        bot = ManiacBot(
-            id="maniac", name="Maniac", state=PlayerState(stack=800, seat=0)
-        )
-        bot.state.holding = Holding(
-            cards=[
-                Card(suit=Suit.HEARTS, rank=Rank.THREE),
-                Card(suit=Suit.CLUBS, rank=Rank.NINE),
-            ]
-        )
+        bot = ManiacBot(uid="maniac", name="Maniac")
 
         game = Mock()
         game.state.pot = 30
         game.state.big_blind = 10
         game.state.community_cards = []
         game.state.get_players_in_hand.return_value = [Mock(), Mock()]
+        game.get_player_snapshot.return_value.state.stack = 800
 
         action = bot.decide_action(
             game=game,
@@ -134,15 +122,7 @@ class TestManiacBotPaths(unittest.TestCase):
 
     def test_maniac_with_call(self):
         """Test ManiacBot calling."""
-        bot = ManiacBot(
-            id="maniac", name="Maniac", state=PlayerState(stack=800, seat=0)
-        )
-        bot.state.holding = Holding(
-            cards=[
-                Card(suit=Suit.HEARTS, rank=Rank.THREE),
-                Card(suit=Suit.CLUBS, rank=Rank.NINE),
-            ]
-        )
+        bot = ManiacBot(uid="maniac", name="Maniac")
 
         game = Mock()
         game.state.pot = 30

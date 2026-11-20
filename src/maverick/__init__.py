@@ -12,6 +12,7 @@ from .enums import (
     GameStage,
     ActionType,
     GameEventType,
+    PlayerIsolation,
 )
 from .player import Player
 from .hand import Hand
@@ -21,7 +22,8 @@ from .game import Game
 from .state import GameState
 from .protocol import PlayerLike
 from .playeraction import PlayerAction
-from .playerstate import PlayerState
+from .playerstate import PlayerState, PlayerSnapshot
+from .playerview import PlayerView
 from .events import GameEvent
 from .table import Table
 
@@ -40,12 +42,15 @@ __all__ = [
     "Game",
     "GameState",
     "GameEventType",
+    "PlayerIsolation",
     "GameStateType",
     "GameStage",
     "ActionType",
     "PlayerLike",
     "PlayerAction",
     "PlayerState",
+    "PlayerSnapshot",
+    "PlayerView",
     "GameEvent",
     "Table",
 ]

@@ -91,6 +91,10 @@ class EventBus:
         """Unsubscribe a handler using its token."""
         self._subs = [s for s in self._subs if s.token != token]
 
+    def has_subscribers(self, event_type: GameEventType) -> bool:
+        """Return True if there is at least one subscriber for the given event type."""
+        return any(s.event_type == event_type for s in self._subs)
+
     def emit(self, event: "GameEvent", game: "Game") -> None:
         """Emit an event to all subscribed handlers."""
         # iterate over a snapshot so handlers can subscribe/unsubscribe safely

@@ -145,14 +145,13 @@ class TestWhaleBot(unittest.TestCase):
 
     def test_whale_prefers_raise(self):
         """WhaleBot should prefer raising with huge amounts."""
-        whale = WhaleBot(
-            id="whale1", name="Whale", state=PlayerState(stack=1000, seat=0)
-        )
+        whale = WhaleBot(uid="whale1", name="Whale")
 
         # Mock game
         game = Mock()
         game.state.pot = 100
         game.state.big_blind = 10
+        game.get_player_snapshot.return_value.state.stack = 1000
 
         action = whale.decide_action(
             game=game,
@@ -168,13 +167,12 @@ class TestWhaleBot(unittest.TestCase):
 
     def test_whale_bets_big(self):
         """WhaleBot should make big bets."""
-        whale = WhaleBot(
-            id="whale1", name="Whale", state=PlayerState(stack=1000, seat=0)
-        )
+        whale = WhaleBot(uid="whale1", name="Whale")
 
         game = Mock()
         game.state.pot = 50
         game.state.big_blind = 10
+        game.get_player_snapshot.return_value.state.stack = 1000
 
         action = whale.decide_action(
             game=game,
@@ -188,9 +186,7 @@ class TestWhaleBot(unittest.TestCase):
 
     def test_whale_calls_everything(self):
         """WhaleBot should call when raising is not available."""
-        whale = WhaleBot(
-            id="whale1", name="Whale", state=PlayerState(stack=100, seat=0)
-        )
+        whale = WhaleBot(uid="whale1", name="Whale")
 
         game = Mock()
         game.state.pot = 50
@@ -206,12 +202,11 @@ class TestWhaleBot(unittest.TestCase):
 
     def test_whale_all_in(self):
         """WhaleBot should go all-in when available."""
-        whale = WhaleBot(
-            id="whale1", name="Whale", state=PlayerState(stack=100, seat=0)
-        )
+        whale = WhaleBot(uid="whale1", name="Whale")
 
         game = Mock()
 
+        game.get_player_snapshot.return_value.state.stack = 100
         action = whale.decide_action(
             game=game,
             valid_actions=[ActionType.ALL_IN],
@@ -224,9 +219,7 @@ class TestWhaleBot(unittest.TestCase):
 
     def test_whale_checks(self):
         """WhaleBot should check when necessary."""
-        whale = WhaleBot(
-            id="whale1", name="Whale", state=PlayerState(stack=100, seat=0)
-        )
+        whale = WhaleBot(uid="whale1", name="Whale")
 
         game = Mock()
 
@@ -241,9 +234,7 @@ class TestWhaleBot(unittest.TestCase):
 
     def test_whale_folds_rarely(self):
         """WhaleBot should fold only when no other options."""
-        whale = WhaleBot(
-            id="whale1", name="Whale", state=PlayerState(stack=100, seat=0)
-        )
+        whale = WhaleBot(uid="whale1", name="Whale")
 
         game = Mock()
 
@@ -262,9 +253,7 @@ class TestSharkBot(unittest.TestCase):
 
     def test_shark_instantiation(self):
         """SharkBot should instantiate correctly."""
-        shark = SharkBot(
-            id="shark1", name="Shark", state=PlayerState(stack=1000, seat=0)
-        )
+        shark = SharkBot(uid="shark1", name="Shark")
         self.assertIsNotNone(shark)
         self.assertEqual(shark.name, "Shark")
 
@@ -286,9 +275,7 @@ class TestHeroCallerBot(unittest.TestCase):
 
     def test_hero_caller_instantiation(self):
         """HeroCallerBot should instantiate correctly."""
-        hero = HeroCallerBot(
-            id="hero1", name="Hero", state=PlayerState(stack=500, seat=0)
-        )
+        hero = HeroCallerBot(uid="hero1", name="Hero")
         self.assertIsNotNone(hero)
         self.assertEqual(hero.name, "Hero")
 
@@ -314,15 +301,7 @@ class TestManiacBot(unittest.TestCase):
 
     def test_maniac_raises_frequently(self):
         """ManiacBot should raise frequently."""
-        maniac = ManiacBot(
-            id="man1", name="Maniac", state=PlayerState(stack=800, seat=0)
-        )
-        maniac.state.holding = Holding(
-            cards=[
-                Card(suit=Suit.HEARTS, rank=Rank.THREE),
-                Card(suit=Suit.CLUBS, rank=Rank.NINE),
-            ]
-        )
+        maniac = ManiacBot(uid="man1", name="Maniac")
 
         game = Mock()
         game.state.pot = 50
@@ -330,6 +309,7 @@ class TestManiacBot(unittest.TestCase):
         game.state.phase = Street.PRE_FLOP
         game.state.community_cards = []
         game.state.get_players_in_hand.return_value = [Mock(), Mock(), Mock()]
+        game.get_player_snapshot.return_value.state.stack = 800
 
         action = maniac.decide_action(
             game=game,
@@ -386,15 +366,7 @@ class TestLoosePassiveBot(unittest.TestCase):
 
     def test_loose_passive_calls_often(self):
         """LoosePassiveBot should call often but rarely raise."""
-        lp = LoosePassiveBot(
-            id="lp1", name="Station", state=PlayerState(stack=700, seat=0)
-        )
-        lp.state.holding = Holding(
-            cards=[
-                Card(suit=Suit.HEARTS, rank=Rank.SIX),
-                Card(suit=Suit.CLUBS, rank=Rank.FOUR),
-            ]
-        )
+        lp = LoosePassiveBot(uid="lp1", name="Station")
 
         game = Mock()
         game.state.pot = 25
@@ -434,7 +406,7 @@ class TestFoldBot(unittest.TestCase):
 
     def test_foldbot_always_folds(self):
         """FoldBot should always fold when possible."""
-        fold = FoldBot(id="fold1", name="Folder", state=PlayerState(stack=100, seat=0))
+        fold = FoldBot(uid="fold1", name="Folder")
 
         game = Mock()
 
@@ -449,7 +421,7 @@ class TestFoldBot(unittest.TestCase):
 
     def test_foldbot_checks_when_no_fold(self):
         """FoldBot should check when folding is not available."""
-        fold = FoldBot(id="fold1", name="Folder", state=PlayerState(stack=100, seat=0))
+        fold = FoldBot(uid="fold1", name="Folder")
 
         game = Mock()
 
@@ -468,7 +440,7 @@ class TestCallBot(unittest.TestCase):
 
     def test_callbot_always_calls(self):
         """CallBot should always call when possible."""
-        call = CallBot(id="call1", name="Caller", state=PlayerState(stack=100, seat=0))
+        call = CallBot(uid="call1", name="Caller")
 
         game = Mock()
 
@@ -483,7 +455,7 @@ class TestCallBot(unittest.TestCase):
 
     def test_callbot_checks_when_no_call(self):
         """CallBot should check when calling is not available."""
-        call = CallBot(id="call1", name="Caller", state=PlayerState(stack=100, seat=0))
+        call = CallBot(uid="call1", name="Caller")
 
         game = Mock()
 
@@ -502,13 +474,12 @@ class TestAggressiveBot(unittest.TestCase):
 
     def test_aggressivebot_prefers_aggressive_actions(self):
         """AggressiveBot should prefer raising and betting."""
-        aggressive = AggressiveBot(
-            id="agg1", name="Aggressive", state=PlayerState(stack=500, seat=0)
-        )
+        aggressive = AggressiveBot(uid="agg1", name="Aggressive")
 
         game = Mock()
         game.state.pot = 50
         game.state.big_blind = 10
+        game.get_player_snapshot.return_value.state.stack = 500
 
         action = aggressive.decide_action(
             game=game,
@@ -522,13 +493,12 @@ class TestAggressiveBot(unittest.TestCase):
 
     def test_aggressivebot_bets_when_available(self):
         """AggressiveBot should bet when possible."""
-        aggressive = AggressiveBot(
-            id="agg1", name="Aggressive", state=PlayerState(stack=500, seat=0)
-        )
+        aggressive = AggressiveBot(uid="agg1", name="Aggressive")
 
         game = Mock()
         game.state.pot = 30
         game.state.big_blind = 10
+        game.get_player_snapshot.return_value.state.stack = 500
 
         action = aggressive.decide_action(
             game=game,

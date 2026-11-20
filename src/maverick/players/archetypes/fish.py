@@ -6,7 +6,7 @@ from ...playeraction import PlayerAction
 from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ...game import Game
+    from ...playerview import PlayerView
 
 __all__ = ["FishBot"]
 
@@ -31,15 +31,16 @@ class FishBot(Player):
     def decide_action(
         self,
         *,
-        game: "Game",
+        game: "PlayerView",
         valid_actions: list[ActionType],
         min_raise_amount: int,
         call_amount: int,
         min_bet_amount: int,
     ) -> PlayerAction:
         """Make exploitable mistakes characteristic of weak players, misusing hand strength."""
+        snapshot = game.get_player_snapshot(self.uid)
         # Evaluate hand strength but use it poorly
-        private_cards = self.state.holding.cards
+        private_cards = snapshot.state.holding.cards
         community_cards = game.state.community_cards
 
         # Get hand equity but often ignore it
@@ -66,7 +67,7 @@ class FishBot(Player):
         # Calls too much (the fish's signature move) - ignores hand strength
         if ActionType.CALL in valid_actions:
             # Fish calls with bad odds and weak hands
-            if call_amount <= self.state.stack * 0.4:
+            if call_amount <= snapshot.state.stack * 0.4:
                 return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Check when possible (passive)
@@ -76,7 +77,7 @@ class FishBot(Player):
         # Occasionally bets with weird sizing, regardless of hand strength
         if ActionType.BET in valid_actions:
             # Inconsistent sizing - sometimes min bet
-            bet_amount = min(min_bet_amount, self.state.stack)
+            bet_amount = min(min_bet_amount, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
@@ -84,7 +85,7 @@ class FishBot(Player):
         # Rarely raises (not aggressive enough), even with good hands
         if ActionType.RAISE in valid_actions and any_hand:
             # Weak raises when does raise
-            raise_amount = min(min_raise_amount, self.state.stack)
+            raise_amount = min(min_raise_amount, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_amount
             )

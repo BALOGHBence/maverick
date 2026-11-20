@@ -1,6 +1,6 @@
 import warnings
 from abc import ABC, ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 import uuid
 
 from .enums import ActionType
@@ -9,8 +9,8 @@ from .playerstate import PlayerState
 from ._registered_players import registered_players
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .game import Game
     from .events import GameEvent
+    from .playerview import PlayerView
 
 __all__ = ["Player"]
 
@@ -45,7 +45,6 @@ class Player(metaclass=PlayerMeta):
         *,
         uid: Optional[str] = None,
         name: str,
-        state: Optional[PlayerState | dict] = None,
         **kwargs,
     ):
         _id = kwargs.pop("id", None)
@@ -57,11 +56,7 @@ class Player(metaclass=PlayerMeta):
             )
         self.uid = uid or _id or uuid.uuid4().hex
         self.name = name
-        self.state = (
-            state
-            if isinstance(state, PlayerState) or state is None
-            else PlayerState.model_validate(state)
-        )
+        self._view: "Optional[PlayerView]" = None
 
     @property
     def id(self) -> str:
@@ -72,6 +67,28 @@ class Player(metaclass=PlayerMeta):
             stacklevel=2,
         )
         return self.uid
+
+    @property
+    def game(self) -> Optional["PlayerView"]:
+        """The most recent view of the game this player received, or None.
+
+        The engine refreshes this view right before calling :meth:`decide_action` and
+        the event hooks, so it is current inside those methods. Outside of them it
+        reflects the game as of the player's last decision or event.
+
+        .. versionchanged:: 0.7.0
+            Returns a :class:`~maverick.playerview.PlayerView` instead of the live
+            :class:`~maverick.game.Game` instance.
+        """
+        return self._view
+
+    @property
+    def state(self) -> Optional["PlayerState"]:
+        """The state of the player as of the most recent view of the game."""
+        if self._view is None:
+            return None
+        snapshot = self._view.me
+        return snapshot.state if snapshot is not None else None
 
     @classmethod
     def get_by_uid(cls, uid: str) -> Optional[type["Player"]]:
@@ -94,7 +111,7 @@ class Player(metaclass=PlayerMeta):
     def decide_action(
         self,
         *,
-        game: "Game",
+        game: "PlayerView",
         valid_actions: list[ActionType],
         min_raise_amount: int,
         call_amount: int,
@@ -107,8 +124,14 @@ class Player(metaclass=PlayerMeta):
 
         Parameters
         ----------
-        game : Game
-            The game instance containing the current state.
+        game : PlayerView
+            A read-only view of the game from this player's perspective. It contains
+            the public game state, the player's own hole cards, the rules and the
+            event history, but not the deck or the hole cards of other players.
+
+            .. versionchanged:: 0.7.0
+                A :class:`~maverick.playerview.PlayerView` is passed instead of the
+                live :class:`~maverick.game.Game` instance.
         valid_actions : list[ActionType]
             List of valid actions the player can take.
         min_raise_amount : int
@@ -125,7 +148,9 @@ class Player(metaclass=PlayerMeta):
         """
         ...
 
-    def on_event(self, event: "GameEvent", game: "Game") -> None:  # pragma: no cover
+    def on_event(
+        self, event: "GameEvent", game: "PlayerView"
+    ) -> None:  # pragma: no cover
         """
         Optional hook called when a game event occurs.
 
@@ -135,9 +160,13 @@ class Player(metaclass=PlayerMeta):
         Parameters
         ----------
         event : GameEvent
-            The game event that occurred.
-        game : Game
-            The game instance containing the current state.
+            The game event that occurred, with private information removed.
+        game : PlayerView
+            A read-only view of the game from this player's perspective.
+
+            .. versionchanged:: 0.7.0
+                A :class:`~maverick.playerview.PlayerView` is passed instead of the
+                live :class:`~maverick.game.Game` instance.
 
         Notes
         -----
@@ -146,17 +175,49 @@ class Player(metaclass=PlayerMeta):
         """
         ...
 
-    def to_dict(self) -> dict:
+    def export_state(self) -> Optional[dict[str, Any]]:
         """
-        Serialize the player to a dictionary.
+        Optional hook that returns the state of the player.
+
+        Together with :meth:`import_state` this forms a pair: ``export_state`` returns
+        everything needed to restore the player later, as a JSON-serializable
+        ``dict``, and ``import_state`` restores it. Typical contents are statistics
+        the player collects while it plays, opponent models, or the cost of calls to
+        an external service. Leave out secrets such as API keys and anything that can
+        be recreated, such as clients.
+
+        :meth:`Game.get_player_state <maverick.game.Game.get_player_state>` reads it.
+        This matters most for players isolated in worker processes: the player object
+        there is a copy, so attributes it changes while playing are not visible on the
+        object passed to :meth:`Game.add_player <maverick.game.Game.add_player>`. The
+        returned data is sent to the engine as JSON, so it is the only way to get data
+        out of an isolated player. The engine reads it one last time when the worker
+        stops, so it stays available after the game has ended.
 
         Returns
         -------
-        dict
-            A dictionary representation of the player.
+        dict | None
+            JSON-serializable data, or ``None`` (the default) if the player has no
+            state worth keeping.
+
+        .. versionadded:: 0.7.0
         """
-        return {
-            "uid": self.uid,
-            "name": self.name,
-            "state": self.state.model_dump() if self.state else None,
-        }
+        return None
+
+    def import_state(self, state: dict[str, Any]) -> None:
+        """
+        Optional hook that restores a state returned by :meth:`export_state`.
+
+        :meth:`Game.set_player_state <maverick.game.Game.set_player_state>` calls it.
+        For players isolated in worker processes, it runs in the worker, on the copy
+        of the player that actually plays.
+
+        Parameters
+        ----------
+        state : dict
+            A copy of data previously returned by :meth:`export_state`, after a round
+            trip through JSON.
+
+        .. versionadded:: 0.7.0
+        """
+        return None

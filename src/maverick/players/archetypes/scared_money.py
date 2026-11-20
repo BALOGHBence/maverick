@@ -6,7 +6,7 @@ from ...playeraction import PlayerAction
 from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ...game import Game
+    from ...playerview import PlayerView
 
 __all__ = ["ScaredMoneyBot"]
 
@@ -29,15 +29,16 @@ class ScaredMoneyBot(Player):
     def decide_action(
         self,
         *,
-        game: "Game",
+        game: "PlayerView",
         valid_actions: list[ActionType],
         call_amount: int,
         min_bet_amount: int,
         **_,
     ) -> PlayerAction:
         """Play scared, risk-averse poker even with good hand strength."""
+        snapshot = game.get_player_snapshot(self.uid)
         # Evaluate hand strength but be too scared to use it
-        private_cards = self.state.holding.cards
+        private_cards = snapshot.state.holding.cards
         community_cards = game.state.community_cards
 
         # Get hand equity but still play scared
@@ -69,14 +70,14 @@ class ScaredMoneyBot(Player):
             # Scared money only calls tiny amounts
             if (
                 call_amount <= game.state.big_blind
-                and call_amount <= self.state.stack * 0.05
+                and call_amount <= snapshot.state.stack * 0.05
             ):
                 return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Makes tiny bets when forced to bet, even with strong hands
         if ActionType.BET in valid_actions and premium_hand:
             # Min bet only
-            bet_amount = min(min_bet_amount, self.state.stack)
+            bet_amount = min(min_bet_amount, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )

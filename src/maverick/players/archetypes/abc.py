@@ -6,7 +6,7 @@ from ...playeraction import PlayerAction
 from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ...game import Game
+    from ...playerview import PlayerView
 
 __all__ = ["ABCBot"]
 
@@ -29,15 +29,16 @@ class ABCBot(Player):
     def decide_action(
         self,
         *,
-        game: "Game",
+        game: "PlayerView",
         valid_actions: list[ActionType],
         min_raise_amount: int,
         call_amount: int,
         min_bet_amount: int,
     ) -> PlayerAction:
         """Play straightforward, textbook poker using hand strength evaluation."""
+        snapshot = game.get_player_snapshot(self.uid)
         # Evaluate hand strength
-        private_cards = self.state.holding.cards
+        private_cards = snapshot.state.holding.cards
         community_cards = game.state.community_cards
 
         # Get hand equity if there are community cards
@@ -65,7 +66,7 @@ class ABCBot(Player):
         # Standard value bet with strong hands
         if ActionType.BET in valid_actions and strong_hand:
             # Textbook bet: 2-3x BB
-            bet_amount = min(min_bet_amount, self.state.stack)
+            bet_amount = min(min_bet_amount, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )
@@ -73,7 +74,7 @@ class ABCBot(Player):
         # Standard raise with strong hands
         if ActionType.RAISE in valid_actions and strong_hand:
             # Textbook raise: minimum raise
-            raise_amount = min(min_raise_amount, self.state.stack)
+            raise_amount = min(min_raise_amount, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.RAISE, amount=raise_amount
             )
@@ -83,7 +84,7 @@ class ABCBot(Player):
             call_amount = call_amount
             # ABC calls with 3:1 pot odds or better and decent hand
             if (
-                call_amount <= self.state.stack
+                call_amount <= snapshot.state.stack
                 and call_amount * 3 <= game.state.pot
                 and decent_hand
             ):

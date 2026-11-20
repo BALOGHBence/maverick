@@ -56,12 +56,12 @@ class MockPlayer(Player):
             action_type, amount = self._actions[self._action_index]
             self._action_index += 1
             return PlayerAction(
-                player_id=self.id,
+                player_uid=self.uid,
                 action_type=action_type,
                 amount=amount if amount is not None else 0,
             )
         # Default to fold
-        return PlayerAction(player_id=self.id, action_type=ActionType.FOLD)
+        return PlayerAction(player_uid=self.uid, action_type=ActionType.FOLD)
 
     def on_event(self, event: GameEvent, game: Game) -> None:
         """Record events for testing."""
@@ -135,20 +135,18 @@ class TestEventSubscription(unittest.TestCase):
         game.unsubscribe(token)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=100))
+        game.add_player(p2, state=PlayerState(stack=100))
         game.start()
 
         # Handler should not have been called
@@ -166,20 +164,18 @@ class TestEventEmission(unittest.TestCase):
         game.subscribe(GameEventType.GAME_STARTED, recorder.record)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=100))
+        game.add_player(p2, state=PlayerState(stack=100))
         game.start()
 
         event_types = recorder.get_event_types()
@@ -193,20 +189,18 @@ class TestEventEmission(unittest.TestCase):
         game.subscribe(GameEventType.HAND_STARTED, recorder.record)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=100))
+        game.add_player(p2, state=PlayerState(stack=100))
         game.start()
 
         event_types = recorder.get_event_types()
@@ -220,27 +214,25 @@ class TestEventEmission(unittest.TestCase):
         game.subscribe(GameEventType.PLAYER_ACTION_TAKEN, recorder.record)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
-            state=PlayerState(stack=100),
             actions=[(ActionType.CALL, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=100))
+        game.add_player(p2, state=PlayerState(stack=100))
         game.start()
 
         # Should have at least one player action
         self.assertTrue(len(recorder.events) > 0)
         # Check that events contain player_id and action
         for event in recorder.events:
-            self.assertIsNotNone(event.player_id)
+            self.assertIsNotNone(event.player_uid)
             self.assertIsNotNone(event.action)
 
     def test_player_joined_event_emitted(self):
@@ -250,12 +242,12 @@ class TestEventEmission(unittest.TestCase):
 
         game.subscribe(GameEventType.PLAYER_JOINED, recorder.record)
 
-        p1 = MockPlayer(id="p1", name="P1", state=PlayerState(stack=100))
-        game.add_player(p1)
+        p1 = MockPlayer(uid="p1", name="P1")
+        game.add_player(p1, state=PlayerState(stack=100))
 
         self.assertEqual(len(recorder.events), 1)
         self.assertEqual(recorder.events[0].type, GameEventType.PLAYER_JOINED)
-        self.assertEqual(recorder.events[0].player_id, "p1")
+        self.assertEqual(recorder.events[0].player_uid, "p1")
 
     def test_all_required_events_emitted(self):
         """Test that all required events are emitted during a complete hand."""
@@ -268,9 +260,8 @@ class TestEventEmission(unittest.TestCase):
 
         # Create players that will play through a hand
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
-            state=PlayerState(stack=100),
             actions=[
                 (ActionType.CALL, None),  # Call BB
                 (ActionType.CHECK, None),  # Check flop
@@ -279,9 +270,8 @@ class TestEventEmission(unittest.TestCase):
             ],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
-            state=PlayerState(stack=100),
             actions=[
                 (ActionType.CHECK, None),  # Check after BB
                 (ActionType.CHECK, None),  # Check flop
@@ -290,8 +280,8 @@ class TestEventEmission(unittest.TestCase):
             ],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=100))
+        game.add_player(p2, state=PlayerState(stack=100))
         game.start()
 
         event_types = recorder.get_event_types()
@@ -340,20 +330,18 @@ class TestHandlerExecutionOrder(unittest.TestCase):
         game.subscribe(GameEventType.GAME_STARTED, handler3)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=100))
+        game.add_player(p2, state=PlayerState(stack=100))
         game.start()
 
         # Handlers should be called in registration order
@@ -373,20 +361,18 @@ class TestHandlerExceptionSafety(unittest.TestCase):
         game.subscribe(GameEventType.GAME_STARTED, failing_handler)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=100))
+        game.add_player(p2, state=PlayerState(stack=100))
 
         # Should not raise an exception
         game.start()
@@ -409,20 +395,18 @@ class TestHandlerExceptionSafety(unittest.TestCase):
         game.subscribe(GameEventType.GAME_STARTED, successful_handler)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=100))
+        game.add_player(p2, state=PlayerState(stack=100))
         game.start()
 
         # Successful handler should still be called
@@ -437,20 +421,18 @@ class TestNoHandlersBehavior(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2, max_hands=1)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=100))
+        game.add_player(p2, state=PlayerState(stack=100))
         game.start()
 
         # Game should complete normally
@@ -465,20 +447,18 @@ class TestPlayerEventHook(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2, max_hands=1)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=100))
+        game.add_player(p2, state=PlayerState(stack=100))
         game.start()
 
         # Players should have observed events
@@ -495,20 +475,18 @@ class TestPlayerEventHook(unittest.TestCase):
         game = Game(small_blind=1, big_blind=2, max_hands=1)
 
         p1 = FailingPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
-            state=PlayerState(stack=100),
             actions=[(ActionType.FOLD, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=100))
+        game.add_player(p2, state=PlayerState(stack=100))
 
         # Should not raise an exception
         game.start()
@@ -522,7 +500,7 @@ class TestEventPayloadAccuracy(unittest.TestCase):
 
     def test_player_action_event_reflects_post_action_state(self):
         """Test that PLAYER_ACTION_TAKEN events contain post-action state."""
-        game = Game(small_blind=1, big_blind=2, max_hands=1)
+        game = Game(small_blind=1, big_blind=2, max_hands=1, first_button_position=0)
         action_events = []
 
         def record_action(event: GameEvent, game: Game):
@@ -532,27 +510,348 @@ class TestEventPayloadAccuracy(unittest.TestCase):
         game.subscribe(GameEventType.PLAYER_ACTION_TAKEN, record_action)
 
         p1 = MockPlayer(
-            id="p1",
+            uid="p1",
             name="P1",
-            state=PlayerState(stack=100),
             actions=[(ActionType.CALL, None)],
         )
         p2 = MockPlayer(
-            id="p2",
+            uid="p2",
             name="P2",
-            state=PlayerState(stack=100),
             actions=[(ActionType.CHECK, None)],
         )
 
-        game.add_player(p1)
-        game.add_player(p2)
+        game.add_player(p1, state=PlayerState(stack=100))
+        game.add_player(p2, state=PlayerState(stack=100))
         game.start()
 
         # Check that action events have correct data
         self.assertTrue(len(action_events) > 0)
         for event in action_events:
-            self.assertIsNotNone(event.player_id)
+            self.assertIsNotNone(event.player_uid)
             self.assertIsNotNone(event.action)
+
+
+class TestEventBusHasSubscribers(unittest.TestCase):
+    """Tests for EventBus.has_subscribers."""
+
+    def _make_bus(self):
+        from maverick.eventbus import EventBus
+
+        return EventBus()
+
+    def test_returns_false_when_no_subscribers(self):
+        bus = self._make_bus()
+        self.assertFalse(bus.has_subscribers(GameEventType.GAME_STATE_CHANGED))
+
+    def test_returns_true_after_subscribing(self):
+        bus = self._make_bus()
+        bus.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: None)
+        self.assertTrue(bus.has_subscribers(GameEventType.GAME_STATE_CHANGED))
+
+    def test_returns_false_after_unsubscribing(self):
+        bus = self._make_bus()
+        token = bus.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: None)
+        bus.unsubscribe(token)
+        self.assertFalse(bus.has_subscribers(GameEventType.GAME_STATE_CHANGED))
+
+    def test_only_matches_given_event_type(self):
+        bus = self._make_bus()
+        bus.subscribe(GameEventType.HAND_STARTED, lambda e, g: None)
+        self.assertFalse(bus.has_subscribers(GameEventType.GAME_STATE_CHANGED))
+        self.assertTrue(bus.has_subscribers(GameEventType.HAND_STARTED))
+
+
+class TestGameStateChangedOptimization(unittest.TestCase):
+    """Tests for the lazy serialization optimization in _update_state."""
+
+    def _make_game(self):
+        game = Game(small_blind=10, big_blind=20, max_hands=1)
+        p1 = MockPlayer(
+            uid="p1",
+            name="P1",
+            actions=[(ActionType.FOLD, None)],
+        )
+        p2 = MockPlayer(
+            uid="p2",
+            name="P2",
+            actions=[(ActionType.FOLD, None)],
+        )
+        game.add_player(p1, state=PlayerState(stack=500))
+        game.add_player(p2, state=PlayerState(stack=500))
+        return game
+
+    def test_no_event_emitted_without_subscribers(self):
+        game = self._make_game()
+        events = []
+        # Subscribe to ALL events and filter for GAME_STATE_CHANGED manually
+        game.subscribe(GameEventType.HAND_STARTED, lambda e, g: None)  # unrelated sub
+        original_emit = game._emit
+
+        def capture(event):
+            if event.type == GameEventType.GAME_STATE_CHANGED:
+                events.append(event)
+            original_emit(event)
+
+        game._emit = capture
+        game.start()
+        self.assertEqual(len(events), 0)
+
+    def test_event_emitted_with_correct_payload_when_subscriber_exists(self):
+        game = self._make_game()
+        events = []
+        game.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: events.append(e))
+        game.start()
+
+        self.assertGreater(len(events), 0)
+        for event in events:
+            self.assertIn("before", event.payload)
+            self.assertIn("after", event.payload)
+            self.assertIsInstance(event.payload["before"], dict)
+            self.assertIsInstance(event.payload["after"], dict)
+
+
+class TestPlayerStateChangedEvents(unittest.TestCase):
+    """Test that GAME_STATE_CHANGED is emitted for player-level state changes."""
+
+    def _make_game_with_players(self, p1_actions, p2_actions, stacks=(500, 500)):
+        game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
+        p1 = MockPlayer(
+            uid="p1",
+            name="P1",
+            actions=p1_actions,
+        )
+        p2 = MockPlayer(
+            uid="p2",
+            name="P2",
+            actions=p2_actions,
+        )
+        game.add_player(p1, state=PlayerState(stack=stacks[0]))
+        game.add_player(p2, state=PlayerState(stack=stacks[1]))
+        return game, p1, p2
+
+    def test_game_state_changed_emitted_when_player_folds(self):
+        """GAME_STATE_CHANGED must be emitted when a player folds."""
+        game, p1, p2 = self._make_game_with_players(
+            p1_actions=[(ActionType.FOLD, None)],
+            p2_actions=[],
+        )
+        events = []
+        game.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: events.append(e))
+        game.start()
+
+        # state_type is serialized as its integer value; FOLDED = 2
+        FOLDED_VALUE = 2
+
+        def _has_folded_player(payload):
+            for player_data in payload.get("after", {}).get("players", []):
+                if player_data.get("state", {}).get("state_type") == FOLDED_VALUE:
+                    return True
+            return False
+
+        self.assertTrue(
+            any(_has_folded_player(e.payload) for e in events),
+            "No GAME_STATE_CHANGED event captured the fold transition",
+        )
+
+    def test_game_state_changed_emitted_when_player_goes_all_in(self):
+        """GAME_STATE_CHANGED must be emitted when a player goes all-in."""
+        game, p1, p2 = self._make_game_with_players(
+            p1_actions=[(ActionType.ALL_IN, None)],
+            p2_actions=[(ActionType.FOLD, None)],
+            stacks=(30, 500),  # p1 short-stacked so all-in is realistic
+        )
+        events = []
+        game.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: events.append(e))
+        game.start()
+
+        # state_type is serialized as its integer value; ALL_IN = 3
+        ALL_IN_VALUE = 3
+
+        def _has_allin_player(payload):
+            for player_data in payload.get("after", {}).get("players", []):
+                if player_data.get("state", {}).get("state_type") == ALL_IN_VALUE:
+                    return True
+            return False
+
+        self.assertTrue(
+            any(_has_allin_player(e.payload) for e in events),
+            "No GAME_STATE_CHANGED event captured the all-in transition",
+        )
+
+    def test_game_state_changed_emitted_when_player_loses_chips(self):
+        """GAME_STATE_CHANGED must be emitted when a player loses chips (call)."""
+        game, p1, p2 = self._make_game_with_players(
+            p1_actions=[
+                (ActionType.CALL, None),
+                (ActionType.CHECK, None),
+                (ActionType.CHECK, None),
+                (ActionType.CHECK, None),
+            ],
+            p2_actions=[
+                (ActionType.CHECK, None),
+                (ActionType.CHECK, None),
+                (ActionType.CHECK, None),
+                (ActionType.CHECK, None),
+            ],
+        )
+        stack_snapshots = []
+
+        def record(event, game):
+            for pd in event.payload.get("after", {}).get("players", []):
+                stack_snapshots.append(pd.get("state", {}).get("stack"))
+
+        game.subscribe(GameEventType.GAME_STATE_CHANGED, record)
+        game.start()
+
+        # Should contain various stack values (not all the same)
+        unique_stacks = set(s for s in stack_snapshots if s is not None)
+        self.assertGreater(
+            len(unique_stacks), 1, "Stack values never changed across events"
+        )
+
+    def test_game_state_changed_emitted_when_player_gains_chips(self):
+        """GAME_STATE_CHANGED must be emitted when a player wins the pot."""
+        game, p1, p2 = self._make_game_with_players(
+            p1_actions=[(ActionType.FOLD, None)],
+            p2_actions=[],
+        )
+        events = []
+        game.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: events.append(e))
+        initial_stacks = {p.uid: p.state.stack for p in game.state.players}
+        game.start()
+
+        # Find the event where the winner's stack increased
+        def _stack_increased(payload):
+            for player_data in payload.get("after", {}).get("players", []):
+                uid = player_data.get("uid")
+                new_stack = player_data.get("state", {}).get("stack", 0)
+                if uid and new_stack > initial_stacks.get(uid, 0):
+                    return True
+            return False
+
+        self.assertTrue(
+            any(_stack_increased(e.payload) for e in events),
+            "No GAME_STATE_CHANGED event captured a stack increase (pot win)",
+        )
+
+    def test_player_state_is_frozen(self):
+        """Assigning to player.state.x directly must raise a ValidationError."""
+        from pydantic import ValidationError
+        from maverick import PlayerState
+
+        ps = PlayerState(stack=100)
+        with self.assertRaises(ValidationError):
+            ps.stack = 200
+
+
+class TestCommunityCardStateChangedEvents(unittest.TestCase):
+    """Test that GAME_STATE_CHANGED is emitted when community cards are dealt."""
+
+    def _make_game_with_players(self, p1_actions, p2_actions):
+        game = Game(small_blind=10, big_blind=20, max_hands=1, first_button_position=0)
+        p1 = MockPlayer(
+            uid="p1",
+            name="P1",
+            actions=p1_actions,
+        )
+        p2 = MockPlayer(
+            uid="p2",
+            name="P2",
+            actions=p2_actions,
+        )
+        game.add_player(p1, state=PlayerState(stack=500))
+        game.add_player(p2, state=PlayerState(stack=500))
+        return game
+
+    def _community_card_counts(self, payload):
+        """Return (before_count, after_count) of community_cards in a payload."""
+        before = len(payload.get("before", {}).get("community_cards", []))
+        after = len(payload.get("after", {}).get("community_cards", []))
+        return before, after
+
+    def test_game_state_changed_emitted_on_flop(self):
+        """GAME_STATE_CHANGED must be emitted when the flop is dealt (0 → 3 cards)."""
+        game = self._make_game_with_players(
+            p1_actions=[
+                (ActionType.CALL, None),  # pre-flop call
+                (ActionType.CHECK, None),  # flop
+                (ActionType.CHECK, None),  # turn
+                (ActionType.CHECK, None),  # river
+            ],
+            p2_actions=[
+                (ActionType.CHECK, None),  # pre-flop check
+                (ActionType.CHECK, None),  # flop
+                (ActionType.CHECK, None),  # turn
+                (ActionType.CHECK, None),  # river
+            ],
+        )
+        events = []
+        game.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: events.append(e))
+        game.start()
+
+        flop_events = [
+            e for e in events if self._community_card_counts(e.payload) == (0, 3)
+        ]
+        self.assertTrue(
+            len(flop_events) > 0,
+            "No GAME_STATE_CHANGED event captured the flop deal (0 → 3 community cards)",
+        )
+
+    def test_game_state_changed_emitted_on_turn(self):
+        """GAME_STATE_CHANGED must be emitted when the turn is dealt (3 → 4 cards)."""
+        game = self._make_game_with_players(
+            p1_actions=[
+                (ActionType.CALL, None),  # pre-flop call
+                (ActionType.CHECK, None),  # flop
+                (ActionType.CHECK, None),  # turn
+                (ActionType.CHECK, None),  # river
+            ],
+            p2_actions=[
+                (ActionType.CHECK, None),  # pre-flop check
+                (ActionType.CHECK, None),  # flop
+                (ActionType.CHECK, None),  # turn
+                (ActionType.CHECK, None),  # river
+            ],
+        )
+        events = []
+        game.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: events.append(e))
+        game.start()
+
+        turn_events = [
+            e for e in events if self._community_card_counts(e.payload) == (3, 4)
+        ]
+        self.assertTrue(
+            len(turn_events) > 0,
+            "No GAME_STATE_CHANGED event captured the turn deal (3 → 4 community cards)",
+        )
+
+    def test_game_state_changed_emitted_on_river(self):
+        """GAME_STATE_CHANGED must be emitted when the river is dealt (4 → 5 cards)."""
+        game = self._make_game_with_players(
+            p1_actions=[
+                (ActionType.CALL, None),  # pre-flop call
+                (ActionType.CHECK, None),  # flop
+                (ActionType.CHECK, None),  # turn
+                (ActionType.CHECK, None),  # river
+            ],
+            p2_actions=[
+                (ActionType.CHECK, None),  # pre-flop check
+                (ActionType.CHECK, None),  # flop
+                (ActionType.CHECK, None),  # turn
+                (ActionType.CHECK, None),  # river
+            ],
+        )
+        events = []
+        game.subscribe(GameEventType.GAME_STATE_CHANGED, lambda e, g: events.append(e))
+        game.start()
+
+        river_events = [
+            e for e in events if self._community_card_counts(e.payload) == (4, 5)
+        ]
+        self.assertTrue(
+            len(river_events) > 0,
+            "No GAME_STATE_CHANGED event captured the river deal (4 → 5 community cards)",
+        )
 
 
 if __name__ == "__main__":

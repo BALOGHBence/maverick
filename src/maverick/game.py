@@ -10,17 +10,22 @@ from __future__ import annotations
 
 from typing import Deque, Optional
 from collections import deque
+import json
 import logging
+import random
 import time
 import uuid
 from warnings import warn
 import warnings
 
+from ._isolation import PlayerFailure, ProcessPlayer
+from .config import IsolationSettings, resolve_settings
 from .deck import Deck
 from .enums import (
     ActionType,
     GameEventType,
     GameStage,
+    PlayerIsolation,
     PlayerStateType,
     Street,
     Suit,
@@ -29,8 +34,10 @@ from .events import GameEvent
 from .holding import Holding
 from .protocol import PlayerLike, EventHandler
 from .state import GameState
+from .player import Player
 from .playeraction import PlayerAction
-from .playerstate import PlayerState
+from .playerstate import PlayerState, PlayerSnapshot
+from .playerview import EventHistoryView, PlayerView, redact_event, redact_state
 from .utils import find_highest_scoring_hand
 from .eventbus import EventBus
 from .rules import PokerRules, DealingRules, StakesRules, ShowdownRules
@@ -73,6 +80,34 @@ class Game:
     first_button_position : int | None
         The seat index of the player who will be the button in the first hand. If None (the default), the
         button is assigned randomly using a card draw.
+    player_isolation : PlayerIsolation | str | None
+        Where the code of the players runs. ``"none"`` runs players in the engine's process, ``"process"``
+        runs every player in its own worker process. If None (the default), the value is taken from the
+        ``MAVERICK_PLAYER_ISOLATION`` environment variable, then from ``[tool.maverick]`` in
+        ``pyproject.toml``, and falls back to ``"none"``.
+
+        .. versionadded:: 0.7.0
+    decision_timeout : float | None
+        Maximum number of seconds an isolated player may take to decide. A player that exceeds it folds.
+        Resolved like ``player_isolation`` (environment variable ``MAVERICK_DECISION_TIMEOUT``). Only applies
+        to isolated players. If not set anywhere, there is no limit.
+
+        .. versionadded:: 0.7.0
+    seed : int | None
+        Seed of the game's own random number generator, which shuffles the deck and draws the first button.
+        Games with the same seed, players and decisions deal the same cards. If None (the default), a seed
+        is drawn from the global ``random`` module, so seeding ``random`` before creating the game keeps
+        working. The generator is never shared with players, so players that use random numbers don't
+        change the cards that are dealt.
+
+        .. versionadded:: 0.7.0
+
+    Notes
+    -----
+    With process isolation, worker processes are started when players are added and stopped when they
+    leave, are eliminated or the game ends. Use the game as a context manager, or call :meth:`close`, to
+    stop them early. Scripts that use process isolation must guard their entry point with
+    ``if __name__ == "__main__":``.
     """
 
     def __init__(
@@ -88,6 +123,9 @@ class Game:
         log_events: bool = True,
         rules: Optional[PokerRules] = None,
         first_button_position: Optional[int] = None,
+        player_isolation: Optional[PlayerIsolation | str] = None,
+        decision_timeout: Optional[float] = None,
+        seed: Optional[int] = None,
     ):
         if not exc_handling_mode in ["log", "raise"]:
             raise ValueError("exc_handling_mode must be 'log' or 'raise'")
@@ -124,6 +162,19 @@ class Game:
             if not first_button_position >= 0:
                 raise ValueError("first_button_position must be non-negative")
 
+        self._settings = resolve_settings(
+            player_isolation=player_isolation, decision_timeout=decision_timeout
+        )
+
+        if seed is not None and (not isinstance(seed, int) or isinstance(seed, bool)):
+            raise ValueError("seed must be an integer")
+
+        # The game's own random number generator, so players that use the global
+        # ``random`` module can neither change nor predict the cards that are dealt.
+        # It must be seedable for reproducible games, so ``secrets`` can't be used.
+        self._seed = seed if seed is not None else random.getrandbits(64)  # nosec B311
+        self._rng = random.Random(self._seed)  # nosec B311
+
         self._rules = rules
         self._max_hands = max_hands
         self._state = GameState(
@@ -140,12 +191,31 @@ class Game:
         # Event handling
         self._events = EventBus(strict=exc_handling_mode == "raise")
         self._event_history: list[GameEvent] = []
+        # Per-player copies of ``_event_history`` (without GAME_STATE_CHANGED events),
+        # synced on demand, and the number of events already synced for each player.
+        self._player_histories: dict[str, list[GameEvent]] = {}
+        self._player_history_synced: dict[str, int] = {}
+        # Per-player copies of the rules, handed out in player views
+        self._player_rules: dict[str, PokerRules] = {}
+        # UIDs of players who revealed their holding at showdown in the current hand
+        self._revealed_uids: set[str] = set()
 
         # Table
         self._table = Table(n_seats=rules.dealing.max_players)
 
         # Game UID - assigned when GAME_STARTED is processed
         self._game_uid: Optional[str] = None
+
+        # Strategy objects - keyed by player UID; separate from GameState snapshots
+        self._strategies: dict[str, PlayerLike] = {}
+        # Proxies of players running in worker processes, keyed by player UID. The
+        # engine calls these instead of the strategy objects.
+        self._proxies: dict[str, ProcessPlayer] = {}
+        # States exported by isolated players when their workers were stopped
+        self._final_states: dict[str, Optional[dict]] = {}
+
+        # Active deck - held here, not in GameState
+        self._deck: Optional[Deck] = None
 
     @property
     def game_uid(self) -> Optional[str]:
@@ -191,6 +261,11 @@ class Game:
         return self._state
 
     @property
+    def deck(self) -> Optional[Deck]:
+        """The current deck. Exposes live engine state — not a historical snapshot."""
+        return self._deck
+
+    @property
     def history(self) -> list[GameEvent]:
         """Returns the event history.
 
@@ -200,6 +275,25 @@ class Game:
             A list of all game events in chronological order.
         """
         return self._event_history
+
+    @property
+    def seed(self) -> int:
+        """The seed of the game's random number generator.
+
+        Passing it to a new game, with the same players and decisions, deals the same
+        cards. It is not part of :attr:`state`, so players never see it.
+
+        .. versionadded:: 0.7.0
+        """
+        return self._seed
+
+    @property
+    def settings(self) -> IsolationSettings:
+        """The resolved isolation settings of the game.
+
+        .. versionadded:: 0.7.0
+        """
+        return self._settings
 
     @property
     def table(self) -> Table:
@@ -216,7 +310,8 @@ class Game:
         .. versionadded:: 0.3.0
         """
         if self.state.button_position is not None:
-            return self.table[self.state.button_position]
+            uid = self.table[self.state.button_position]
+            return self._strategies.get(uid) if uid else None
         return None
 
     @property
@@ -226,7 +321,8 @@ class Game:
         .. versionadded:: 0.3.0
         """
         if self.state.small_blind_position is not None:
-            return self.table[self.state.small_blind_position]
+            uid = self.table[self.state.small_blind_position]
+            return self._strategies.get(uid) if uid else None
         return None
 
     @property
@@ -236,8 +332,17 @@ class Game:
         .. versionadded:: 0.3.0
         """
         if self.state.big_blind_position is not None:
-            return self.table[self.state.big_blind_position]
+            uid = self.table[self.state.big_blind_position]
+            return self._strategies.get(uid) if uid else None
         return None
+
+    @property
+    def all_stacks_at_game_start(self) -> int:
+        """Returns the total of all player stacks at the start of the game.
+
+        .. versionadded:: 0.7.0
+        """
+        return self._all_stacks_at_game_start
 
     def _log(
         self,
@@ -311,21 +416,40 @@ class Game:
         # external listeners
         self._events.emit(event, self)
 
-        # player hooks
-        for p in self.state.players:
-            fn = getattr(p, "on_event", None)
+        # player hooks - iterate in snapshot order to preserve deterministic ordering.
+        # Players only ever receive their own redacted copy of the event and a
+        # PlayerView, never the Game itself.
+        for s in self._state.players:
+            p = self._strategies.get(s.uid)
+            if p is None:
+                continue
+            target = self._proxies.get(s.uid, p)
+            fn = getattr(target, "on_event", None)
+            if getattr(fn, "__func__", None) is Player.on_event:
+                fn = None  # the default hook does nothing, skip building a view
+            specific = getattr(target, f"on_{event.type.name.lower()}", None)
+            if not (callable(fn) or callable(specific)):
+                continue
+            view = self._build_player_view(p)
+            if event.type == GameEventType.GAME_STATE_CHANGED:
+                player_event = redact_event(
+                    event, p.uid, frozenset(self._revealed_uids)
+                )
+            else:
+                player_event = next(
+                    e for e in reversed(view.history) if e.uid == event.uid
+                )
             if callable(fn):
                 try:
-                    fn(event, self)
+                    fn(player_event, view)
                 except Exception:
                     self._logger.warning(
                         f"Exception in player {p.name} on_event hook for {event.type.name}",
                         exc_info=True,
                     )
-            specific = getattr(p, f"on_{event.type.name.lower()}", None)
             if callable(specific):
                 try:
-                    specific(event, self)
+                    specific(player_event, view)
                 except Exception:
                     self._logger.warning(
                         f"Exception in player {p.name} {specific.__name__} hook for {event.type.name}",
@@ -366,13 +490,57 @@ class Game:
             payload=payload or {},
         )
 
-    def add_player(self, player: PlayerLike) -> None:
+    def _update_state(self, **changes) -> None:
+        has_listeners = self._events.has_subscribers(GameEventType.GAME_STATE_CHANGED)
+        before = self.state.model_dump(mode="json") if has_listeners else None
+        self._state = self.state.model_copy(update=changes)
+        if has_listeners:
+            after = self.state.model_dump(mode="json")
+            self._emit(
+                self._create_event(
+                    GameEventType.GAME_STATE_CHANGED,
+                    payload={"before": before, "after": after},
+                )
+            )
+
+    def _update_player_state(self, player, **changes) -> None:
+        """Create a new PlayerSnapshot for a player and propagate to game state.
+
+        All PlayerState mutations must go through this method to ensure that
+        GAME_STATE_CHANGED is always emitted. A fresh PlayerSnapshot is created
+        via model_copy.
+
+        Parameters
+        ----------
+        player : PlayerLike | PlayerSnapshot
+            The player whose state should be updated. Only ``player.uid`` is
+            used for the lookup.
+        **changes
+            Field names and their new values to set on the player's state.
+        """
+        uid = player.uid
+        snapshots = [
+            (
+                s.model_copy(update={"state": s.state.model_copy(update=changes)})
+                if s.uid == uid
+                else s
+            )
+            for s in self._state.players
+        ]
+        self._update_state(players=snapshots)
+
+    def add_player(
+        self, player: PlayerLike, *, state: Optional[PlayerState | dict] = None
+    ) -> None:
         """Add a player to the game.
 
         Parameters
         ----------
         player : PlayerLike
             The player to add to the game.
+        state : PlayerState | dict | None, optional
+            Initial player state (stack, seat, etc.). If not provided, a default
+            ``PlayerState`` with zero chips is used.
         """
         if not self.table.has_free_seat:
             raise ValueError("Table is full")
@@ -391,14 +559,44 @@ class Game:
         if player.uid in existing_ids:
             raise ValueError(f"Player uid '{player.uid}' is already taken")
 
-        if player.state is None:
-            player.state = PlayerState(state_type=PlayerStateType.ACTIVE)
-            self.table.seat_player(player)
+        # Normalise state argument
+        if isinstance(state, dict):
+            initial_player_state = PlayerState.model_validate(state)
+        elif isinstance(state, PlayerState):
+            initial_player_state = state
         else:
-            self.table.seat_player(player, seat_index=player.state.seat)
-        player.state.state_type = PlayerStateType.ACTIVE
+            initial_player_state = PlayerState()
 
-        self.state.players.append(player)
+        # Start the worker before changing any state, so a player that can't be
+        # isolated is rejected cleanly
+        if self._settings.player_isolation == PlayerIsolation.PROCESS:
+            proxy = ProcessPlayer(
+                player,
+                decision_timeout=self._settings.decision_timeout,
+                logger=self._logger,
+            )
+            proxy.start()
+            self._proxies[player.uid] = proxy
+            self._final_states.pop(player.uid, None)
+
+        # Determine the seat
+        preferred_seat = initial_player_state.seat
+        try:
+            seat_index = self.table.seat_player(player, seat_index=preferred_seat)
+        except Exception:
+            self._close_proxy(player.uid)
+            raise
+        initial_player_state = initial_player_state.model_copy(
+            update={"seat": seat_index, "state_type": PlayerStateType.ACTIVE}
+        )
+
+        snapshot = PlayerSnapshot(
+            uid=player.uid,
+            name=player.name,
+            state=initial_player_state,
+        )
+        self._strategies[player.uid] = player
+        self._update_state(players=[*self.state.players, snapshot])
 
         self._handle_event(GameEventType.PLAYER_JOINED)
         self._emit(
@@ -429,22 +627,162 @@ class Game:
         ]:
             raise ValueError("Cannot remove players while hand is in progress")
 
-        player = next((p for p in self.state.players if p.uid == player_uid), None)
-        if not player:
+        snapshot = next((p for p in self.state.players if p.uid == player_uid), None)
+        if not snapshot:
             raise ValueError(f"Player with uid {player_uid} not found")
 
-        self.table.remove_player(player)
-        self.state.players = [p for p in self.state.players if p.uid != player_uid]
+        self.table.remove_player(snapshot)
+        self._strategies.pop(player_uid, None)
+        self._close_proxy(player_uid)
+        self._update_state(
+            players=[p for p in self.state.players if p.uid != player_uid]
+        )
 
         if flush:
             self._handle_event(GameEventType.PLAYER_LEFT)
         else:
             self._event_queue.append(GameEventType.PLAYER_LEFT)
 
+        # drop the last view held by the player and its redacted history
+        if isinstance(player, Player):
+            player._view = None
+        self._player_histories.pop(player_uid, None)
+        self._player_history_synced.pop(player_uid, None)
+        self._player_rules.pop(player_uid, None)
+
         self._emit(self._create_event(GameEventType.PLAYER_LEFT, player_uid=player_uid))
         self._log(
-            f"Player {player.name} has left the game.", logging.INFO, stage_prefix=False
+            f"Player {snapshot.name} has left the game.",
+            logging.INFO,
+            stage_prefix=False,
         )
+
+    def close(self) -> None:
+        """Stop the worker processes of isolated players.
+
+        Called automatically when the game ends. Does nothing if no player runs in a
+        worker process.
+
+        .. versionadded:: 0.7.0
+        """
+        for uid in list(self._proxies):
+            self._close_proxy(uid)
+
+    def _close_proxy(self, uid: str) -> None:
+        proxy = self._proxies.pop(uid, None)
+        if proxy is not None:
+            proxy.close()
+            self._final_states[uid] = proxy.final_state
+
+    def get_player_state(self, player: "PlayerLike | str") -> Optional[dict]:
+        """Return the data a player reports through ``export_state``.
+
+        Works the same in both isolation modes. For a player running in a worker
+        process, the data is requested from the worker, or, once the worker has
+        stopped, taken from its last export. In-process, the player's
+        ``export_state`` is called directly. Either way, the result is a copy that
+        went through JSON, so it holds no references into the player.
+
+        Parameters
+        ----------
+        player : PlayerLike | str
+            A player object or a plain UID string. Pass the player object for an
+            in-process player that has been eliminated or removed.
+
+        Returns
+        -------
+        dict | None
+            The exported data, or ``None`` if the player doesn't implement
+            ``export_state`` or its worker failed to answer (a warning is logged).
+
+        Raises
+        ------
+        ValueError
+            If the player is unknown.
+
+        .. versionadded:: 0.7.0
+        """
+        uid = player if isinstance(player, str) else player.uid
+        proxy = self._proxies.get(uid)
+        if proxy is not None:
+            try:
+                return proxy.export_state()
+            except PlayerFailure as exc:
+                self._logger.warning(
+                    f"Could not get the state of player {proxy.name}: {exc}"
+                )
+                return None
+        if uid in self._final_states:
+            state = self._final_states[uid]
+            return None if state is None else json.loads(json.dumps(state))
+        target = self._strategies.get(uid) if isinstance(player, str) else player
+        if target is None:
+            raise ValueError(f"Player with uid {uid} not found")
+        export_state = getattr(target, "export_state", None)
+        state = export_state() if callable(export_state) else None
+        if state is not None and not isinstance(state, dict):
+            raise TypeError(
+                f"export_state must return a dict or None, got {type(state).__name__}"
+            )
+        return None if state is None else json.loads(json.dumps(state))
+
+    def set_player_state(self, player: "PlayerLike | str", state: dict) -> None:
+        """Restore a player's state with its ``import_state`` hook.
+
+        The counterpart of :meth:`get_player_state`: passing what it returned restores
+        the player. Works the same in both isolation modes. For a player running in a
+        worker process, ``import_state`` runs in the worker, on the copy of the player
+        that actually plays. The player receives a copy of ``state`` that went through
+        JSON.
+
+        Parameters
+        ----------
+        player : PlayerLike | str
+            A player object or a plain UID string.
+        state : dict
+            JSON-serializable data, typically returned by :meth:`get_player_state`.
+
+        Raises
+        ------
+        TypeError
+            If ``state`` is not a JSON-serializable ``dict``, or an in-process player
+            doesn't implement ``import_state``.
+        ValueError
+            If the player is not in the game.
+        RuntimeError
+            If an isolated player's worker is not running or fails to restore the
+            state.
+
+        .. versionadded:: 0.7.0
+        """
+        if not isinstance(state, dict):
+            raise TypeError(f"state must be a dict, got {type(state).__name__}")
+        state = json.loads(json.dumps(state))
+        uid = player if isinstance(player, str) else player.uid
+        proxy = self._proxies.get(uid)
+        if proxy is not None:
+            try:
+                proxy.import_state(state)
+            except PlayerFailure as exc:
+                raise RuntimeError(str(exc)) from exc
+            return
+        if uid in self._final_states:
+            raise RuntimeError(
+                f"The worker of player {uid} has stopped, so its state can't be set"
+            )
+        target = self._strategies.get(uid)
+        if target is None:
+            raise ValueError(f"Player with uid {uid} not found")
+        import_state = getattr(target, "import_state", None)
+        if not callable(import_state):
+            raise TypeError(f"Player {target.name} doesn't implement import_state")
+        import_state(state)
+
+    def __enter__(self) -> "Game":
+        return self
+
+    def __exit__(self, *exc_info) -> None:
+        self.close()
 
     def start(self) -> None:
         """Start the poker game."""
@@ -463,7 +801,7 @@ class Game:
         if len(self.state.players) == 0:
             raise ValueError("No players to assign button position")
 
-        deck = Deck.standard_deck(shuffle=True)
+        deck = Deck.standard_deck(shuffle=True, rng=self._rng)
         suit_priority = {
             Suit.SPADES: 3,
             Suit.HEARTS: 2,
@@ -475,7 +813,7 @@ class Game:
         best_score: tuple[int, int] | None = None
 
         for idx in range(len(self.state.players)):
-            card = deck.deal(1)[0]
+            card = deck.deal(1, rng=self._rng)[0]
             score = (card.rank.value, suit_priority[card.suit])
 
             if best_score is None or score > best_score:
@@ -491,7 +829,7 @@ class Game:
         match event:
             case GameEventType.GAME_STARTED:
                 assert self.state.stage == GameStage.READY
-                self.state.stage = GameStage.STARTED
+                self._update_state(stage=GameStage.STARTED)
                 self._game_uid = uuid.uuid4().hex
                 self._emit(self._create_event(GameEventType.GAME_STARTED))
                 self._start_new_hand()
@@ -502,7 +840,7 @@ class Game:
                     GameStage.STARTED,
                     GameStage.HAND_COMPLETE,
                 ]
-                self.state.stage = GameStage.DEALING
+                self._update_state(stage=GameStage.DEALING)
                 self._emit(self._create_event(GameEventType.HAND_STARTED))
                 self._deal_hole_cards()
                 self._emit(self._create_event(GameEventType.HOLE_CARDS_DEALT))
@@ -522,13 +860,13 @@ class Game:
 
             case GameEventType.ANTES_POSTED:
                 assert self.state.stage == GameStage.DEALING
-                self.state.stage = GameStage.PRE_FLOP
+                self._update_state(stage=GameStage.PRE_FLOP)
                 self._emit(self._create_event(GameEventType.BETTING_ROUND_STARTED))
                 self._take_action_from_current_player()
                 self._event_queue.append(GameEventType.PLAYER_ACTION_TAKEN)
 
             case GameEventType.PLAYER_ACTION_TAKEN:
-                if self.state.is_betting_round_complete():
+                if self.state.is_betting_round_complete:
                     self._complete_betting_round()
                     self._emit(
                         self._create_event(GameEventType.BETTING_ROUND_COMPLETED)
@@ -542,8 +880,7 @@ class Game:
             case GameEventType.BETTING_ROUND_COMPLETED:
                 if len(self.state.get_players_in_hand()) == 1:
                     # There is no or only one active player left, so we skip to showdown
-                    self.state.stage = GameStage.SHOWDOWN
-                    self.state.street = None
+                    self._update_state(stage=GameStage.SHOWDOWN, street=None)
                     self._emit(self._create_event(GameEventType.SHOWDOWN_STARTED))
                     self._handle_showdown()
                     self._emit(self._create_event(GameEventType.SHOWDOWN_COMPLETED))
@@ -551,29 +888,25 @@ class Game:
                 else:
                     # There is at least 2 active players, so we continue to next street
                     if self.state.stage == GameStage.PRE_FLOP:
-                        self.state.stage = GameStage.FLOP
-                        self.state.street = Street.FLOP
+                        self._update_state(stage=GameStage.FLOP, street=Street.FLOP)
                         self._deal_flop()
                         self._emit(self._create_event(GameEventType.FLOP_DEALT))
                         self._event_queue.append(GameEventType.FLOP_DEALT)
                         self._advance_to_first_active_player()
                     elif self.state.stage == GameStage.FLOP:
-                        self.state.stage = GameStage.TURN
-                        self.state.street = Street.TURN
+                        self._update_state(stage=GameStage.TURN, street=Street.TURN)
                         self._deal_turn()
                         self._emit(self._create_event(GameEventType.TURN_DEALT))
                         self._event_queue.append(GameEventType.TURN_DEALT)
                         self._advance_to_first_active_player()
                     elif self.state.stage == GameStage.TURN:
-                        self.state.stage = GameStage.RIVER
-                        self.state.street = Street.RIVER
+                        self._update_state(stage=GameStage.RIVER, street=Street.RIVER)
                         self._deal_river()
                         self._emit(self._create_event(GameEventType.RIVER_DEALT))
                         self._event_queue.append(GameEventType.RIVER_DEALT)
                         self._advance_to_first_active_player()
                     elif self.state.stage == GameStage.RIVER:
-                        self.state.stage = GameStage.SHOWDOWN
-                        self.state.street = None
+                        self._update_state(stage=GameStage.SHOWDOWN, street=None)
                         self._emit(self._create_event(GameEventType.SHOWDOWN_STARTED))
                         self._handle_showdown()
                         self._emit(self._create_event(GameEventType.SHOWDOWN_COMPLETED))
@@ -585,7 +918,7 @@ class Game:
                 | GameEventType.RIVER_DEALT
             ):
                 self._emit(self._create_event(GameEventType.BETTING_ROUND_STARTED))
-                if self.state.is_betting_round_complete():
+                if self.state.is_betting_round_complete:
                     self._complete_betting_round()
                     self._emit(
                         self._create_event(GameEventType.BETTING_ROUND_COMPLETED)
@@ -600,7 +933,7 @@ class Game:
                     self._event_queue.append(GameEventType.PLAYER_ACTION_TAKEN)
 
             case GameEventType.SHOWDOWN_COMPLETED:
-                self.state.stage = GameStage.HAND_COMPLETE
+                self._update_state(stage=GameStage.HAND_COMPLETE)
                 self._emit(self._create_event(GameEventType.HAND_ENDED))
                 self._event_queue.append(GameEventType.HAND_ENDED)
 
@@ -609,10 +942,15 @@ class Game:
 
                 # Eliminate players with zero stack
                 eliminated_players = [
-                    p for p in self.state.players if p.state.stack == 0
+                    p
+                    for p in self.state.players
+                    if p.state.stack == 0
+                    and p.state.state_type != PlayerStateType.ELIMINATED
                 ]
                 for player in eliminated_players:
-                    player.state.state_type = PlayerStateType.ELIMINATED
+                    self._update_player_state(
+                        player, state_type=PlayerStateType.ELIMINATED
+                    )
                     self._emit(
                         self._create_event(
                             GameEventType.PLAYER_ELIMINATED, player_uid=player.uid
@@ -624,14 +962,20 @@ class Game:
                         stage_prefix=False,
                     )
                     self._event_queue.append(GameEventType.PLAYER_ELIMINATED)
-                    self.remove_player(player, flush=False)
+                    # Free the table seat and strategy but keep snapshot in state.players
+                    self.table.remove_player(player)
+                    self._strategies.pop(player.uid, None)
+                    self._close_proxy(player.uid)
 
                 # Check if we have enough players to continue
-                if len(self.state.players) < self.rules.dealing.min_players:
+                if (
+                    len(self.state.get_non_eliminated_players())
+                    < self.rules.dealing.min_players
+                ):
                     self._log(
                         "Not enough players to continue, ending game.", logging.INFO
                     )
-                    self.state.stage = GameStage.GAME_OVER
+                    self._update_state(stage=GameStage.GAME_OVER)
                     self._event_queue.append(GameEventType.GAME_ENDED)
                 else:
                     # Move button and start next hand
@@ -641,7 +985,7 @@ class Game:
                             logging.INFO,
                             stage_prefix=False,
                         )
-                        self.state.stage = GameStage.GAME_OVER
+                        self._update_state(stage=GameStage.GAME_OVER)
                         self._event_queue.append(GameEventType.GAME_ENDED)
                     else:
                         self._move_button()
@@ -651,15 +995,19 @@ class Game:
             case GameEventType.GAME_ENDED:
                 self._log("Game ended", logging.INFO, stage_prefix=False)
                 self._emit(self._create_event(GameEventType.GAME_ENDED))
+                self.close()
 
             case GameEventType.PLAYER_JOINED:
                 if self.state.stage == GameStage.WAITING_FOR_PLAYERS:
                     if len(self.state.players) >= self.rules.dealing.min_players:
-                        self.state.stage = GameStage.READY
+                        self._update_state(stage=GameStage.READY)
 
             case GameEventType.PLAYER_LEFT:
-                if len(self.state.players) < self.rules.dealing.min_players:
-                    self.state.stage = GameStage.WAITING_FOR_PLAYERS
+                if (
+                    len(self.state.get_non_eliminated_players())
+                    < self.rules.dealing.min_players
+                ):
+                    self._update_state(stage=GameStage.WAITING_FOR_PLAYERS)
 
             case GameEventType.PLAYER_ELIMINATED:
                 pass
@@ -684,14 +1032,16 @@ class Game:
         return len(self._event_queue) > 0
 
     def _initialize_game(self) -> None:
-        self.state.hand_number = 0
-        self.state.button_position = self._find_first_button_position()
+        self._update_state(
+            hand_number=0,
+            button_position=self._find_first_button_position(),
+        )
 
         for p in self.state.players:
             self._all_stacks_at_game_start += p.state.stack
 
     def _start_new_hand(self) -> None:
-        self.state.hand_number += 1
+        self._update_state(hand_number=self.state.hand_number + 1)
 
         self._log(
             "=" * 30 + f" Hand {self.state.hand_number} " + "=" * 30 + "\n",
@@ -699,33 +1049,123 @@ class Game:
             stage_prefix=False,
         )
 
-        if len(self.state.players) < self.rules.dealing.min_players:
+        if (
+            len(self.state.get_non_eliminated_players())
+            < self.rules.dealing.min_players
+        ):
             raise ValueError("Not enough players to start hand")
 
-        self.state.deck = Deck.standard_deck(shuffle=True)
-        self.state.community_cards = []
-        self.state.pot = 0
-        self.state.current_bet = 0
-        self.state.last_raise_size = 0
+        self._deck = Deck.standard_deck(shuffle=True, rng=self._rng)
+        self._revealed_uids.clear()
+        self._update_state(
+            community_cards=(),
+            pot=0,
+            current_bet=0,
+            last_raise_size=0,
+        )
 
         for player in self.state.players:
-            player.state.current_bet = 0
-            player.state.total_contributed = 0
-            player.state.acted_this_street = False
-            player.state.holding = None
+            changes = dict(
+                current_bet=0,
+                total_contributed=0,
+                acted_this_street=False,
+                holding=None,
+            )
             if player.state.stack > 0:
-                player.state.state_type = PlayerStateType.ACTIVE
+                changes["state_type"] = PlayerStateType.ACTIVE
+            self._update_player_state(player, **changes)
 
-        self.state.street = Street.PRE_FLOP
+        self._update_state(street=Street.PRE_FLOP)
 
         self._assign_blind_positions()
 
     def get_current_player(self) -> Optional[PlayerLike]:
-        """Return the player whose turn it is.
+        """Return the strategy object for the player whose turn it is.
 
         .. versionadded:: 0.2.0
         """
-        return self.table[self.state.current_player_index]
+        uid = self.table[self.state.current_player_index]
+        if uid is None:
+            return None
+        return self._strategies.get(uid)
+
+    def get_player_snapshot(
+        self, player: "PlayerLike | str"
+    ) -> Optional[PlayerSnapshot]:
+        """Return the current ``PlayerSnapshot`` for a player by UID or player object.
+
+        Parameters
+        ----------
+        player : PlayerLike | str
+            A player object (any object with a ``uid`` attribute) or a plain
+            UID string.
+
+        Returns
+        -------
+        PlayerSnapshot | None
+            The frozen snapshot, or ``None`` if no player with that UID is
+            currently in the game.
+
+        .. versionadded:: 0.7.0
+            Now accepts a ``PlayerLike`` object in addition to a plain UID string.
+        """
+        uid = player if isinstance(player, str) else player.uid
+        return next((s for s in self._state.players if s.uid == uid), None)
+
+    def get_player_view(self, player: "PlayerLike | str") -> PlayerView:
+        """Return a fresh :class:`~maverick.playerview.PlayerView` for a player.
+
+        The view contains only the information the player is allowed to observe and
+        holds no reference to this game. This is what the engine passes to
+        ``decide_action`` and to the event hooks of players.
+
+        Parameters
+        ----------
+        player : PlayerLike | str
+            A player object (any object with a ``uid`` attribute) or a plain
+            UID string.
+
+        Returns
+        -------
+        PlayerView
+            The redacted view of the game for the given player.
+
+        .. versionadded:: 0.7.0
+        """
+        uid = player if isinstance(player, str) else player.uid
+        if uid not in self._strategies:
+            raise ValueError(f"Player with uid {uid} not found")
+        # GAME_STATE_CHANGED events are diagnostics for external listeners that only
+        # exist while someone subscribes to them. They are left out of player
+        # histories, which keeps those deterministic and cheap; the view itself
+        # always carries the current state.
+        history = self._player_histories.setdefault(uid, [])
+        synced = self._player_history_synced.get(uid, 0)
+        for event in self._event_history[synced:]:
+            if event.type != GameEventType.GAME_STATE_CHANGED:
+                history.append(redact_event(event, uid))
+        self._player_history_synced[uid] = len(self._event_history)
+        rules = self._player_rules.get(uid)
+        if rules is None:
+            rules = self._player_rules[uid] = self._rules.model_copy(deep=True)
+        return PlayerView(
+            player_uid=uid,
+            game_uid=self._game_uid,
+            state=redact_state(self._state, uid, frozenset(self._revealed_uids)),
+            rules=rules,
+            history=EventHistoryView(history),
+        )
+
+    def _build_player_view(self, player: PlayerLike) -> PlayerView:
+        """Build a view for *player* and remember it on ``Player`` instances."""
+        view = self.get_player_view(player.uid)
+        if isinstance(player, Player):
+            player._view = view
+        return view
+
+    def _get_snapshot(self, player) -> PlayerSnapshot:
+        """Return the snapshot for *player* (which may be PlayerLike or PlayerSnapshot)."""
+        return next(s for s in self._state.players if s.uid == player.uid)
 
     def _calculate_min_raise_amount(self) -> int:
         """Calculates the minimum extra chips the current player must add
@@ -735,8 +1175,9 @@ class Game:
         or raise to, but the amount the player must add on top of their current bet.
         """
         player = self.get_current_player()
+        snapshot = self._get_snapshot(player)
 
-        player_bet_before = player.state.current_bet
+        player_bet_before = snapshot.state.current_bet
         old_table_bet = self.state.current_bet
         last_raise_size = self.state.last_raise_size
 
@@ -748,24 +1189,43 @@ class Game:
     def _take_action_from_current_player(self) -> None:
         current_player = self.get_current_player()
 
-        if (
-            not current_player
-            or current_player.state.state_type != PlayerStateType.ACTIVE
-        ):
+        if not current_player:
             return
 
-        valid_actions = self._get_valid_actions(current_player)
+        current_snapshot = self._get_snapshot(current_player)
+        if current_snapshot.state.state_type != PlayerStateType.ACTIVE:
+            return
+
+        valid_actions = self._get_valid_actions(current_snapshot)
         min_raise_amount = self._calculate_min_raise_amount()
 
+        view = self._build_player_view(current_player)
+        decider = self._proxies.get(current_player.uid, current_player)
+
         _t0 = time.perf_counter()
-        action: PlayerAction = current_player.decide_action(
-            game=self,
-            valid_actions=valid_actions,
-            min_raise_amount=min_raise_amount,
-            call_amount=self.state.current_bet - current_player.state.current_bet,
-            min_bet_amount=self.state.min_bet,
-        )
-        action.decision_time_seconds = time.perf_counter() - _t0
+        try:
+            action: PlayerAction = decider.decide_action(
+                game=view,
+                valid_actions=valid_actions,
+                min_raise_amount=min_raise_amount,
+                call_amount=self.state.current_bet - current_snapshot.state.current_bet,
+                min_bet_amount=self.state.min_bet,
+            )
+        except PlayerFailure as exc:
+            self._log(
+                f"Player {current_player.name} failed to decide, folding. {exc}",
+                logging.WARNING,
+            )
+            warn(f"Player {current_player.name} failed to decide, folding.")
+            action = PlayerAction(
+                player_uid=current_player.uid, action_type=ActionType.FOLD
+            )
+            self._register_player_action(current_player, action)
+            return
+        decision_time_seconds = time.perf_counter() - _t0
+        # Keep a private copy, so the player can't alter the recorded action later
+        action = action.model_copy(deep=True)
+        action.decision_time_seconds = decision_time_seconds
 
         try:
             self._register_player_action(current_player, action)
@@ -786,16 +1246,17 @@ class Game:
             self._register_player_action(current_player, action)
 
     def _deal_hole_cards(self) -> None:
-        button = self.table[self.state.button_position]
-        self._log(f"Dealing hole cards. Button: {button.name}", logging.INFO)
+        button_uid = self.table[self.state.button_position]
+        button_name = self._strategies[button_uid].name if button_uid else "unknown"
+        self._log(f"Dealing hole cards. Button: {button_name}", logging.INFO)
         for player in self.state.players:
             if player.state.state_type == PlayerStateType.ACTIVE:
-                cards = self.state.deck.deal(self.rules.dealing.hole_cards)
-                player.state.holding = Holding(cards=cards)
+                cards = self._deck.deal(self.rules.dealing.hole_cards, rng=self._rng)
+                self._update_player_state(player, holding=Holding(cards=cards))
 
     def _post_blinds(self) -> None:
         """Post blinds with correct heads-up semantics (button posts SB in HU)."""
-        num_players = len(self.state.players)
+        num_players = len(self.state.get_non_eliminated_players())
         min_num_players = self.rules.dealing.min_players
 
         # Sanity check: ensure we have enough players to post blinds
@@ -803,60 +1264,72 @@ class Game:
             raise ValueError(f"Need at least {min_num_players} players to post blinds")
 
         # Sanity check: ensure small_blind and big_blind positions are assigned correctly
-        if not self.small_blind or not self.big_blind:  # pragma: no cover
-            raise ValueError("Small blind or big blind player not assigned")
-        if self.small_blind.state.seat == self.big_blind.state.seat:  # pragma: no cover
+        if (
+            self.state.small_blind_position is None
+            or self.state.big_blind_position is None
+        ):  # pragma: no cover
+            raise ValueError("Small blind or big blind position not assigned")
+        if (
+            self.state.small_blind_position == self.state.big_blind_position
+        ):  # pragma: no cover
             raise ValueError("Small blind and big blind cannot be the same player")
 
         # --- Small blind ---
         sb_player = self.small_blind
-        sb_amount = min(self.state.small_blind, sb_player.state.stack)
-        sb_player.state.current_bet = sb_amount
-        sb_player.state.total_contributed = sb_amount
-        sb_player.state.stack -= sb_amount
-        self.state.pot += sb_amount
-        if sb_player.state.stack == 0:
-            sb_player.state.state_type = PlayerStateType.ALL_IN
+        sb_snapshot = self._get_snapshot(sb_player)
+        sb_amount = min(self.state.small_blind, sb_snapshot.state.stack)
+        sb_new_stack = sb_snapshot.state.stack - sb_amount
+        sb_changes = dict(
+            current_bet=sb_amount, total_contributed=sb_amount, stack=sb_new_stack
+        )
+        if sb_new_stack == 0:
+            sb_changes["state_type"] = PlayerStateType.ALL_IN
+        self._update_player_state(sb_player, **sb_changes)
+        self._update_state(pot=self.state.pot + sb_amount)
 
         self._log(
             f"Posting small blind of {sb_amount} by player {sb_player.name}. "
-            f"Remaining stack: {sb_player.state.stack}",
+            f"Remaining stack: {sb_new_stack}",
             logging.INFO,
         )
 
         # --- Big blind ---
         bb_player = self.big_blind
-        bb_amount = min(self.state.big_blind, bb_player.state.stack)
-        bb_player.state.current_bet = bb_amount
-        bb_player.state.total_contributed = bb_amount
-        bb_player.state.stack -= bb_amount
-        self.state.pot += bb_amount
-        if bb_player.state.stack == 0:
-            bb_player.state.state_type = PlayerStateType.ALL_IN
+        bb_snapshot = self._get_snapshot(bb_player)
+        bb_amount = min(self.state.big_blind, bb_snapshot.state.stack)
+        bb_new_stack = bb_snapshot.state.stack - bb_amount
+        bb_changes = dict(
+            current_bet=bb_amount, total_contributed=bb_amount, stack=bb_new_stack
+        )
+        if bb_new_stack == 0:
+            bb_changes["state_type"] = PlayerStateType.ALL_IN
+        self._update_player_state(bb_player, **bb_changes)
+        self._update_state(pot=self.state.pot + bb_amount)
 
         self._log(
             f"Posting big blind of {bb_amount} by player {bb_player.name}. "
-            f"Remaining stack: {bb_player.state.stack}",
+            f"Remaining stack: {bb_new_stack}",
             logging.INFO,
         )
 
         # Table betting state
         # IMPORTANT: current_bet should reflect the actual posted BB amount if BB is short-stacked.
-        self.state.current_bet = bb_amount
-        self.state.min_bet = self.state.big_blind
-        self.state.last_raise_size = (
-            self.state.big_blind
-        )  # preflop min raise increment is BB size
-
         # Next to act preflop:
         # - Heads-up: button (SB) acts first
         # - Multi-way: player left of BB acts first
         if num_players == 2:
-            self.state.current_player_index = sb_player.state.seat
+            next_player_index = sb_snapshot.state.seat
         else:
-            self.state.current_player_index = self.table.next_occupied_seat(
-                bb_player.state.seat, active=True
+            active_uids = {s.uid for s in self._state.get_active_players()}
+            next_player_index = self.table.next_occupied_seat(
+                bb_snapshot.state.seat, active_uids=active_uids
             )
+        self._update_state(
+            current_bet=bb_amount,
+            min_bet=self.state.big_blind,
+            last_raise_size=self.state.big_blind,  # preflop min raise increment is BB size
+            current_player_index=next_player_index,
+        )
 
         assert isinstance(
             self.state.current_player_index, int
@@ -871,28 +1344,36 @@ class Game:
         for player in self.state.players:
             if player.state.state_type == PlayerStateType.ACTIVE:
                 ante_amount = min(self.state.ante, player.state.stack)
-                player.state.current_bet += ante_amount
-                player.state.total_contributed += ante_amount
-                player.state.stack -= ante_amount
-                self.state.pot += ante_amount
-                if player.state.stack == 0:
-                    player.state.state_type = PlayerStateType.ALL_IN
+                ante_new_current_bet = player.state.current_bet + ante_amount
+                ante_new_total_contributed = (
+                    player.state.total_contributed + ante_amount
+                )
+                ante_new_stack = player.state.stack - ante_amount
+                ante_changes = dict(
+                    current_bet=ante_new_current_bet,
+                    total_contributed=ante_new_total_contributed,
+                    stack=ante_new_stack,
+                )
+                if ante_new_stack == 0:
+                    ante_changes["state_type"] = PlayerStateType.ALL_IN
+                self._update_player_state(player, **ante_changes)
+                self._update_state(pot=self.state.pot + ante_amount)
 
                 self._log(
                     f"Player {player.name} posts ante of {ante_amount}. "
-                    f"Remaining stack: {player.state.stack}",
+                    f"Remaining stack: {ante_new_stack}",
                     logging.INFO,
                 )
 
     def _calculate_raise_components(
-        self, player: PlayerLike, chips_to_add: int
+        self, snapshot, chips_to_add: int
     ) -> tuple[int, int, int, int, int, bool]:
         """
         Returns:
             (player_add, player_bet_after, new_table_bet, call_part, raise_size, is_all_in)
         """
-        stack_before = player.state.stack
-        player_bet_before = player.state.current_bet
+        stack_before = snapshot.state.stack
+        player_bet_before = snapshot.state.current_bet
         old_table_bet = self.state.current_bet
 
         player_add = min(chips_to_add, stack_before)
@@ -926,7 +1407,7 @@ class Game:
         """
         for p in self.state.players:
             if p.uid != raiser_id and p.state.state_type == PlayerStateType.ACTIVE:
-                p.state.acted_this_street = False
+                self._update_player_state(p, acted_this_street=False)
 
     def _register_player_action(self, player: PlayerLike, action: PlayerAction) -> None:
         action_type = action.action_type
@@ -936,35 +1417,49 @@ class Game:
         if not current_player or current_player.uid != player.uid:
             raise ValueError("Not this player's turn")
 
-        if current_player.state.state_type != PlayerStateType.ACTIVE:
+        current_snapshot = self._get_snapshot(current_player)
+        if current_snapshot.state.state_type != PlayerStateType.ACTIVE:
             raise ValueError("Player cannot act (folded or all-in)")
 
-        valid_actions = self._get_valid_actions(current_player)
+        valid_actions = self._get_valid_actions(current_snapshot)
         if action_type not in valid_actions:
             raise ValueError(f"Invalid action: {action_type}")
 
         if action_type == ActionType.FOLD:
-            current_player.state.state_type = PlayerStateType.FOLDED
+            self._update_player_state(
+                current_player,
+                state_type=PlayerStateType.FOLDED,
+                acted_this_street=True,
+            )
             self._log(f"Player {current_player.name} folds.", logging.INFO)
 
         elif action_type == ActionType.CHECK:
-            if current_player.state.current_bet != self.state.current_bet:
+            if current_snapshot.state.current_bet != self.state.current_bet:
                 raise ValueError("Cannot check when there is a bet to call")
+            self._update_player_state(current_player, acted_this_street=True)
             self._log(f"Player {current_player.name} checks.", logging.INFO)
 
         elif action_type == ActionType.CALL:
-            call_amount = self.state.current_bet - current_player.state.current_bet
-            actual_amount = min(call_amount, current_player.state.stack)
-            current_player.state.current_bet += actual_amount
-            current_player.state.total_contributed += actual_amount
-            current_player.state.stack -= actual_amount
-            self.state.pot += actual_amount
-
-            if current_player.state.stack == 0:
-                current_player.state.state_type = PlayerStateType.ALL_IN
+            call_amount = self.state.current_bet - current_snapshot.state.current_bet
+            actual_amount = min(call_amount, current_snapshot.state.stack)
+            call_new_current_bet = current_snapshot.state.current_bet + actual_amount
+            call_new_total_contributed = (
+                current_snapshot.state.total_contributed + actual_amount
+            )
+            call_new_stack = current_snapshot.state.stack - actual_amount
+            call_changes = dict(
+                current_bet=call_new_current_bet,
+                total_contributed=call_new_total_contributed,
+                stack=call_new_stack,
+                acted_this_street=True,
+            )
+            if call_new_stack == 0:
+                call_changes["state_type"] = PlayerStateType.ALL_IN
+            self._update_player_state(current_player, **call_changes)
+            self._update_state(pot=self.state.pot + actual_amount)
 
             self._log(
-                f"Player {current_player.name} calls with amount {actual_amount}. Remaining stack: {current_player.state.stack}.",
+                f"Player {current_player.name} calls with amount {actual_amount}. Remaining stack: {call_new_stack}.",
                 logging.INFO,
             )
 
@@ -974,23 +1469,31 @@ class Game:
             if amount < self.state.min_bet:
                 raise ValueError(f"Bet must be at least {self.state.min_bet}")
 
-            actual_amount = min(amount, current_player.state.stack)
-            current_player.state.current_bet = actual_amount
-            current_player.state.total_contributed += actual_amount
-            current_player.state.stack -= actual_amount
-            self.state.pot += actual_amount
-
-            self.state.current_bet = actual_amount
-            self.state.last_raise_size = actual_amount
-
-            if current_player.state.stack == 0:
-                current_player.state.state_type = PlayerStateType.ALL_IN
+            actual_amount = min(amount, current_snapshot.state.stack)
+            bet_new_total_contributed = (
+                current_snapshot.state.total_contributed + actual_amount
+            )
+            bet_new_stack = current_snapshot.state.stack - actual_amount
+            bet_changes = dict(
+                current_bet=actual_amount,
+                total_contributed=bet_new_total_contributed,
+                stack=bet_new_stack,
+                acted_this_street=True,
+            )
+            if bet_new_stack == 0:
+                bet_changes["state_type"] = PlayerStateType.ALL_IN
+            self._update_player_state(current_player, **bet_changes)
+            self._update_state(
+                pot=self.state.pot + actual_amount,
+                current_bet=actual_amount,
+                last_raise_size=actual_amount,
+            )
 
             # A bet opens action for others (everyone else must respond)
             self._reset_acted_flags_for_reopen(raiser_id=current_player.uid)
 
             self._log(
-                f"Player {current_player.name} bets amount {actual_amount}. Remaining stack: {current_player.state.stack}.",
+                f"Player {current_player.name} bets amount {actual_amount}. Remaining stack: {bet_new_stack}.",
                 logging.INFO,
             )
 
@@ -1005,7 +1508,7 @@ class Game:
                 _,
                 raise_size,
                 is_all_in,
-            ) = self._calculate_raise_components(current_player, amount)
+            ) = self._calculate_raise_components(current_snapshot, amount)
 
             if raise_size == 0:
                 raise ValueError("RAISE must increase the table bet")
@@ -1016,26 +1519,40 @@ class Game:
                     f"Raise size must be at least {old_last_raise_size} (attempted {raise_size})"
                 )
 
-            current_player.state.current_bet = player_bet_after
-            current_player.state.total_contributed += player_add
-            current_player.state.stack -= player_add
-            self.state.pot += player_add
-            self.state.current_bet = new_table_bet
-
+            raise_new_total_contributed = (
+                current_snapshot.state.total_contributed + player_add
+            )
+            raise_new_stack = current_snapshot.state.stack - player_add
+            raise_changes = dict(
+                current_bet=player_bet_after,
+                total_contributed=raise_new_total_contributed,
+                stack=raise_new_stack,
+                acted_this_street=True,
+            )
             if is_all_in:
-                current_player.state.state_type = PlayerStateType.ALL_IN
+                raise_changes["state_type"] = PlayerStateType.ALL_IN
+            self._update_player_state(current_player, **raise_changes)
 
             # Reopen betting ONLY on a full raise (>= old_last_raise_size)
             reopens_betting = raise_size >= old_last_raise_size
 
             if reopens_betting:
-                self.state.last_raise_size = raise_size
+                self._update_state(
+                    pot=self.state.pot + player_add,
+                    current_bet=new_table_bet,
+                    last_raise_size=raise_size,
+                )
                 self._reset_acted_flags_for_reopen(raiser_id=current_player.uid)
+            else:
+                self._update_state(
+                    pot=self.state.pot + player_add,
+                    current_bet=new_table_bet,
+                )
             # else: short all-in raise does NOT reopen betting and must NOT reset flags
 
             self._log(
                 f"Player {current_player.name} raises by {player_add} chips "
-                f"to total bet {player_bet_after}. Remaining stack: {current_player.state.stack}.",
+                f"to total bet {player_bet_after}. Remaining stack: {raise_new_stack}.",
                 logging.INFO,
             )
 
@@ -1043,7 +1560,7 @@ class Game:
             old_table_bet = self.state.current_bet
             old_last_raise_size = self.state.last_raise_size
 
-            chips_to_add = current_player.state.stack
+            chips_to_add = current_snapshot.state.stack
             (
                 player_add,
                 player_bet_after,
@@ -1051,32 +1568,45 @@ class Game:
                 _,
                 raise_size,
                 _,
-            ) = self._calculate_raise_components(current_player, chips_to_add)
+            ) = self._calculate_raise_components(current_snapshot, chips_to_add)
 
-            current_player.state.current_bet = player_bet_after
-            current_player.state.total_contributed += player_add
-            current_player.state.stack = 0
-            self.state.pot += player_add
-            current_player.state.state_type = PlayerStateType.ALL_IN
+            allin_new_total_contributed = (
+                current_snapshot.state.total_contributed + player_add
+            )
+            self._update_player_state(
+                current_player,
+                current_bet=player_bet_after,
+                total_contributed=allin_new_total_contributed,
+                stack=0,
+                state_type=PlayerStateType.ALL_IN,
+                acted_this_street=True,
+            )
 
             # If the all-in increases the table bet, update it
             if new_table_bet > old_table_bet:
-                self.state.current_bet = new_table_bet
-
                 # Reopen betting ONLY if raise_size meets minimum
                 reopens_betting = raise_size >= old_last_raise_size
                 if reopens_betting:
-                    self.state.last_raise_size = raise_size
+                    self._update_state(
+                        pot=self.state.pot + player_add,
+                        current_bet=new_table_bet,
+                        last_raise_size=raise_size,
+                    )
                     self._reset_acted_flags_for_reopen(raiser_id=current_player.uid)
+                else:
+                    self._update_state(
+                        pot=self.state.pot + player_add,
+                        current_bet=new_table_bet,
+                    )
                 # else: SHORT all-in -> DOES NOT reopen betting -> DO NOT reset acted flags
+            else:
+                self._update_state(pot=self.state.pot + player_add)
 
             self._log(
                 f"Player {current_player.name} goes all-in with {player_add} chips.",
                 logging.INFO,
             )
 
-        # Mark actor as having acted
-        current_player.state.acted_this_street = True
         self._log(
             f"Current pot: {self.state.pot} | Current bet: {self.state.current_bet}",
             logging.INFO,
@@ -1091,7 +1621,8 @@ class Game:
             )
         )
 
-    def _get_valid_actions(self, player: PlayerLike) -> list[ActionType]:
+    def _get_valid_actions(self, player) -> list[ActionType]:
+        """Compute valid actions for *player* (PlayerSnapshot or anything with .state)."""
         actions = [ActionType.FOLD]
 
         call_amount = self.state.current_bet - player.state.current_bet
@@ -1129,19 +1660,21 @@ class Game:
         idx = self.state.current_player_index
         starting_idx = idx
         num_players = len(self.table.seats)
+        snapshots_by_uid = {s.uid: s for s in self._state.players}
 
         for _ in range(num_players):
-            # get player at next occupied seat
+            # get uid at next occupied seat
             idx = self.table.next_occupied_seat(idx)
-            p = self.table[idx]
+            uid = self.table[idx]
+            s = snapshots_by_uid.get(uid)
 
             # skip if not active
-            if p.state.state_type != PlayerStateType.ACTIVE:
+            if s is None or s.state.state_type != PlayerStateType.ACTIVE:
                 continue
 
             # check if player needs to act
-            facing_call = p.state.current_bet < self.state.current_bet
-            needs_action = (not p.state.acted_this_street) or facing_call
+            facing_call = s.state.current_bet < self.state.current_bet
+            needs_action = (not s.state.acted_this_street) or facing_call
 
             if needs_action:
                 # Safety check: ensure we've actually moved to a different player
@@ -1151,45 +1684,46 @@ class Game:
                         "Cannot advance to next player: same player would act again"
                     )
                 # we've found the next player who needs to act
-                self.state.current_player_index = idx
+                self._update_state(current_player_index=idx)
                 return
 
     def _complete_betting_round(self) -> None:
         for player in self.state.players:
-            player.state.current_bet = 0
-            player.state.acted_this_street = False
-        self.state.current_bet = 0
-        self.state.last_raise_size = 0
+            self._update_player_state(player, current_bet=0, acted_this_street=False)
+        self._update_state(current_bet=0, last_raise_size=0)
         self._log("Betting round complete\n", logging.INFO)
 
     def _advance_to_first_active_player(self) -> None:
-        self.state.current_player_index = self.table.next_occupied_seat(
-            self.state.button_position,
-            active=True,
+        active_uids = {s.uid for s in self._state.get_active_players()}
+        self._update_state(
+            current_player_index=self.table.next_occupied_seat(
+                self.state.button_position,
+                active_uids=active_uids,
+            )
         )
 
     def _deal_flop(self) -> None:
-        self.state.deck.deal(1)
-        flop_cards = self.state.deck.deal(3)
-        self.state.community_cards.extend(flop_cards)
+        self._deck.deal(1, rng=self._rng)
+        flop_cards = self._deck.deal(3, rng=self._rng)
+        self._update_state(community_cards=(*self.state.community_cards, *flop_cards))
         self._log(
             f"Dealt flop. Community cards: {[card.utf8() for card in self.state.community_cards]}",
             logging.INFO,
         )
 
     def _deal_turn(self) -> None:
-        self.state.deck.deal(1)
-        turn_card = self.state.deck.deal(1)[0]
-        self.state.community_cards.append(turn_card)
+        self._deck.deal(1, rng=self._rng)
+        turn_card = self._deck.deal(1, rng=self._rng)[0]
+        self._update_state(community_cards=(*self.state.community_cards, turn_card))
         self._log(
             f"Dealt turn. Community cards: {[card.utf8() for card in self.state.community_cards]}",
             logging.INFO,
         )
 
     def _deal_river(self) -> None:
-        self.state.deck.deal(1)
-        river_card = self.state.deck.deal(1)[0]
-        self.state.community_cards.append(river_card)
+        self._deck.deal(1, rng=self._rng)
+        river_card = self._deck.deal(1, rng=self._rng)[0]
+        self._update_state(community_cards=(*self.state.community_cards, river_card))
         self._log(
             f"Dealt river. Community cards: {[card.utf8() for card in self.state.community_cards]}",
             logging.INFO,
@@ -1197,10 +1731,10 @@ class Game:
 
     def _move_button(self) -> None:
         self.table.move_button()
-        self.state.button_position = self.table.button_seat
+        self._update_state(button_position=self.table.button_seat)
 
     def _assign_blind_positions(self) -> None:
-        num_players = len(self.state.players)
+        num_players = len(self.state.get_non_eliminated_players())
         min_num_players = self.rules.dealing.min_players
         if num_players < min_num_players:  # pragma: no cover
             raise ValueError(f"Need at least {min_num_players} players to post blinds")
@@ -1208,33 +1742,36 @@ class Game:
         # Heads-up special case:
         # - Button is SMALL blind
         # - Other player is BIG blind
+        active_uids = {s.uid for s in self._state.get_active_players()}
         if num_players == 2:
             sb_index = self.state.button_position
-            bb_index = self.table.next_occupied_seat(sb_index, active=True)
+            bb_index = self.table.next_occupied_seat(sb_index, active_uids=active_uids)
         else:
             # Multi-way:
             # - SB = left of button
             # - BB = left of SB
             sb_index = self.table.next_occupied_seat(
-                self.state.button_position, active=True
+                self.state.button_position, active_uids=active_uids
             )
-            bb_index = self.table.next_occupied_seat(sb_index, active=True)
+            bb_index = self.table.next_occupied_seat(sb_index, active_uids=active_uids)
         assert isinstance(sb_index, int)
         assert isinstance(bb_index, int)
         assert sb_index != bb_index, "SB and BB cannot be the same player"
 
         # Store blind positions in state for easy access by event handlers and player logic
-        self.state.small_blind_position = sb_index
-        self.state.big_blind_position = bb_index
+        self._update_state(
+            small_blind_position=sb_index,
+            big_blind_position=bb_index,
+        )
 
-    def _winners_in_button_order(self, winners: list[PlayerLike]) -> list[PlayerLike]:
-        n_players = len(self.state.players)
+    def _winners_in_button_order(self, winners) -> list:
+        n_players = len(self.state.get_non_eliminated_players())
         idx = self.state.button_position  # seat index of the button player
         rel_btn_idx = {}
         for i in range(n_players):
             idx = self.table.next_occupied_seat(idx)
-            p = self.table[idx]
-            rel_btn_idx[p.uid] = i
+            uid = self.table[idx]
+            rel_btn_idx[uid] = i
         return sorted(winners, key=lambda p: rel_btn_idx[p.uid])
 
     def _handle_showdown(self) -> None:
@@ -1242,19 +1779,20 @@ class Game:
 
         if len(players_in_hand) == 1:
             winner = players_in_hand[0]
-            winner.state.stack += self.state.pot
+            pot_amount = self.state.pot
+            self._update_player_state(winner, stack=winner.state.stack + pot_amount)
             self._log(
-                f"Player {winner.name} wins {self.state.pot} from the pot.",
+                f"Player {winner.name} wins {pot_amount} from the pot.",
                 logging.INFO,
             )
             self._emit(
                 self._create_event(
                     GameEventType.POT_WON,
                     player_uid=winner.uid,
-                    payload={"amount": self.state.pot},
+                    payload={"amount": pot_amount},
                 )
             )
-            self.state.pot = 0
+            self._update_state(pot=0)
         else:
             assert (
                 len(self.state.community_cards) == self.rules.dealing.board_cards_total
@@ -1285,6 +1823,8 @@ class Game:
                     )
                     player_scores.append((player, best_score))
 
+                    # the holding becomes public information from now on
+                    self._revealed_uids.add(player.uid)
                     self._emit(
                         self._create_event(
                             GameEventType.PLAYER_CARDS_REVEALED,
@@ -1341,7 +1881,7 @@ class Game:
                     raise RuntimeError("No eligible players for a pot segment.")
 
                 # Deduct distributed segment from pot
-                self.state.pot -= segment_amount
+                self._update_state(pot=self.state.pot - segment_amount)
 
                 if len(segment_contributors) == 1:
                     # uncalled top layer -> refund to that one contributor
@@ -1378,7 +1918,7 @@ class Game:
                 if amount == 0:
                     continue
                 player = id_to_player[p_id]
-                player.state.stack += amount
+                self._update_player_state(player, stack=player.state.stack + amount)
                 pot_distributed += amount
                 self._log(
                     f"Player {player.name} wins {amount} from the pot.", logging.INFO

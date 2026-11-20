@@ -6,7 +6,7 @@ from ...playeraction import PlayerAction
 from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ...game import Game
+    from ...playerview import PlayerView
 
 __all__ = ["LooseAggressiveBot"]
 
@@ -29,15 +29,16 @@ class LooseAggressiveBot(Player):
     def decide_action(
         self,
         *,
-        game: "Game",
+        game: "PlayerView",
         valid_actions: list[ActionType],
         min_raise_amount: int,
         min_bet_amount: int,
         **_,
     ) -> PlayerAction:
         """Play aggressively with a wide range of hands using hand strength."""
+        snapshot = game.get_player_snapshot(self.uid)
         # Evaluate hand strength
-        private_cards = self.state.holding.cards
+        private_cards = snapshot.state.holding.cards
         community_cards = game.state.community_cards
 
         # Get hand equity
@@ -66,7 +67,7 @@ class LooseAggressiveBot(Player):
             # Aggressive raises - typically 3x BB or minimum raise, whichever is larger
             # min_raise_amount is the minimum raise-by increment
             raise_by_amount = max(min_raise_amount, game.state.big_blind * 3)
-            raise_by_amount = min(raise_by_amount, self.state.stack)
+            raise_by_amount = min(raise_by_amount, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid,
                 action_type=ActionType.RAISE,
@@ -75,7 +76,7 @@ class LooseAggressiveBot(Player):
 
         if ActionType.BET in valid_actions and any_equity:
             # Aggressive bets
-            bet_amount = min(min_bet_amount * 3, self.state.stack)
+            bet_amount = min(min_bet_amount * 3, snapshot.state.stack)
             return PlayerAction(
                 player_uid=self.uid, action_type=ActionType.BET, amount=bet_amount
             )

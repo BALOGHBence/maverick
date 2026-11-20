@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "The GitFlow branching strategy used by Maverick, from feature branches through dev to main and PyPI releases."
+---
+
 # GitFlow and Branching Strategy
 
 The adopted GitFlow is the following:

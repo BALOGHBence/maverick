@@ -1,0 +1,333 @@
+---
+myst:
+  html_meta:
+    description: "Record of key architectural decisions in Maverick, the reasoning behind them and the trade-offs accepted."
+---
+
+# Design Decisions
+
+This page records key architectural decisions made during development, the reasoning
+behind them, and the trade-offs accepted. It is intended to help contributors understand
+*why* the codebase looks the way it does and to prevent well-intentioned refactors from
+accidentally undoing deliberate choices.
+
+---
+
+## GameState Immutability
+
+### Decision
+
+`GameState` is a frozen Pydantic model (`frozen=True`). All state transitions create a
+new `GameState` instance via `model_copy(update=...)` through the internal
+`Game._update_state(**changes)` helper. Direct field assignment on a live `GameState`
+instance raises a `ValidationError`.
+
+### Rationale
+
+- **Snapshot integrity** — Event listeners subscribed to `GAME_STATE_CHANGED` receive
+  `before`/`after` dicts that are true point-in-time snapshots (`model_dump(mode="json")`
+  at the moment of transition), not live references that could mutate underneath the
+  listener.
+- **Auditability** — A single entry point for all state changes makes the game engine
+  easier to reason about and debug.
+- **Safety** — Prevents accidental field assignment by player strategies or external code
+  that receives a `game.state` reference.
+
+### Trade-offs
+
+`frozen=True` is only *shallow* immutability. Mutable objects contained in `GameState`
+(player objects, the community cards list, the deck) are not protected by the freeze.
+The roadmap below addresses this progressively.
+
+### Roadmap to full (deep) immutability
+
+The following steps are planned, each as a separate PR:
+
+| Step | Change | Breaking? |
+| --- | --- | --- |
+| 1 | Freeze `PlayerState` + introduce `_update_player_state` helper | No |
+| 2 | ✅ Introduce `PlayerSnapshot`; decouple strategy objects from `GameState` | **Yes** |
+| 3 | Replace `community_cards` in-place mutations with `_update_state` calls | No |
+| 4 | ✅ Move `Deck` out of `GameState` into `Game._deck` | **Yes** |
+
+---
+
+## Deck is not part of GameState
+
+*(Implemented — see roadmap Step 4 above)*
+
+### Decision
+
+The `Deck` will be held by `Game._deck`, not stored as a field on `GameState`. A
+read-only `game.deck` property will expose it for bots that need it for Monte Carlo
+simulations.
+
+*(Superseded for players by "Players receive a PlayerView, not the Game" below: bots
+no longer have access to `game.deck`. The property remains available to code that holds
+the `Game` itself.)*
+
+### Rationale
+
+- **Observable state vs. engine internals** — `GameState` represents the observable state
+  of the poker table: pot, community cards, player stacks, positions. The remaining cards
+  in the deck are not observable to any player in a real game; they are a private
+  implementation detail of the dealer.
+- **Snapshot integrity** — Serializing a `GameState` snapshot (e.g., for the
+  `GAME_STATE_CHANGED` `before`/`after` payload) currently leaks which cards remain in
+  the deck. Moving the deck out eliminates this information leak.
+- **Simplicity** — Keeping the `Deck` in `Game._deck` lets it remain a mutable object
+  without compromising `GameState` immutability semantics.
+
+### Alternative considered
+
+Making `Deck` immutable (functional style: `dealt_cards, new_deck = deck.deal(n)`).
+Rejected because it adds object-allocation overhead on every deal with no benefit — the
+deck is never part of a snapshot that needs to be independently preserved.
+
+---
+
+## PlayerSnapshot — Decoupling strategy from observable state
+
+*(Implemented — see roadmap Step 2 above)*
+
+### Decision
+
+`GameState.players` now holds `list[PlayerSnapshot]`, where `PlayerSnapshot` is a frozen
+Pydantic model containing only observable data (`uid`, `name`, `state: PlayerState`).
+Strategy objects (`decide_action`, `on_event`) are held separately in
+`Game._strategies: dict[str, PlayerLike]`.
+
+`Table._seats` was changed from `list[Optional[PlayerLike]]` to `list[Optional[str]]`
+(player UIDs). `Table.next_occupied_seat` now accepts an explicit `active_uids: set[str]`
+parameter instead of reading `player.state.state_type` directly, so Table has no
+dependency on live state at all.
+
+`Game._update_player_state` now creates fresh `PlayerSnapshot` instances via `model_copy`;
+it never mutates any live strategy object. As a result consecutive `GameState` instances
+produced by `_update_state` share no mutable player references.
+
+Custom player strategies access their own current state via
+`game.get_player_snapshot(self.uid)` rather than `self.state`, because the engine no
+longer writes back to strategy objects.
+
+### Rationale
+
+- **True snapshot isolation** — With live player objects in `GameState.players`, mutating
+  `player.state` retroactively changed every prior `GameState` instance that referenced
+  the same player object. `PlayerSnapshot` breaks this coupling: each `GameState` holds
+  independent frozen copies.
+- **Separation of concerns** — Strategy logic (how a player decides) is distinct from
+  observable data (what a player's current stack is). Mixing them in a single object
+  makes both harder to evolve independently.
+- **`Table` simplification** — Table now navigates by UID instead of object reference,
+  eliminating synchronisation bugs between `Table` and `GameState`.
+
+### Trade-offs
+
+This is a **breaking change** to the public API:
+- `GameState.players` no longer returns objects with `decide_action`. Code that reads
+  state (`p.state.stack`, `p.uid`, etc.) is unaffected; code that calls strategy methods
+  must go through `Game._strategies`.
+- `Table[seat]` now returns a UID string, not a `PlayerLike`.
+- `Table.next_occupied_seat(active=True)` is replaced by
+  `Table.next_occupied_seat(active_uids={...})`.
+- Custom players that relied on `self.state` inside `decide_action` must instead use
+  `game.get_player_snapshot(self.uid)`.
+
+---
+
+## Retaining Eliminated Players in GameState
+
+### Decision
+
+When a player's stack reaches zero at `HAND_ENDED`, their table seat and strategy object
+are freed (so they no longer participate in future betting rounds), but their
+`PlayerSnapshot` is kept in `game.state.players` with `state_type=ELIMINATED` for the
+remainder of the game.
+
+### Rationale
+
+- **Post-game analysis** — Removing players from `game.state.players` on elimination made
+  the final game state incomplete: the last known stack, holding, and outcome of busted
+  players were discarded. Retaining them allows full replay, statistics, and debugging
+  without any additional bookkeeping by callers.
+- **Minimal API surface change** — Code that already uses `get_active_players()` or
+  `get_players_in_hand()` is unaffected. Only callers that relied on eliminated players
+  *disappearing* from `game.state.players` need to switch to the filtered helpers.
+- **Separation of seat management from player history** — Freeing the table seat is an
+  engine-internal concern (it controls the dealing order for subsequent hands). Whether the
+  player's historical snapshot is retained is an observable-state concern. Splitting these
+  two actions makes each responsibility explicit.
+
+### Trade-offs
+
+- `game.state.players` now grows monotonically during a game (eliminated players accumulate).
+  Code that counts players for game-logic purposes (e.g. "enough to start a hand") must use
+  `get_active_players()` or filter by `state_type != ELIMINATED`.
+- `PLAYER_LEFT` is no longer emitted on elimination; eliminations are exclusively signalled
+  by `PLAYER_ELIMINATED`.
+
+---
+
+### Decision
+
+`_update_state` only calls `model_dump(mode="json")` when at least one handler is
+subscribed to `GAME_STATE_CHANGED`. The guard uses `EventBus.has_subscribers(event_type)`
+before allocating the `before`/`after` dicts.
+
+### Rationale
+
+`model_dump` on a `GameState` that contains many players is non-trivial. Most games run
+without a `GAME_STATE_CHANGED` listener; paying the serialization cost unconditionally on
+every state transition would be wasteful. The `has_subscribers` guard reduces the overhead
+to a single `any()` call over the subscriber list when no listeners are registered.
+
+---
+
+## Players receive a PlayerView, not the Game
+
+### Decision
+
+The engine never passes the live `Game` to player code. `decide_action`, `on_event` and
+the implicit `on_<event_type>` hooks receive a `PlayerView` instead: a frozen,
+per-seat object built for every call by `Game.get_player_view(uid)`. It holds:
+
+- `state` — a copy of `GameState` in which the holdings of all other players are `None`,
+  except for players who revealed their cards at showdown in the current hand,
+- `rules` — a per-player copy of `PokerRules`,
+- `history` — the player's copy of the event history (an `EventHistoryView`),
+- convenience accessors: `me`, `holding`, `get_player_snapshot()`.
+
+Player hooks receive a copy of each event. `GAME_STATE_CHANGED` payloads are redacted
+the same way as `state`. `Player.game` returns the most recent view the player received
+instead of the `Game`. External `EventBus` listeners are trusted observers and keep
+receiving the full `Game`.
+
+### Rationale
+
+- **Hidden information** — With the live `Game`, a bot could read opponents' hole cards
+  (`game.state.players[i].state.holding`), the upcoming board (`game.deck`), the strategy
+  objects of other players, or change the game through private methods. In a real game
+  none of this is observable, so results of bot-vs-bot simulations could not be trusted.
+- **No back-reference** — `PlayerView` holds only copies and no reference to the `Game`,
+  `Deck`, `Table` or strategy objects, so nothing private is reachable through its
+  attributes. Changing anything in a view has no effect on the game or on other players.
+- **Compatibility** — The argument is still called `game`, and the view mirrors the parts
+  of `Game` that strategies use (`state`, `rules`, `get_player_snapshot`, `history`), so
+  most existing bots keep working unchanged.
+
+### Performance
+
+Views are built on every decision and for every player hook that is actually
+overridden; the no-op `Player.on_event` default is skipped. To keep this cheap:
+
+- `Card` is frozen, so cards can be shared between the engine and the views; only
+  `Holding.cards` lists and the players list are copied.
+- Rules are copied once per player, not per view.
+- Each player's history is synced incrementally, and `EventHistoryView` is an O(1)
+  fixed-length window over it.
+- `GAME_STATE_CHANGED` events are left out of player histories. They are diagnostics
+  for external listeners that only exist while someone subscribes to them, so including
+  them would make a bot's history depend on unrelated observers and require copying two
+  full state dumps per state change for every player. The view always carries the
+  current state anyway.
+
+### Limits of in-process isolation
+
+Inside a single Python process isolation cannot be complete: a deliberately malicious
+bot can still reach the `Game` through interpreter introspection (e.g. walking the call
+stack with `sys._getframe` or using `gc.get_referrers`). The `PlayerView` closes every
+API-level leak, so well-behaved bots cannot see hidden information by accident and
+cheating requires deliberate introspection. For untrusted bots, players can run in
+separate processes; see the next section.
+
+## Players can run in separate processes
+
+With `player_isolation="process"`, every player runs in its own worker process. The
+engine talks to it through a `ProcessPlayer` proxy (`maverick/_isolation/`), which
+satisfies `PlayerLike`, so the engine barely changes: it calls the proxy where it would
+call the player, and `Game.button`, `get_current_player()` and the other public members
+still return the original player objects. In-process mode stays the default and doesn't
+pay for any of this.
+
+- **`spawn`, never `fork`.** A forked worker would inherit a copy of the engine,
+  including the global `random` state that shuffles the deck, so a bot could predict the
+  cards. Spawned workers share nothing with the engine.
+- **Pickle in, JSON out.** The engine sends pickled views to workers, which is safe
+  because the engine is trusted. Workers answer with JSON only, of limited size, and the
+  engine validates the action with `PlayerAction.model_validate`. Unpickling data from an
+  untrusted worker would let it run code in the engine. This is the security boundary of
+  the design: any new message from workers must be JSON too.
+- **A pipe per worker, not a `multiprocessing.Queue`.** A queue unpickles every object
+  taken out of it, so a worker → engine queue would let a bot run code in the engine.
+  A `Pipe` lets the engine read raw bytes with a size limit (`recv_bytes(maxlength)`)
+  and decode them itself. With one engine and one worker per channel, a queue's support
+  for many producers and consumers, its feeder thread and its locks aren't needed either.
+- **Bot state crosses the process boundary only through `export_state` and
+  `import_state`.** Bots keep their state in the worker, so changes are not visible on
+  the object passed to `add_player`. Sending the bot object back pickled would be
+  transparent but unsafe, and mirroring attributes as JSON would fail silently for
+  anything that isn't JSON-serializable. Instead, a bot opts in with a pair of hooks:
+  `export_state` returns everything needed to restore it as a JSON-serializable `dict`,
+  and `import_state` restores it. `Game.get_player_state` and `Game.set_player_state`
+  call them. The worker exports once more when it stops, so the data outlives the
+  worker. In-process, the hooks are called directly and the data round-trips through
+  JSON, so both modes behave the same.
+- **One pair of hooks for reporting and for restoring.** The same data serves both
+  purposes, for example the token usage of an LLM bot, and two pairs of methods with
+  overlapping data would drift apart. Saving and resuming games (#103) will use the
+  same pair.
+- **Failed exports return `None`, failed imports raise.** Results are often collected
+  from many bots at once, so one misbehaving bot shouldn't stop that. A state that
+  silently fails to load would be worse, so `set_player_state` raises.
+- **One long-lived worker per player,** because bots keep state between decisions. A
+  pool of workers would lose it.
+- **Only the new history entries are sent.** Each worker keeps its own copy of the
+  player's history and rebuilds an `EventHistoryView` over it. Rules are sent once.
+- **Hooks are one-way messages.** The engine doesn't wait for them, and the pipe keeps
+  them in order before the next decision. The proxy only exposes the hooks the player
+  implements, so `Game._emit` skips the others as it does in-process. Exceptions in
+  hooks are reported back with the next reply and logged.
+- **Isolated players fail closed.** On a timeout, an exception, an invalid reply or a
+  dead worker, the player folds instead of stopping the game. Each decision carries a
+  sequence number, so a late answer to a decision that timed out is discarded.
+  `exc_handling_mode` still only applies to event bus handlers.
+- **Settings come from code, environment or `pyproject.toml`,** in that order, so a
+  tournament can switch isolation on without changing the code that builds the games.
+  `IsolationSettings` is a Pydantic model because it validates and converts untrusted
+  strings from the environment and from TOML. It is built once per game, so the cost of
+  validation doesn't matter.
+
+Process isolation doesn't cover code that runs when the bot is created: the bot's module
+is imported and the player is created and pickled in the engine's process. It also sets
+no CPU or memory limits, and it is not a sandbox: workers run as the same operating
+system user, inherit the engine's environment variables, and can use files, the network
+and signals. `multiprocessing` offers no way to start a worker with a different
+environment, and clearing `os.environ` inside the worker is incomplete, because on Linux
+the original environment can still be read from `/proc/self/environ`. Untrusted
+tournaments should run in a container or as a separate user.
+
+## The game owns its random number generator
+
+Every `Game` has its own `random.Random`, created from the `seed` argument, and passes
+it to every shuffle and deal (`Deck` methods take an optional `rng`). The engine used to
+rely on the global `random` module, which had three problems:
+
+- **Players changed the cards.** An in-process player that called `random.random()`
+  consumed numbers from the generator that shuffles the deck, so games were only
+  reproducible if every player behaved identically.
+- **Players could predict the cards.** An in-process player could call
+  `random.getstate()` and simulate the next shuffle without touching the `Game`, a path
+  that `PlayerView` couldn't close.
+- **The state couldn't be saved.** Saving and resuming games (#103) needs the state of
+  the generator that deals the cards, and the global one is shared with everything else
+  in the interpreter.
+
+If no seed is given, it is drawn from the global `random` module. That keeps
+`random.seed(...)` before creating a game reproducible, as documented before. The seed
+is available as `Game.seed`, so any game can be repeated, but it is not part of
+`GameState`, so players never see it.
+
+The engine's generator is still an object in the engine's process, so an in-process
+player can reach it through introspection like anything else there. With process
+isolation, players have no way to reach it.

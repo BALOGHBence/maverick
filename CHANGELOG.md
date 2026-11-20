@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `uid` and `ts` fields to the `GameState` class.
+- Added `GAME_STATE_CHANGED` event type to `GameEventType`. This event is emitted every time the game state transitions to a new instance and carries a `before`/`after` payload with the full serialized `GameState` before and after the change.
+- Added `EventBus.has_subscribers(event_type)` method that returns `True` if at least one handler is subscribed to the given event type.
+- Added `all_stacks_at_game_start` property to the `Game` class.
+- Added `PlayerSnapshot` frozen Pydantic model (fields: `uid`, `name`, `state`) that captures observable player data at a point in time, decoupled from strategy logic.
+- Added `Game.get_player_snapshot(uid)` helper method that returns the current `PlayerSnapshot` for a player by UID or player object.
+- Added `PlayerView`, a read-only, per-seat view of the game that players receive instead of the `Game` itself. It exposes `state` (with the holdings of other players removed until they are revealed at showdown), `rules`, `history`, `holding`, `me` and `get_player_snapshot()`.
+- Added `Game.get_player_view(player)` method that returns the `PlayerView` of a player.
+- Added the `redact_state` and `redact_event` functions and the `EventHistoryView` class to the new `maverick.playerview` module.
+- Added optional process isolation for players. With `Game(player_isolation="process")`, every player runs in its own worker process and can't reach the engine, the deck or the hole cards of other players, not even through interpreter introspection. Failing, hanging or crashing isolated players fold instead of stopping the game.
+- Added the `decision_timeout` argument to `Game`, which limits how long an isolated player may take for a decision.
+- Added the `PlayerIsolation` enumeration, and the `maverick.config` module with `IsolationSettings` and `resolve_settings`. The isolation settings can also be set with the `MAVERICK_PLAYER_ISOLATION` and `MAVERICK_DECISION_TIMEOUT` environment variables, or in the `[tool.maverick]` table of `pyproject.toml`. Arguments take priority over environment variables, which take priority over `pyproject.toml`.
+- Added `Game.close()`, `Game.settings`, and support for using `Game` as a context manager.
+- Added the optional `Player.export_state()` and `Player.import_state(state)` hooks, and `Game.get_player_state(player)` and `Game.set_player_state(player, state)`. `export_state` returns everything needed to restore the player as a JSON-serializable `dict`, such as statistics it collects while playing, and `import_state` restores it. This works the same in both isolation modes, and is the way to get data out of a player isolated in a worker process and back in. The last export of an isolated player stays available after its worker has stopped.
+- Added the `seed` argument and the `seed` property to `Game`. Every game now has its own random number generator, which shuffles the deck and draws the first button. Games with the same seed, players and decisions deal the same cards.
+- Added an optional `rng` argument to `Deck.build`, `Deck.standard_deck`, `Deck.shuffle` and `Deck.deal`.
+
+### Changed
+
+- The game no longer uses the global `random` module to shuffle and deal. Players that use random numbers no longer change the cards that are dealt. Seeding `random` before creating a game is still reproducible, because the game draws its seed from it by default, but seeding it after the game has been created no longer affects the cards: pass `seed` to `Game` instead.
+- Eliminated players are now **retained** in `game.state.players` with `state_type=PlayerStateType.ELIMINATED` for the full game duration. Previously, players whose stack reached zero were immediately removed from `game.state.players` after each hand. Code that needs only active or eligible players should use `game.state.get_active_players()` or `game.state.get_players_in_hand()`.
+- **Breaking (minor):** `PLAYER_LEFT` is no longer emitted when a player is eliminated. Elimination is exclusively signalled by the `PLAYER_ELIMINATED` event. Code that listened to `PLAYER_LEFT` to detect eliminations should switch to `PLAYER_ELIMINATED`.
+- **Breaking:** `GameState.community_cards` type changed from `list[Card]` to `tuple[Card, ...]`. This makes the immutability intent explicit and prevents in-place mutation at the type level. Code that relies on `community_cards` being a `list` (e.g. calling `.append()` or `.extend()` on it) must be updated.
+- `GAME_STATE_CHANGED` is now emitted when community cards are dealt (flop, turn, and river). Previously, the deal methods mutated the card list in-place, bypassing `_update_state` and suppressing the event.
+- The `is_betting_round_complete` function of the `GameState` class has been turned into a property.
+- `GameState` is now a fully immutable (frozen) Pydantic model. Direct attribute assignment raises a `ValidationError`. All state mutations are performed internally via `model_copy`.
+- `PlayerState` is now a fully immutable (frozen) Pydantic model. Direct attribute assignment raises a `ValidationError`. All player-level mutations in the game engine now go through `Game._update_player_state`, which replaces the `PlayerState` via `model_copy` and propagates the change by calling `_update_state`. This ensures `GAME_STATE_CHANGED` is emitted after every logical player state change (fold, all-in transition, stack deduction, stack gain, etc.).
+- **Breaking:** `GameState.players` type changed from `list[PlayerLike]` to `list[PlayerSnapshot]`. Each element now contains only observable data (`uid`, `name`, `state`); live strategy objects are no longer stored inside `GameState`. Code that accesses `game.state.players[i].decide_action(...)` or player-specific attributes (e.g. custom `event_counter`) must be updated to obtain the strategy object via `game._strategies[uid]` or subscribe to game events.
+- **Breaking:** `Table._seats` now stores player UIDs (`str`) instead of live player objects. `table[seat]` returns a `str` UID or `None`. `Table.seat_player` and `Table.remove_player` no longer mutate `player.state`; seat information is managed exclusively through `PlayerSnapshot` in `GameState`.
+- **Breaking:** `Table.next_occupied_seat(active=True)` replaced by `Table.next_occupied_seat(active_uids=...)`. Callers must explicitly pass the set of active player UIDs obtained from `{s.uid for s in game.state.get_active_players()}`.
+- **Breaking:** `Player` is now a pure strategy object. The `state` constructor parameter and `state` instance attribute have been removed. All player state lives exclusively in `GameState.players` as `PlayerSnapshot` entries. Code that previously passed `state=PlayerState(stack=...)` to a player constructor must instead pass it to `Game.add_player(player, state=PlayerState(stack=...))`. Code that previously read `player.state.stack` must use `game.get_player_snapshot(player).state.stack` or iterate `game.state.players`.
+- **Breaking:** `Game.add_player()` now accepts an optional keyword-only `state` parameter (`PlayerState | dict | None`) that sets the player's initial state. The initial stack/seat previously carried on the player object must now be supplied here.
+- **Breaking:** `PlayerLike` protocol no longer includes a `state` attribute.
+- **Breaking:** `Player.to_dict()` no longer includes a `"state"` key in the returned dictionary.
+- `Game._update_player_state` no longer synchronises the strategy object's `state` attribute. State is now the exclusive responsibility of `GameState`.
+- `Game.get_player_snapshot()` now accepts either a UID string or a `PlayerLike` object (in addition to the previous UID-only form).
+- `Game._strategies` dict holds all live strategy objects keyed by player UID; `Game.add_player` populates it, `Game.remove_player` clears the entry.
+- All built-in player strategies (`FoldBot`, `CallBot`, `AggressiveBot`, and all archetype bots) updated to retrieve their current state via `game.get_player_snapshot(self.uid)` instead of `self.state`.
+- `GameState.get_active_players()` and `GameState.get_players_in_hand()` now return `list[PlayerSnapshot]`.
+- **Breaking:** `Player.decide_action` and the player event hooks (`on_event` and `on_<event_type>`) now receive a `PlayerView` as their `game` argument instead of the live `Game` instance. Strategies that only use `game.state`, `game.rules` and `game.get_player_snapshot()` keep working; code that relied on other `Game` members (e.g. `game.deck`, `game.table`, `game.subscribe`) from inside a player must be updated.
+- **Breaking:** `Player.game` now returns the most recent `PlayerView` the player received instead of the `Game`, and `Player.state` reads from that view.
+- **Breaking:** Player event hooks receive a copy of each event; `GAME_STATE_CHANGED` payloads delivered to players have the unrevealed holdings of other players removed.
+- **Breaking:** `Card` is now an immutable (frozen) Pydantic model.
+- **Breaking:** `deck` has been removed from `GameState`. The active deck is now held by `Game._deck` and exposed via the read-only `game.deck` property. Code that previously accessed `game.state.deck` must be updated to use `game.deck`.
+
+### Security
+
+- Players can no longer access hidden information through the game object passed to them: the hole cards of other players, the remaining deck, the strategy objects of other players and the engine internals are not reachable from a `PlayerView`.
+
 ## [0.6.0] - 2026.03.20
 
 ### Added

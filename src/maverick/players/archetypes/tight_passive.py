@@ -6,7 +6,7 @@ from ...playeraction import PlayerAction
 from ...utils import estimate_holding_strength
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ...game import Game
+    from ...playerview import PlayerView
 
 __all__ = ["TightPassiveBot"]
 
@@ -29,14 +29,15 @@ class TightPassiveBot(Player):
     def decide_action(
         self,
         *,
-        game: "Game",
+        game: "PlayerView",
         valid_actions: list[ActionType],
         call_amount: int,
         **_,
     ) -> PlayerAction:
         """Play passively, avoiding raises and large bets even with good equity."""
+        snapshot = game.get_player_snapshot(self.uid)
         # Evaluate hand strength but still play too passively
-        private_cards = self.state.holding.cards
+        private_cards = snapshot.state.holding.cards
         community_cards = game.state.community_cards
 
         # Get hand equity but require premium to play
@@ -67,7 +68,7 @@ class TightPassiveBot(Player):
         # Call only if the amount is small relative to the pot and hand is strong
         if ActionType.CALL in valid_actions and strong_hand:
             # Only call if it's less than 10% of stack and pot is worth it
-            if call_amount <= self.state.stack * 0.1:
+            if call_amount <= snapshot.state.stack * 0.1:
                 return PlayerAction(player_uid=self.uid, action_type=ActionType.CALL)
 
         # Fold in most other situations (never raises or bets, even with premium)

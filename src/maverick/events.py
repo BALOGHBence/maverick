@@ -26,7 +26,9 @@ class GameEvent(BaseModel):
     the type of event, current game state, and relevant action details.
 
     Payload by event type:
+
     - PLAYER_CARDS_REVEALED:
+
         - holding: list[str] - The player's hole cards as a list of card codes.
         - best_hand: list[str] - The best hand the player can make as a list of card codes.
         - best_hand_type: str - The type of the best hand (e.g., "FLUSH") according to HandType.
@@ -48,6 +50,8 @@ class GameEvent(BaseModel):
         .. versionadded:: 0.2.0
     uid : str
         Unique identifier for the event. Replaces deprecated ``id``.
+    ts: float
+        Timestamp of when the event was created, in seconds since the epoch.
     player_uid : Optional[str]
         UID of the player involved in the event, if applicable. Replaces deprecated ``player_id``.
     action : Optional[PlayerAction]

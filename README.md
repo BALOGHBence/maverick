@@ -16,6 +16,7 @@
 
   <div>
     <a href="https://pymaverick.readthedocs.io/en/latest/index.html"><img src="https://img.shields.io/badge/Documentation-blue?style=flat" alt="Documentation"></a>
+    <a href="https://pymaverick.readthedocs.io/en/latest/LLMs.html"><img src="https://img.shields.io/badge/%F0%9F%A4%96%20Coding%20Agents-Guide-8A2BE2?style=flat" alt="Coding Agents Guide"></a>
   </div>
   
   <br>
@@ -29,6 +30,24 @@
   <p>
     A Python library for simulating poker games with custom player strategies.
   </p>
+
+  <br>
+
+  <table>
+    <tr>
+      <td align="center">
+        <h3>🤖 Build with Coding Agents</h3>
+        <p>
+          Using <b>Claude Code</b>, <b>Cursor</b>, <b>Copilot</b>, <b>Windsurf</b> or <b>ChatGPT</b>?<br>
+          Teach your AI assistant Maverick's API and let it write bots, strategies and simulations for you.
+        </p>
+        <p>
+          <code>llms.txt</code> &nbsp;•&nbsp; <code>llms-full.txt</code> &nbsp;•&nbsp; per-page Markdown &nbsp;•&nbsp; Claude Code plugin &amp; skills
+        </p>
+        <a href="https://pymaverick.readthedocs.io/en/latest/LLMs.html"><img src="https://img.shields.io/badge/Read%20the%20Coding%20Agents%20Guide-%E2%86%92-8A2BE2?style=for-the-badge&logo=anthropic&logoColor=white" alt="Read the Coding Agents Guide"></a>
+      </td>
+    </tr>
+  </table>
 
 </div>
 
@@ -74,19 +93,23 @@ game = Game(small_blind=10, big_blind=20, max_hands=10)
 
 # Create players
 players: list[PlayerLike] = [
-    CallBot(name="CallBot", state=PlayerState(stack=1000)),
-    AggressiveBot(name="AggroBot", state=PlayerState(stack=1000)),
-    FoldBot(name="FoldBot", state=PlayerState(stack=1000)),
+    CallBot(name="CallBot"),
+    AggressiveBot(name="AggroBot"),
+    FoldBot(name="FoldBot"),
 ]
 
 for player in players:
-    game.add_player(player)
+    game.add_player(player, state=PlayerState(stack=1000))
 
 game.start()
 
-# Inspect results
-for player in players:
-    print(f"{player.name} - Stack: {player.state.stack}")
+# Inspect results — all players (including eliminated) are retained
+for snapshot in game.state.players:
+    print(f"{snapshot.name} - Stack: {snapshot.state.stack} ({snapshot.state.state_type})")
+
+# Active players only (excludes eliminated)
+for snapshot in game.state.get_active_players():
+    print(f"{snapshot.name} is still in the game with {snapshot.state.stack} chips")
 ```
 
 (See the documentation for more examples and APIs.)
