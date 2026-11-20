@@ -9,7 +9,7 @@ myst:
 | | |
 |---|---|
 | **Date** | 2026-11-20 |
-| **PR / Issues** | Closes #103 |
+| **PR / Issues** | #111, closes #103 |
 | **Version** | 0.7.0 (unreleased) |
 | **Breaking** | No |
 
