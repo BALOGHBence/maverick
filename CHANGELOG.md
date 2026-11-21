@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026.11.21
+
+### Added
+
+- Added saving games to disk, for replay and resume. With `Game(save_dir=...)`, the game writes the events of every hand, each with the full table state after it, and a checkpoint to resume from whenever a hand ends. Saves are versioned JSON only: loading them never unpickles data or imports code.
+- Added `Game.load(save_dir, players=...)`, which loads a saved game to continue it with `Game.start()` from the end of the last completed hand, including after a crash. The players are supplied by the caller and get their state back through `import_state`. A resumed game deals the same cards as one that was never interrupted.
+- Added the `Replay` class, which steps through a saved game event by event or hand by hand, without creating the game or any players.
+- Added the `GAME_RESUMED` event type, emitted when a loaded game continues.
+- Added `Game.save_dir` and the `SaveFormatError` exception.
+- Isolated players are now seeded. With `player_isolation="process"`, the game seeds the `random` module of every worker, and `numpy`'s legacy global generator if the bot has imported `numpy`, from the game's seed, the player's UID and the hand number, before every hand. Isolated bots that use random numbers make the same decisions in games with the same seed, including games that were saved and resumed.
+
+### Changed
+
+- `PokerRules` can now be read back from JSON. Before, the `Street` keys of `DealingRules.board_deal_pattern` failed to validate after a round trip through JSON.
+
+### Security
+
+- Saved games are created readable by their owner only, because the checkpoint of a running game predicts the next cards. Players isolated in worker processes run as the same user and can still read them: keep saves of games with untrusted bots out of their reach.
+
+## [0.7.0] - 2026.11.20
+
 ### Added
 
 - Added `uid` and `ts` fields to the `GameState` class.
@@ -25,16 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the optional `Player.export_state()` and `Player.import_state(state)` hooks, and `Game.get_player_state(player)` and `Game.set_player_state(player, state)`. `export_state` returns everything needed to restore the player as a JSON-serializable `dict`, such as statistics it collects while playing, and `import_state` restores it. This works the same in both isolation modes, and is the way to get data out of a player isolated in a worker process and back in. The last export of an isolated player stays available after its worker has stopped.
 - Added the `seed` argument and the `seed` property to `Game`. Every game now has its own random number generator, which shuffles the deck and draws the first button. Games with the same seed, players and decisions deal the same cards.
 - Added an optional `rng` argument to `Deck.build`, `Deck.standard_deck`, `Deck.shuffle` and `Deck.deal`.
-- Added saving games to disk, for replay and resume. With `Game(save_dir=...)`, the game writes the events of every hand, each with the full table state after it, and a checkpoint to resume from whenever a hand ends. Saves are versioned JSON only: loading them never unpickles data or imports code.
-- Added `Game.load(save_dir, players=...)`, which loads a saved game to continue it with `Game.start()` from the end of the last completed hand, including after a crash. The players are supplied by the caller and get their state back through `import_state`. A resumed game deals the same cards as one that was never interrupted.
-- Added the `Replay` class, which steps through a saved game event by event or hand by hand, without creating the game or any players.
-- Added the `GAME_RESUMED` event type, emitted when a loaded game continues.
-- Added `Game.save_dir` and the `SaveFormatError` exception.
-- Isolated players are now seeded. With `player_isolation="process"`, the game seeds the `random` module of every worker, and `numpy`'s legacy global generator if the bot has imported `numpy`, from the game's seed, the player's UID and the hand number, before every hand. Isolated bots that use random numbers make the same decisions in games with the same seed, including games that were saved and resumed.
 
 ### Changed
 
-- `PokerRules` can now be read back from JSON. Before, the `Street` keys of `DealingRules.board_deal_pattern` failed to validate after a round trip through JSON.
 - The game no longer uses the global `random` module to shuffle and deal. Players that use random numbers no longer change the cards that are dealt. Seeding `random` before creating a game is still reproducible, because the game draws its seed from it by default, but seeding it after the game has been created no longer affects the cards: pass `seed` to `Game` instead.
 - Eliminated players are now **retained** in `game.state.players` with `state_type=PlayerStateType.ELIMINATED` for the full game duration. Previously, players whose stack reached zero were immediately removed from `game.state.players` after each hand. Code that needs only active or eligible players should use `game.state.get_active_players()` or `game.state.get_players_in_hand()`.
 - **Breaking (minor):** `PLAYER_LEFT` is no longer emitted when a player is eliminated. Elimination is exclusively signalled by the `PLAYER_ELIMINATED` event. Code that listened to `PLAYER_LEFT` to detect eliminations should switch to `PLAYER_ELIMINATED`.
@@ -64,7 +78,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - Players can no longer access hidden information through the game object passed to them: the hole cards of other players, the remaining deck, the strategy objects of other players and the engine internals are not reachable from a `PlayerView`.
-- Saved games are created readable by their owner only, because the checkpoint of a running game predicts the next cards. Players isolated in worker processes run as the same user and can still read them: keep saves of games with untrusted bots out of their reach.
 
 ## [0.6.0] - 2026.03.20
 

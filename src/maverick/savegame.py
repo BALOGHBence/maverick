@@ -22,7 +22,7 @@ the old one, so a crash can't corrupt the last good checkpoint. If a game is
 interrupted, the log may hold events that came after the checkpoint. They are cut off
 when the game is loaded.
 
-.. versionadded:: 0.7.0
+.. versionadded:: 0.8.0
 """
 
 from __future__ import annotations
@@ -69,7 +69,7 @@ _FILE_MODE = 0o600
 class SaveFormatError(ValueError):
     """A saved game is missing, malformed, or uses an unsupported format version.
 
-    .. versionadded:: 0.7.0
+    .. versionadded:: 0.8.0
     """
 
 
@@ -80,7 +80,7 @@ class _Record(BaseModel):
 class SeatRecord(_Record):
     """A player at the table when the game started.
 
-    .. versionadded:: 0.7.0
+    .. versionadded:: 0.8.0
     """
 
     uid: str
@@ -91,7 +91,7 @@ class SeatRecord(_Record):
 class SaveHeader(_Record):
     """Contents of ``header.json``: what doesn't change while a game runs.
 
-    .. versionadded:: 0.7.0
+    .. versionadded:: 0.8.0
     """
 
     format_version: int
@@ -108,7 +108,7 @@ class SaveHeader(_Record):
 class TableRecord(_Record):
     """The seats of the table and the position of the button.
 
-    .. versionadded:: 0.7.0
+    .. versionadded:: 0.8.0
     """
 
     seats: list[Optional[str]]
@@ -126,7 +126,7 @@ class PlayerRecord(_Record):
         Whether ``export_state`` failed. The player is then restored without state when
         the game is loaded.
 
-    .. versionadded:: 0.7.0
+    .. versionadded:: 0.8.0
     """
 
     state: Optional[dict[str, Any]] = None
@@ -136,7 +136,7 @@ class PlayerRecord(_Record):
 class Checkpoint(_Record):
     """Contents of ``checkpoint.json``: the engine between two hands.
 
-    .. versionadded:: 0.7.0
+    .. versionadded:: 0.8.0
     """
 
     format_version: int
@@ -155,7 +155,7 @@ class Checkpoint(_Record):
 class EventRecord(_Record):
     """One line of ``events.jsonl``: an event and the game state right after it.
 
-    .. versionadded:: 0.7.0
+    .. versionadded:: 0.8.0
     """
 
     event: GameEvent
