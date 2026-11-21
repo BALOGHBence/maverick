@@ -90,6 +90,11 @@ handling of the seed. Removing the per-hand reseed makes the resume tests fail;
 reseeding when the hand starts instead of right after the checkpoint makes the test
 with draws between hands fail; removing both seeds makes the same-seed test fail too.
 
+`tests/test_rare_branches.py` covers four branches that games with random cards only
+reach sometimes: an all-in below the current bet, acting out of turn, the odd chip of a
+split pot, and estimating holding strength on a complete board. Without it, project
+coverage changed from run to run, which made Codecov report a drop on this PR.
+
 ### Follow-ups and known limitations
 
 - Random numbers drawn in `on_game_resumed` come from the seed of the last completed
