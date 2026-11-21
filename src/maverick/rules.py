@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from typing import Any
+
+from pydantic import BaseModel, Field, field_validator
 
 from .enums import Street
 
@@ -69,6 +71,17 @@ class DealingRules(BaseModel):
         Street.TURN: 1,
         Street.RIVER: 1,
     }
+
+    @field_validator("board_deal_pattern", mode="before")
+    @classmethod
+    def _parse_street_keys(cls, value: Any) -> Any:
+        """Accept the string keys JSON turns the ``Street`` values into."""
+        if isinstance(value, dict):
+            return {
+                int(k) if isinstance(k, str) and k.isdigit() else k: v
+                for k, v in value.items()
+            }
+        return value
 
 
 class StakesRules(BaseModel):

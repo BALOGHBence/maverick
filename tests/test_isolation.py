@@ -858,6 +858,22 @@ class TestWorkerLoop(IsolationTestCase):
         self.engine.send(("export", 1))
         self.assertEqual(json.loads(self.engine.recv_bytes())["seq"], 1)
 
+    def test_seed_message_seeds_the_worker(self):
+        with mock.patch("maverick._isolation.worker.seed_random") as seed_random:
+            self.engine.send(("seed", 12))
+            self.engine.send(("export", 1))  # replies after the seed is handled
+            self.engine.recv_bytes()
+        seed_random.assert_called_once_with(12)
+
+    def test_worker_is_seeded_before_the_player_is_loaded(self):
+        engine, worker = Pipe()
+        with mock.patch("maverick._isolation.worker.seed_random") as seed_random:
+            run_worker(worker, b"not a pickle", 5)
+        seed_random.assert_called_once_with(5)
+        self.assertFalse(json.loads(engine.recv_bytes())["ready"])
+        engine.close()
+        worker.close()
+
     def test_bytes_that_cant_be_loaded(self):
         engine, worker = Pipe()
         run_worker(worker, b"not a pickle")

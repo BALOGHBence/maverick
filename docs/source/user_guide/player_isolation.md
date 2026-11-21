@@ -110,6 +110,44 @@ Exceptions in event hooks are logged, as in in-process mode.
 - **`decision_time_seconds`** on recorded actions includes the time to communicate with
   the worker.
 
+(isolated-player-random-numbers)=
+## Random numbers in isolated players
+
+Workers don't inherit the random state of your script, so seeding `random` in your
+script doesn't reach isolated bots. Instead, the game seeds each worker itself:
+
+- **Before the bot is loaded,** and **again between hands,** the game seeds the
+  worker's global `random` module. If the bot has imported `numpy`, its legacy
+  global generator (`numpy.random.seed`) is seeded too.
+- **The seed is derived from the game's seed, the player's UID and the number of the
+  coming hand.**
+  Two games with the same seed and the same players make the same random choices, and a
+  different seed gives different choices. Each player draws different numbers, and so
+  does each hand.
+- **Resumed games make the same choices** as games that were never interrupted (see
+  {doc}`saving_games`). The game reseeds the workers right after it saves a hand, and
+  a resumed game right after its `GAME_RESUMED` event, so both continue from the same
+  seed. Nothing about the workers' random state needs to be saved. Only random numbers
+  drawn in `on_game_resumed` itself, which an uninterrupted game never calls, come
+  from a different sequence.
+
+So `Game(seed=...)` makes isolated games reproducible, cards and decisions alike. To make
+the seed predictable, pass it explicitly, or seed `random` in your script before the
+game is created (see {doc}`reproducibility`).
+
+Some consequences of reseeding every hand:
+
+- **A bot that seeds `random` itself** is reseeded at the next hand. A bot that needs its
+  own random sequence should use its own generator, such as `random.Random(...)` or
+  `numpy.random.default_rng(...)`, which the game doesn't touch. Such a generator is
+  only reproducible if the bot seeds it from something reproducible.
+- **Bots in two games with the same seed and the same UIDs** make the same random
+  choices. Use different seeds for games that should be independent.
+- **In-process players are not seeded.** They share the `random` module of your script,
+  which you seed yourself.
+
+(player-state-export-import)=
+
 ## Player state: export and import
 
 Listeners subscribed with `game.subscribe(...)` run in the engine's process and receive
@@ -222,6 +260,10 @@ malicious bot can still do anything that user can do:
   secrets from the environment before starting a game with untrusted bots.
 - **Use files and the network.** A bot can read any file the user can read, including
   files your own code writes during the game, and send data anywhere.
+- **Read saved games.** If the game is saved with `save_dir`, a bot can read the
+  checkpoint of the last hand, which predicts the cards of the next one (see
+  {doc}`saving_games`). Save games with untrusted bots to a directory the workers
+  can't read.
 - **Interfere with other processes,** for example by killing the engine or the workers
   of other players, which stops the game.
 
@@ -236,7 +278,3 @@ Beyond that, process isolation doesn't cover:
   or container.
 - **Resource limits.** A worker can use as much CPU and memory as the operating system
   allows. Use containers or operating system limits if you need hard limits.
-- **Random numbers in bots.** Workers don't inherit the random state of your script,
-  so seeding `random` doesn't make the decisions of isolated bots reproducible. The
-  cards are not affected: the game shuffles with its own generator, which you can seed
-  with `Game(seed=...)` (see {doc}`reproducibility`).

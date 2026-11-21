@@ -331,3 +331,82 @@ is available as `Game.seed`, so any game can be repeated, but it is not part of
 The engine's generator is still an object in the engine's process, so an in-process
 player can reach it through introspection like anything else there. With process
 isolation, players have no way to reach it.
+
+### Isolated players are reseeded every hand
+
+Every worker is a fresh interpreter, so bots that use the global `random` module would
+make different decisions on every run. The engine therefore seeds each worker's
+`random` (and `numpy`'s legacy global generator, if the bot imported `numpy`) before the
+bot is unpickled, and again between hands, with
+`derive_player_seed(game seed, player uid, number of the coming hand)`:
+
+- **Reseeding per hand, not once per worker,** makes resumed games exact without saving
+  anything. The reseed happens in `_continue_between_hands`, which runs right after the
+  checkpoint is written, and in a resumed game right after `GAME_RESUMED`. Both games
+  therefore reseed at the same point, before anything else between the hands (such as
+  moving the button) reaches the bots. Reseeding later, when the hand starts, would
+  leave a gap after the checkpoint in which a resumed worker draws different numbers
+  than one that never stopped. Saving each worker's random state
+  instead would mean trusting state reported by the worker and would miss generators
+  the engine doesn't know about.
+- **SHA-256, not `hash()`,** because `hash()` of strings differs between interpreters.
+  The derivation doesn't use the engine's generator, so the seeds reveal nothing about
+  the cards. A bot that knows the game seed could compute the deck anyway, but players
+  never see the seed.
+- **On by default.** Reproducibility is the expectation set by `Game(seed=...)`; the
+  price is that bots in games with the same seed and UIDs make the same random choices,
+  which is what "same seed" means.
+- **The global `random` module, not a dedicated `self.rng`.** Existing bots use
+  `random` directly. Bots that want their own generator can still create one.
+
+In-process players are not seeded: they share the caller's `random` module, and
+reseeding it would change the caller's own random numbers.
+
+## Games are saved as JSON, between hands
+
+`Game(save_dir=...)` saves a game to a directory with three files (`maverick/savegame.py`):
+a header written once, an append-only event log for replay, and a checkpoint for
+resuming. {class}`~maverick.replay.Replay` reads the log, and `Game.load` reads the
+checkpoint.
+
+- **JSON only, never pickle, never class paths.** Save files are shared and loaded
+  later, so loading must not run code. Unpickling would, and so would importing a class
+  named in the file. That is why `Game.load` takes the player objects from the caller
+  and only checks that their UIDs and names match the table. Every file is validated
+  with Pydantic models with `extra="forbid"`.
+- **Saves happen between hands only.** Between hands there is no deck, no betting-round
+  state and nothing in the event queue to store, so the checkpoint is just the
+  `GameState`, the table, a few counters, the state of the engine's random number
+  generator and each player's `export_state()`. The hand boundary logic of the engine
+  lives in `_continue_between_hands()`, which runs after `GAME_STARTED`, after
+  `HAND_ENDED` and when a loaded game continues, so resuming takes the same path as an
+  uninterrupted game.
+- **A hand's events reach the disk only when the hand is over.** The writer keeps them
+  in memory and writes them together with the checkpoint. The files on disk then never
+  hold the hole cards of a hand being played, and the log never has to be repaired in
+  the middle of a hand. The checkpoint records how many lines and bytes of the log it
+  covers. Loading cuts the log back to that size, so a resumed game has no seam.
+- **The checkpoint is replaced atomically:** written to a temporary file, synced, and
+  renamed over the old one, after the log has been synced. Only the last checkpoint is
+  kept; stepping back through a game is the job of the log.
+- **A state per event, not a replay mode.** The log stores the full `GameState` after
+  every event, like `GameStateCollector`. Rebuilding states from events would need an
+  engine mode that applies recorded actions instead of asking players. Storing states is
+  simple and costs about 125 KB per hand with six players. The engine only does this
+  work when a game is saved.
+- **Failed exports don't stop the game.** If a player's `export_state` fails at a
+  checkpoint, the checkpoint records that and the player continues without its state
+  when the game is loaded, with a warning. One misbehaving bot must not stop a
+  tournament, which is the same rule isolated players follow when they fail to decide.
+- **`GAME_RESUMED` marks the restart.** Listeners and players see where a game was
+  loaded, and the event stays in the log, so a replay shows it too.
+- **Enumeration values are part of the format.** Events and states store enumerations
+  by value, and `GameEventType` uses `auto()`, so new members go at the end. A change
+  that breaks old saves must increase `SAVE_FORMAT_VERSION`, and loading an unsupported
+  version fails with a `SaveFormatError` that names it.
+- **Saves of running games are secret.** The checkpoint's random state predicts the next
+  hand. Files are created readable by their owner only, which keeps other users out,
+  but not isolated workers running as the same user. Leaving the random state out of
+  checkpoints would break exact resumes and still leave the hole cards of finished
+  hands readable, so the save directory has to be kept out of the workers' reach by
+  running untrusted games in a container or as a separate user (#107).
