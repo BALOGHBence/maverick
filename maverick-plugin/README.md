@@ -20,5 +20,5 @@ Skills activate automatically based on natural language — no slash commands ne
 
 | Skill | Activates when you say… | What it does |
 | --- | --- | --- |
-| **maverick** | "write a bot", "set up a game", "subscribe to events", "record the game history" | Teaches the library's core usage: the player contract, betting semantics, game setup, events, listeners and game histories |
+| **maverick** | "write a bot", "set up a game", "run untrusted bots", "save and resume a game", "replay a game" | Teaches the library's core usage: the player contract, betting semantics, game setup and seeding, events, listeners, game histories, player isolation, player state export/import, and saving, replaying and resuming games |
 | **maverick-docs** | "how do I use Maverick", "what does X do in Maverick", "show me an example of…" | Reads the online documentation index, selects relevant pages, and answers from their content |

@@ -1,6 +1,6 @@
 ---
 name: maverick
-description: General-purpose guide for writing code with the Maverick poker library — custom players, game setup, events and subscriptions, built-in listeners, and game histories. Auto-invoked when the user wants to write, run, or debug code that uses Maverick.
+description: General-purpose guide for writing code with the Maverick poker library — custom players, game setup, seeding, player isolation in worker processes, player state export/import, events and subscriptions, built-in listeners, game histories, and saving, replaying, loading and resuming games. Auto-invoked when the user wants to write, run, or debug code that uses Maverick.
 ---
 
 You are writing code that uses the Maverick poker library (Python >= 3.12). It is published on PyPI as `maverick`: install it with `pip install maverick` (or `uv add maverick`) and import it as `import maverick`.
@@ -38,7 +38,9 @@ Contract rules:
 - An invalid action (wrong type, too small, not your turn) is **converted to FOLD** with a warning — it does not raise.
 - Players are strategies, not state holders: the engine owns all state. `game.state.players` holds frozen `PlayerSnapshot`s (`uid`, `name`, `state`), not your player objects.
 - `PlayerAction.payload` may carry extra dict data; `decision_time_seconds` is filled by the engine.
-- Constructor is keyword-only: `MyBot(name="Bob", uid=None)`. Names and uids must be unique per game. When overriding `__init__`, forward `**kwargs` to `super().__init__`.
+- Constructor is keyword-only: `MyBot(name="Bob", uid=None)`. Names and uids must be unique per game. When overriding `__init__`, forward `**kwargs` to `super().__init__`. Pass a fixed `uid` if the game may be resumed later (section 9).
+- Optional state hooks: `export_state(self) -> dict | None` returns everything needed to restore the bot (statistics, opponent models, …) as a JSON-serializable dict; `import_state(self, state: dict) -> None` restores it. Leave out secrets and anything recreatable (clients). They are the only way to get data out of an isolated bot (section 8) and are what a resumed game restores (section 9).
+- Write bots so they also work under process isolation: define the class at module top level (not in a function or notebook), keep it picklable, and don't rely on mutating shared objects outside the bot.
 - Useful inside `decide_action`: `self.state` (`PlayerState`: `stack`, `current_bet`, `total_contributed`, `holding.cards`, `state_type`, `seat`), `game.state` (`GameState`: `street`, `pot`, `current_bet`, `min_bet`, `last_raise_size`, `community_cards`, `small_blind`, `big_blind`, `hand_number`, `players`, `get_players_in_hand()`, `get_active_players()`), `game.rules.showdown.hole_cards_required`, `game.holding` (own hole cards). `game` is a read-only `PlayerView`: opponents' `holding` is `None` until revealed at showdown and there is no `game.deck`. `self.state` only works for `Player` subclasses; duck-typed players use `game.get_player_snapshot(self.uid).state`.
 - Hand evaluation (scores only compare hands; strength is a win probability):
   - `maverick.utils.score_hand(cards)` → `(HandType, score)` for up to 5 cards; `Holding(cards=...).score()`, `Hand(private_cards=..., community_cards=...).score()` do the same.
@@ -88,11 +90,12 @@ for s in game.state.players:  # includes eliminated players
     print(s.name, s.state.stack, s.state.state_type)
 ```
 
-- `Game(...)` keyword args: `small_blind`, `big_blind`, `ante`, `min_players=2`, `max_players`, `max_hands=1000`, `exc_handling_mode="log" | "raise"` (raise = handler exceptions propagate), `log_events=True`, `rules: PokerRules | None`, `first_button_position: int | None` (random if `None`).
+- `Game(...)` keyword args: `small_blind`, `big_blind`, `ante`, `min_players=2`, `max_players`, `max_hands=1000`, `exc_handling_mode="log" | "raise"` (raise = handler exceptions propagate), `log_events=True`, `rules: PokerRules | None`, `first_button_position: int | None` (drawn by card draw if `None`), `seed: int | None`, `player_isolation: "none" | "process" | None` and `decision_timeout: float | None` (section 8), `save_dir: str | PathLike | None` (section 9).
+- `Game` is a context manager (`with Game(...) as game:`); leaving it, or `game.close()`, stops isolated players' worker processes. Use it whenever isolation might be on.
 - Without a `state`, a player gets a stack of **0** — always pass `PlayerState(stack=...)` (or a dict).
 - Always set a sensible `max_hands`, especially with passive bots like `FoldBot`, or games run for a long time.
 - `game.state.players` keeps eliminated players (`state_type=ELIMINATED`, `stack=0`); use `game.state.get_non_eliminated_players()` / `get_active_players()` to filter.
-- `game.game_uid` is `None` before `start()` and gets a new value on every start — use it to tell sessions apart.
+- `game.game_uid` is `None` before `start()` and gets a new value on every start — use it to tell sessions apart. A game continued with `Game.load` keeps its UID.
 - Players can only be added before `start()`; remove with `game.remove_player(p)` between hands / after the game.
 - Constructor args override the matching `rules` fields. Omaha example:
 
@@ -107,12 +110,13 @@ rules = PokerRules(
 game = Game(rules=rules)
 ```
 
-- Reproducibility: call `random.seed(...)` before creating/starting the game and set `first_button_position`.
+- Reproducibility: pass `seed=...` to `Game`. The game has its own random generator (read it back with `game.seed`) that shuffles and draws the button; same seed + same players + same decisions → same cards. Bots' use of `random` no longer changes the cards. Without `seed`, one is drawn from the global `random` module when the game is created, so `random.seed(...)` **before** `Game(...)` still works, but seeding afterwards has no effect on the cards.
+- In-process bots share your script's `random` module; seed it yourself if their decisions must be reproducible. Isolated bots are seeded by the game (section 8).
 - Silence engine logs with `log_events=False`, or via `logging.getLogger("maverick")`.
 
 ## 4. Events and subscribing
 
-Event types: `maverick.GameEventType` — `GAME_STARTED`, `GAME_ENDED`, `HAND_STARTED`, `HAND_ENDED`, `HOLE_CARDS_DEALT`, `BLINDS_POSTED`, `ANTES_POSTED`, `BETTING_ROUND_STARTED`, `BETTING_ROUND_COMPLETED`, `PLAYER_ACTION_TAKEN`, `FLOP_DEALT`, `TURN_DEALT`, `RIVER_DEALT`, `SHOWDOWN_STARTED`, `SHOWDOWN_COMPLETED`, `PLAYER_CARDS_REVEALED`, `POT_WON`, `PLAYER_JOINED`, `PLAYER_LEFT`, `PLAYER_ELIMINATED`, `GAME_STATE_CHANGED`.
+Event types: `maverick.GameEventType` — `GAME_STARTED`, `GAME_ENDED`, `HAND_STARTED`, `HAND_ENDED`, `HOLE_CARDS_DEALT`, `BLINDS_POSTED`, `ANTES_POSTED`, `BETTING_ROUND_STARTED`, `BETTING_ROUND_COMPLETED`, `PLAYER_ACTION_TAKEN`, `FLOP_DEALT`, `TURN_DEALT`, `RIVER_DEALT`, `SHOWDOWN_STARTED`, `SHOWDOWN_COMPLETED`, `PLAYER_CARDS_REVEALED`, `POT_WON`, `PLAYER_JOINED`, `PLAYER_LEFT`, `PLAYER_ELIMINATED`, `GAME_STATE_CHANGED`, `GAME_RESUMED` (a loaded game continues; emitted by `start()` before the next hand).
 
 **Explicit listeners** — any callable `handler(event: GameEvent, game: Game) -> None`:
 
@@ -130,7 +134,7 @@ game.unsubscribe(token)
 - One subscription = one event type. To listen to everything: `for t in GameEventType: game.subscribe(t, handler)`.
 - Subscribe **before** `game.start()`; dispatch is synchronous. Subscribing/unsubscribing inside a handler is safe.
 - Handler exceptions are logged and swallowed unless `exc_handling_mode="raise"`.
-- Handlers receive the live `game` and could mutate it — treat it as read-only.
+- Handlers receive the live `game` and could mutate it — treat it as read-only. Listeners always run in the engine's process, also with player isolation, so they work the same in both modes.
 
 **Player hooks** (run after explicit listeners, exceptions always logged):
 - `on_event(self, event, game)` — called for every event.
@@ -217,6 +221,86 @@ for t in GameEventType:
 
 - For state snapshots rather than events, use `GameStateCollector` (section 6).
 
-## 8. When this is not enough
+## 8. Player isolation (worker processes)
+
+By default bots run in the engine's process. A malicious bot can then reach the engine through introspection (`sys._getframe`, `gc.get_objects()`) and read the deck. For bots you don't trust, run each player in its own worker process:
+
+```python
+from maverick import Game, PlayerState
+from maverick.players import CallBot, SharkBot
+
+if __name__ == "__main__":  # required: workers are started with "spawn"
+    with Game(small_blind=1, big_blind=2, player_isolation="process", decision_timeout=5.0) as game:
+        game.add_player(CallBot(name="Alice"), state=PlayerState(stack=200))
+        game.add_player(SharkBot(name="Bob"), state=PlayerState(stack=200))
+        game.start()
+```
+
+- Modes: `"none"` (default, fast) and `"process"`; also `maverick.PlayerIsolation.NONE` / `.PROCESS`.
+- Settings resolve per setting from: `Game` argument → env vars `MAVERICK_PLAYER_ISOLATION` / `MAVERICK_DECISION_TIMEOUT` → `[tool.maverick]` table in the nearest `pyproject.toml` (`player_isolation = "process"`, `decision_timeout = 5.0`). Invalid values or unknown keys raise `ValueError`. Resolved values: `game.settings`.
+- `decision_timeout` (seconds) applies only to isolated players; a late player folds and its answer is discarded.
+- An isolated player that times out, raises in `decide_action`, returns an invalid action, or whose worker dies **folds** with a warning instead of stopping the game (a dead worker folds every remaining hand).
+- Requirements: players must be picklable and their class importable in a fresh interpreter (no classes defined in functions, notebooks or the REPL — `add_player` raises `TypeError`/`RuntimeError`); scripts need the `if __name__ == "__main__":` guard.
+- **The bot lives in the worker.** The object you passed to `add_player` is a copy that is never updated (except `Player.game`, the latest view). Reading `bot.some_counter` after the game gives the initial value. Get data out with state hooks:
+
+```python
+saved = game.get_player_state(bot)   # calls export_state (in the worker if isolated) → dict | None
+game.set_player_state(bot, saved)    # calls import_state
+```
+
+  - Works the same in both modes, always through a JSON round trip. Callable between hands (e.g. from a listener) or before/after the game.
+  - When a worker stops (player left/eliminated, game ended), it exports once more; `get_player_state` keeps returning that, while `set_player_state` then raises `RuntimeError`.
+  - Isolated: a failing/timing-out `export_state` → warning and `None`; a failing `import_state` → `RuntimeError`. In-process, hook exceptions propagate.
+- Random numbers: before each hand the game seeds the worker's global `random` (and `numpy`'s legacy global generator if imported) from the game seed, the player's UID and the hand number. Isolated bots using `random` are therefore reproducible with `Game(seed=...)`, also across save/resume. A bot that seeds `random` itself gets reseeded next hand — use its own `random.Random(...)` / `numpy.random.default_rng(...)` instead.
+- Slower: every decision and hook crosses a process boundary; `decision_time_seconds` includes that overhead.
+- Not a sandbox: workers run as the same OS user, inherit env vars (secrets!), and can use files and the network. For fully untrusted code, also use a container / separate user, and strip secrets from the environment. Bot import and `__init__` still run in your process.
+
+## 9. Saving, replaying and resuming games
+
+**Save** by passing `save_dir` (created at start; must not already hold a save). After every hand the game writes the hand's events, each with the full table state after it, plus a checkpoint to resume from. It doesn't change the cards dealt, but is slower (~1.5×). Use fixed player UIDs if you want to resume.
+
+```python
+game = Game(small_blind=1, big_blind=2, max_hands=50, seed=42, save_dir="saves/game-1")
+game.add_player(CallBot(name="Alice", uid="alice"), state=PlayerState(stack=200))
+game.add_player(SharkBot(name="Bob", uid="bob"), state=PlayerState(stack=200))
+game.start()
+```
+
+**Replay** with `maverick.Replay` — no `Game`, no players, no bot code needed:
+
+```python
+from maverick import GameEventType, Replay
+
+replay = Replay("saves/game-1")
+print(len(replay), replay.hand_numbers, replay.seed, replay.rules, replay.players)
+replay.go_to_hand(3)
+while replay.forward():
+    event, state = replay.event, replay.state  # GameEvent, GameState right after it
+    if event.type == GameEventType.HAND_ENDED:
+        break
+```
+
+- Navigation: `forward(steps=1)` / `backward(steps=1)` (return `False` at the ends), `seek(index)`, `go_to_hand(n)`, `position`; `hand(n)` → `list[(event, state)]`; iterating yields all pairs; `state_at(index)`; `events`, `game_uid`, `header`.
+- Replay states contain **every player's hole cards**; hide them with `maverick.playerview.redact_state(state, viewer_uid, revealed=frozenset())` to show what one player saw.
+
+**Resume** (also after a crash) with `Game.load`, then `start()`:
+
+```python
+game = Game.load(
+    "saves/game-1",
+    players=[CallBot(name="Alice", uid="alice"), SharkBot(name="Bob", uid="bob")],
+    max_hands=100,  # optional: raise the limit to continue a finished game
+)
+game.start()  # emits GAME_RESUMED, then continues from the end of the last completed hand
+```
+
+- Supply the players seated when the last hand ended, with the **same UIDs and names** (eliminated ones may be omitted), else `ValueError`. The save holds data only, never code.
+- Each player's state is restored via `import_state` with what `export_state` returned at that checkpoint; players without the hooks start fresh.
+- Rules, seed and `first_button_position` come from the save; `max_hands` too unless passed. `player_isolation`, `decision_timeout`, `log_events`, `exc_handling_mode` are passed as for a new game. Add listeners after `load` and before `start`.
+- An interrupted hand is replayed from its start (its partial events are dropped). With deterministic bots, a resumed game ends exactly like an uninterrupted one, with the same cards. The game keeps its `game_uid`, history and save directory.
+- Save files: `header.json`, `events.jsonl` (no `GAME_STATE_CHANGED`), `checkpoint.json`. All versioned JSON — loading never unpickles or imports code; an unreadable or unsupported save raises `maverick.SaveFormatError`.
+- Security: a running game's checkpoint holds the RNG state and predicts the next cards. Files are owner-readable only, but isolated bots run as the same user — keep saves of games with untrusted bots out of their reach. Finished saves can be shared.
+
+## 10. When this is not enough
 
 If the question cannot be answered from this skill alone, use the **maverick-docs** skill from this plugin, which looks up the answer in the online documentation at https://pymaverick.readthedocs.io/en/latest/.
