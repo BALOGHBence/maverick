@@ -12,6 +12,7 @@ limited size and decoded as JSON. Never unpickle anything a worker sends, and do
 replace the pipe with a ``multiprocessing.Queue``, which unpickles what it receives.
 """
 
+import hashlib
 import json
 import logging
 import multiprocessing
@@ -31,7 +32,7 @@ from ..playeraction import PlayerAction
 from ..playerview import PlayerView
 from .worker import ViewDelta, run_worker
 
-__all__ = ["PlayerFailure", "ProcessPlayer"]
+__all__ = ["PlayerFailure", "ProcessPlayer", "derive_player_seed"]
 
 # Upper limit for the size of a reply from a worker, so a misbehaving worker can't make
 # the engine allocate arbitrary amounts of memory.
@@ -49,6 +50,33 @@ class PlayerFailure(Exception):
 
     .. versionadded:: 0.7.0
     """
+
+
+def derive_player_seed(game_seed: int, player_uid: str, hand_number: int) -> int:
+    """Seed for the random number generators of an isolated player.
+
+    The seed depends on the game's seed, the player and the hand, so players get
+    different random numbers, and so do the hands of a game. It doesn't depend on the
+    state of the game's own generator, so it can't be used to predict the cards. The
+    derivation uses SHA-256 rather than :func:`hash`, which differs between
+    interpreters.
+
+    Parameters
+    ----------
+    game_seed : int
+        The seed of the game.
+    player_uid : str
+        The UID of the player.
+    hand_number : int
+        The number of the hand, ``0`` before the first hand.
+
+    Returns
+    -------
+    int
+        A non-negative integer below ``2**64``.
+    """
+    data = f"maverick-player-seed:{game_seed}:{player_uid}:{hand_number}".encode()
+    return int.from_bytes(hashlib.sha256(data).digest()[:8], "big")
 
 
 def _overridden_hooks(player: Any) -> list[str]:
@@ -87,6 +115,10 @@ class ProcessPlayer:
         Maximum number of seconds to wait for a decision. ``None`` means no limit.
     logger : logging.Logger
         Logger for problems reported by the worker.
+    seed : int | None
+        Seed for the random number generators of the worker, set before the player is
+        unpickled. If None, the worker's generators are seeded from the operating
+        system, as in any new interpreter.
 
     .. versionadded:: 0.7.0
     """
@@ -97,11 +129,13 @@ class ProcessPlayer:
         *,
         decision_timeout: Optional[float],
         logger: logging.Logger,
+        seed: Optional[int] = None,
     ) -> None:
         self.player = player
         self.uid: Optional[str] = player.uid
         self.name: Optional[str] = player.name
         self._timeout = decision_timeout
+        self._seed = seed
         self._logger = logger
         self._seq = 0
         self._sent_events = 0
@@ -149,11 +183,12 @@ class ProcessPlayer:
                 f"can't be pickled: {exc}"
             ) from exc
 
+        seed = self._seed
         ctx = multiprocessing.get_context("spawn")
         conn, child_conn = ctx.Pipe(duplex=True)
         process = ctx.Process(
             target=run_worker,
-            args=(child_conn, payload),
+            args=(child_conn, payload, seed),
             name=f"maverick-player-{self.name}",
             daemon=True,
         )
@@ -203,6 +238,16 @@ class ProcessPlayer:
             self._process.join(max(0.0, deadline - time.monotonic()))
             self._dead = True
         self._finalizer()
+
+    def reseed(self, seed: int) -> None:
+        """Seed the random number generators of the worker.
+
+        The worker handles messages in order, so everything the player does after
+        this call uses the new seed. Does nothing if the worker is not running.
+        """
+        self._seed = seed
+        if not self._dead and self._conn is not None:
+            self._send(("seed", seed), fail=False)
 
     def decide_action(self, *, game: PlayerView, **kwargs: Any) -> PlayerAction:
         """Forward a decision to the worker and return its action.

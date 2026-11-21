@@ -20,7 +20,7 @@ import uuid
 from warnings import warn
 import warnings
 
-from ._isolation import PlayerFailure, ProcessPlayer
+from ._isolation import PlayerFailure, ProcessPlayer, derive_player_seed
 from .config import IsolationSettings, resolve_settings
 from .deck import Deck
 from .enums import (
@@ -116,7 +116,9 @@ class Game:
         Games with the same seed, players and decisions deal the same cards. If None (the default), a seed
         is drawn from the global ``random`` module, so seeding ``random`` before creating the game keeps
         working. The generator is never shared with players, so players that use random numbers don't
-        change the cards that are dealt.
+        change the cards that are dealt. Isolated players get the global ``random`` module of their
+        worker seeded from this seed, their UID and the hand number before every hand, so their
+        decisions are reproducible too.
 
         .. versionadded:: 0.7.0
     save_dir : str | os.PathLike | None
@@ -624,6 +626,7 @@ class Game:
                 player,
                 decision_timeout=self._settings.decision_timeout,
                 logger=self._logger,
+                seed=self._player_seed(player.uid),
             )
             proxy.start()
             self._proxies[player.uid] = proxy
@@ -1005,6 +1008,7 @@ class Game:
                     player,
                     decision_timeout=self._settings.decision_timeout,
                     logger=self._logger,
+                    seed=self._player_seed(uid),
                 )
                 proxy.start()
                 self._proxies[uid] = proxy
@@ -1325,6 +1329,13 @@ class Game:
         Runs between two hands: after the game has started, after a hand has ended,
         and when a loaded game continues.
         """
+        # Reseed isolated players for the coming hand. This runs right after the
+        # checkpoint is written, and right after a loaded game emits GAME_RESUMED, so
+        # from here on, a resumed game plays out exactly like one that ran through.
+        hand_number = self.state.hand_number + 1
+        for uid, proxy in self._proxies.items():
+            proxy.reseed(self._player_seed(uid, hand_number))
+
         if self.state.stage == GameStage.STARTED:
             self._start_new_hand()
             self._event_queue.append(GameEventType.HAND_STARTED)
@@ -1377,6 +1388,12 @@ class Game:
 
         for p in self.state.players:
             self._all_stacks_at_game_start += p.state.stack
+
+    def _player_seed(self, uid: str, hand_number: Optional[int] = None) -> int:
+        """Seed for the random number generators of the isolated player ``uid``."""
+        if hand_number is None:
+            hand_number = self.state.hand_number
+        return derive_player_seed(self._seed, uid, hand_number)
 
     def _start_new_hand(self) -> None:
         self._update_state(hand_number=self.state.hand_number + 1)

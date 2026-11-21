@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the `Replay` class, which steps through a saved game event by event or hand by hand, without creating the game or any players.
 - Added the `GAME_RESUMED` event type, emitted when a loaded game continues.
 - Added `Game.save_dir` and the `SaveFormatError` exception.
+- Isolated players are now seeded. With `player_isolation="process"`, the game seeds the `random` module of every worker, and `numpy`'s legacy global generator if the bot has imported `numpy`, from the game's seed, the player's UID and the hand number, before every hand. Isolated bots that use random numbers make the same decisions in games with the same seed, including games that were saved and resumed.
 
 ### Changed
 
