@@ -121,6 +121,9 @@ class Game:
         decisions are reproducible too.
 
         .. versionadded:: 0.7.0
+
+        .. versionchanged:: 0.8.0
+            Isolated players are seeded from it before every hand.
     save_dir : str | os.PathLike | None
         Directory to save the game to, for replay with :class:`~maverick.replay.Replay`
         and to resume it with :meth:`load`. The game writes the events of every hand,
@@ -128,7 +131,7 @@ class Game:
         created when the game starts. It must not hold a saved game already. If None
         (the default), the game is not saved.
 
-        .. versionadded:: 0.7.0
+        .. versionadded:: 0.8.0
 
     Notes
     -----
@@ -333,7 +336,7 @@ class Game:
     def save_dir(self) -> Optional[Path]:
         """The directory the game is saved to, or None if it is not saved.
 
-        .. versionadded:: 0.7.0
+        .. versionadded:: 0.8.0
         """
         return self._save.directory if self._save is not None else None
 
@@ -889,7 +892,7 @@ class Game:
         Loading never unpickles anything and never imports code named in the save.
         Every file is read as JSON and validated.
 
-        .. versionadded:: 0.7.0
+        .. versionadded:: 0.8.0
         """
         directory = Path(save_dir)
         header = read_header(directory)
@@ -1104,7 +1107,7 @@ class Game:
     def start(self) -> None:
         """Start the poker game, or continue a game loaded with :meth:`load`.
 
-        .. versionchanged:: 0.7.0
+        .. versionchanged:: 0.8.0
             Continues a loaded game, after emitting a ``GAME_RESUMED`` event.
         """
         if self._resuming:

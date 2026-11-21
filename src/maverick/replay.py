@@ -5,7 +5,7 @@ Replay of saved games.
 event by event or hand by hand, without creating a :class:`~maverick.game.Game` or any
 players.
 
-.. versionadded:: 0.7.0
+.. versionadded:: 0.8.0
 """
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ class Replay:
             if replay.event.type.name == "HAND_ENDED":
                 break
 
-    .. versionadded:: 0.7.0
+    .. versionadded:: 0.8.0
     """
 
     def __init__(self, save_dir: str | os.PathLike) -> None:

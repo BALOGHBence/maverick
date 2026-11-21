@@ -353,7 +353,7 @@ class GameEventType(Enum):
         continues. Emitted by :meth:`Game.start <maverick.game.Game.start>`, between
         hands, before the next hand starts.
 
-        .. versionadded:: 0.7.0
+        .. versionadded:: 0.8.0
     """
 
     # Game lifecycle events
