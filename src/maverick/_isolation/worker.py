@@ -14,6 +14,8 @@ Messages from the engine:
   ``{"seq", "state", "state_error", "hook_errors"}``.
 - ``("import", seq, state)``: call ``import_state`` and reply with
   ``{"seq", "state_error", "hook_errors"}``.
+- ``("seed", seed)``: seed the random number generators of the worker with
+  :func:`seed_random`. There is no reply.
 - ``("close",)``: export the state one last time, reply with
   ``{"closed": true, "state", "state_error", "hook_errors"}`` and exit.
 
@@ -23,6 +25,8 @@ Messages from the engine:
 
 import json
 import pickle  # nosec B403 - only loads the player sent by the engine
+import random
+import sys
 import traceback
 from multiprocessing.connection import Connection
 from typing import Any, NamedTuple, Optional
@@ -34,7 +38,7 @@ from ..playerview import EventHistoryView, PlayerView
 from ..rules import PokerRules
 from ..state import GameState
 
-__all__ = ["ViewDelta", "run_worker"]
+__all__ = ["ViewDelta", "run_worker", "seed_random"]
 
 
 class ViewDelta(NamedTuple):
@@ -45,6 +49,27 @@ class ViewDelta(NamedTuple):
     state: GameState
     new_events: list[GameEvent]
     rules: Optional[PokerRules]  # only sent with the first message
+
+
+def seed_random(seed: int) -> None:
+    """Seed the global random number generators a bot may use.
+
+    Seeds the ``random`` module, and the legacy global generator of ``numpy`` if a bot
+    has imported ``numpy``. ``numpy`` is never imported here, so workers of bots that
+    don't use it don't pay for the import.
+
+    Parameters
+    ----------
+    seed : int
+        A non-negative integer below ``2**64``.
+    """
+    random.seed(seed)  # nosec B311
+    np = sys.modules.get("numpy")
+    if np is not None:
+        try:
+            np.random.seed(seed % 2**32)
+        except Exception:  # nosec B110 - a broken numpy must not stop the worker
+            pass
 
 
 class _Worker:
@@ -134,7 +159,9 @@ class _Worker:
         return json.dumps(reply).encode()
 
 
-def run_worker(conn: Connection, player_bytes: bytes) -> None:
+def run_worker(
+    conn: Connection, player_bytes: bytes, seed: Optional[int] = None
+) -> None:
     """Serve one player in a worker process until the engine closes the connection.
 
     Parameters
@@ -143,7 +170,12 @@ def run_worker(conn: Connection, player_bytes: bytes) -> None:
         The worker's end of the pipe to the engine.
     player_bytes : bytes
         The pickled player object.
+    seed : int | None
+        Seed for the random number generators, set before the player is unpickled.
+        If None, they are left as they are.
     """
+    if seed is not None:
+        seed_random(seed)
     try:
         # The bytes come from the engine that started this worker, not from a bot.
         player = pickle.loads(player_bytes)  # nosec B301  # nosemgrep
@@ -170,6 +202,8 @@ def run_worker(conn: Connection, player_bytes: bytes) -> None:
             conn.send_bytes(worker.export(seq=message[1]))
         elif kind == "import":
             conn.send_bytes(worker.import_(*message[1:]))
+        elif kind == "seed":
+            seed_random(message[1])
         elif kind == "close":
             conn.send_bytes(worker.export(closed=True))
             return
