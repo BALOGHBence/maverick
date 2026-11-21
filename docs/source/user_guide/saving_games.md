@@ -98,7 +98,9 @@ game.start()
 - **The game continues where the last completed hand ended.** A hand that was
   interrupted is played again from the start, and its events are removed from the
   save. With deterministic players, a game that is interrupted and resumed ends exactly
-  like one that wasn't.
+  like one that wasn't. Isolated players that use the `random` module count as
+  deterministic here, because the game seeds them between hands (see
+  {ref}`isolated-player-random-numbers`).
 - **The resumed game emits a `GAME_RESUMED` event** before the next hand, so listeners
   and players can see where it restarted. The game keeps its UID and its history, and
   keeps writing to the same save, so a replay shows the whole game.

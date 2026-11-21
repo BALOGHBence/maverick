@@ -332,6 +332,36 @@ The engine's generator is still an object in the engine's process, so an in-proc
 player can reach it through introspection like anything else there. With process
 isolation, players have no way to reach it.
 
+### Isolated players are reseeded every hand
+
+Every worker is a fresh interpreter, so bots that use the global `random` module would
+make different decisions on every run. The engine therefore seeds each worker's
+`random` (and `numpy`'s legacy global generator, if the bot imported `numpy`) before the
+bot is unpickled, and again between hands, with
+`derive_player_seed(game seed, player uid, number of the coming hand)`:
+
+- **Reseeding per hand, not once per worker,** makes resumed games exact without saving
+  anything. The reseed happens in `_continue_between_hands`, which runs right after the
+  checkpoint is written, and in a resumed game right after `GAME_RESUMED`. Both games
+  therefore reseed at the same point, before anything else between the hands (such as
+  moving the button) reaches the bots. Reseeding later, when the hand starts, would
+  leave a gap after the checkpoint in which a resumed worker draws different numbers
+  than one that never stopped. Saving each worker's random state
+  instead would mean trusting state reported by the worker and would miss generators
+  the engine doesn't know about.
+- **SHA-256, not `hash()`,** because `hash()` of strings differs between interpreters.
+  The derivation doesn't use the engine's generator, so the seeds reveal nothing about
+  the cards. A bot that knows the game seed could compute the deck anyway, but players
+  never see the seed.
+- **On by default.** Reproducibility is the expectation set by `Game(seed=...)`; the
+  price is that bots in games with the same seed and UIDs make the same random choices,
+  which is what "same seed" means.
+- **The global `random` module, not a dedicated `self.rng`.** Existing bots use
+  `random` directly. Bots that want their own generator can still create one.
+
+In-process players are not seeded: they share the caller's `random` module, and
+reseeding it would change the caller's own random numbers.
+
 ## Games are saved as JSON, between hands
 
 `Game(save_dir=...)` saves a game to a directory with three files (`maverick/savegame.py`):
